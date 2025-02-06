@@ -11,10 +11,10 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeTabletController;
 
-Route::get('/', function(){
-    $employees = Employee::all();
-    return view('home', ['employees' => $employees]);
-});
+// Route::get('/', function(){
+//     $employees = Employee::all();
+//     return view('home', ['employees' => $employees]);
+// });
 
 Route::post('/register', [UserController::class, 'register']);
 Route::post('/logout', [UserController::class, 'logout']);
@@ -30,9 +30,9 @@ Route::delete('/delete-employee/{employee}', [EmployeeController::class, 'delete
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
 
 // Tablet assignment
-Route::post('/assign-tablet/{employee}', [EmployeeController::class, 'assignTablet']);
-Route::post('/unassign-tablet/{employee}/{tablet}', [EmployeeController::class, 'unassignTablet'])->name('unassign-tablet');
-Route::post('/print-act/{employee}/{tablet}', [EmployeeController::class, 'printAct']);
+Route::post('/assign-tablet/{employee}', [EmployeeTabletController::class, 'assignTablet']);
+Route::post('/unassign-tablet/{employee}/{tablet}', [EmployeeTabletController::class, 'unassignTablet'])->name('unassign-tablet');
+Route::post('/print-act/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct']);
 
 // Territory assignment
 Route::post('/assign-territory/{employee}', [EmployeeController::class, 'assignTerritory']);

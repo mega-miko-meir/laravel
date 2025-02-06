@@ -99,12 +99,6 @@ class EmployeeController extends Controller
         }
     }
 
-
-
-    public function printAct(Employee $employee, Tablet $tablet){
-        return view('print', compact('employee', 'tablet'), ['showHeader' => false, 'printPadding' => 1]);
-    }
-
     // public function unassignTerritory(Employee $employee, Territory $territory){
 
     //     $territory->old_employee_id = $employee->full_name;
@@ -182,65 +176,17 @@ class EmployeeController extends Controller
     }
 
 
-
-    public function unassignTablet(Employee $employee, Tablet $tablet){
-        $pdfAssignment = DB::table('employee_tablet')
-            ->where('employee_id', $employee->id)
-            ->where('tablet_id', $tablet->id)
-            ->where('confirmed', 0)
-            ->orderByDesc('id') // Берем только поле pdf_path
-            ->first();
-
-        $pdfUnassignment = DB::table('employee_tablet')
-            ->where('employee_id', $employee->id)
-            ->where('tablet_id', $tablet->id)
-            ->orderByDesc('id') // Берем только поле pdf_path
-            ->first();
-
-
-        $tablet->employee()->dissociate();
-        $tablet->save();
-
-        if($pdfAssignment) {
-            DB::table('employee_tablet')
-            ->where('id', $pdfAssignment->id) // Указываем ID найденной записи
-            ->delete();
-
-            return redirect()->back()->with('success', 'Tablet unassigned and removed due to unconfirmed status.');
-        } else {
-            // if (!$pdfUnassignment || empty($pdfUnassignment->unassign_pdf)) {
-            //     return redirect()->back()->with('error', 'Для отвязки планшета необходимо загрузить PDF.');
-            // }
-            $tablet->old_employee_id = $employee->full_name;
-            $tablet->save();
-            $employee->employee_tablet()->updateExistingPivot($tablet->id, ['returned_at' => now()]);
-            return redirect()->back()->with('success', 'Tablet successfully unassigned from the employee.');
-        }
-
-
-    }
-
-    public function assignTablet(Request $request, Employee $employee){
-        // $employee = Employee::findOrFail($employee->id);
-        $tablet = Tablet::findOrFail($request->input('tablet_id'));
-
-        $tablet->employee()->associate($employee);
-        // $tablet->employee_id = $employee->id;
-        $tablet->save();
-        // Filling in employee_territory table
-        $employee->employee_tablet()->attach($tablet->id, ['assigned_at' => now()]);
-
-
-
-        return redirect()->back()->with('success', 'Tablet successfully assigned to the employee.');
-    }
-
-
     public function searchEmployee(Request $request){
 
         $query = $request->input('search');
-        $employees = Employee::where('first_name', 'like', "%$query%")->orWhere('last_name', 'like', "%$query%")->get();
-
+        $employees = Employee::where('first_name', 'like', "%$query%")
+            ->orWhere('full_name', 'like', "%$query%")
+            ->orWhere('email', 'like', "%$query%")
+            ->orWhereHas('territories', function ($q) use ($query) {
+                $q->where('team', 'like', "%$query%")
+                ->orWhere('city', 'like', "%$query%");
+            })
+            ->get();
         return view('home', ['employees' => $employees, 'query' => $query]);
     }
 
@@ -260,22 +206,22 @@ class EmployeeController extends Controller
 }
 
     public function actuallyEditEmployee(Request $request, Employee $employee){
-        $incomingFields = $request->validate([
-        'first_name' => 'required',
-        'last_name' => 'required',
-        'middle_name' => 'nullable',
-        'team' => 'nullable',
-        'city' => 'nullable',
-        'position' => 'nullable',
-        'hiring_date' => 'nullable',
-        'email' => 'required|email|unique:employees,email,' . $employee->id,
-    ]);
+            $incomingFields = $request->validate([
+            'full_name' => 'required',
+            'first_name' => 'required',
+            'last_name' => 'required',
+            'team' => 'nullable',
+            'city' => 'nullable',
+            'position' => 'nullable',
+            'hiring_date' => 'nullable',
+            'email' => 'required|email|unique:employees,email,' . $employee->id,
+        ]);
 
-    // Обновление данных модели
-    $employee->update($incomingFields);
+        // Обновление данных модели
+        $employee->update($incomingFields);
 
-    return redirect('/')->with('success', 'Employee updated successfully!');
-}
+        return redirect('/')->with('success', 'Employee updated successfully!');
+    }
 
 
     public function showEditEmployee(Employee $employee){
@@ -314,11 +260,16 @@ class EmployeeController extends Controller
         $availableTablets = Tablet::whereNull('employee_id')->with('oldEmployee')->get();
         $availableTerritories = Territory::whereNull('employee_id')->with('oldEmployee')->get();
         $territoriesHistory = EmployeeTerritory::where('employee_id', $employee->id)
-            ->whereNotNull('unassigned_at')
-            ->with(['territory']) // Подгружаем данные из модели Territory, если есть связь
-            ->orderBy('assigned_at', 'desc') // Сортировка по дате изменения
-            ->get();
-            // dd($territoriesHistory);
+        ->whereNotNull('unassigned_at')
+        ->with(['territory']) // Подгружаем данные из модели Territory, если есть связь
+        ->orderByDesc('assigned_at') // Сортировка по дате изменения
+        ->get();
+        // dd($territoriesHistory);
+        $tabletHistories = EmployeeTablet::where('employee_id', $employee->id)
+        ->with(['tablet'])
+        ->whereNotNull('returned_at') // Только подтвержденные записи
+        ->orderByDesc('assigned_at')
+        ->get();
 
         $territories = $employee->territories->map(function ($territory) use ($employee) {
             $territory->assignmentToRemove = DB::table('employee_territory')
@@ -347,7 +298,7 @@ class EmployeeController extends Controller
         // dd($tablets);
 
 
-        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory'));
+        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories'));
 
 
         // return view('employee.show', compact('employee', 'availableTablets'));

@@ -12,58 +12,37 @@
                     @foreach($employee->territories as $territory)
                         <li class="flex items-center justify-between text text-gray-600 py-2">
                             <span>{{ $territory->territory_name }}</span>
-                            <div class="flex items-center space-x-4">
-                                <form action="/unassign-territory/{{$employee->id}}/{{$territory->id}}" method="POST" onsubmit="return confirm('Are you sure you want to assign the territory?');">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <!-- Кнопка удаления территории -->
+                                <form action="/unassign-territory/{{$employee->id}}/{{$territory->id}}" method="POST"
+                                      onsubmit="return confirm('Are you sure you want to unassign the territory?');">
                                     @csrf
-                                    <button class="btn-primary bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-                                        Unassign territory
+                                    <button class="bg-red-400 hover:bg-red-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                        ❌ Unassign
                                     </button>
                                 </form>
-                                <form action="/form-template/{{$employee->id}}" method="POST" onsubmit="return confirm('Are you sure you want to from OCE template?');">
+
+                                <!-- Кнопка OCE template -->
+                                <form action="/form-template/{{$employee->id}}" method="POST"
+                                      onsubmit="return confirm('Are you sure you want to use OCE template?');">
                                     @csrf
-                                    <button class="btn-primary bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded">
-                                        Form OCE template
+                                    <button class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                        📝 OCE Template
                                     </button>
                                 </form>
+
+                                <!-- Кнопка подтверждения -->
                                 @if ($territory->assignmentToRemove)
-                                    {{-- <h1>{{$employee->employee_territory->confirmed ?? "Not confirmed"}}</h1> --}}
                                     <form action="{{ route('confirm.territory', [$employee->id, $territory->id]) }}" method="POST" style="display:inline;">
                                         @csrf
                                         @method('PATCH')
-
-                                        <button type="submit" class="btn-success bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded">
-                                            Confirm
+                                        <button type="submit" class="bg-green-400 hover:bg-green-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                            ✅ Confirm
                                         </button>
                                     </form>
                                 @else
-                                    <span class="text-green-500">(Confirmed)</span>
+                                    <span class="text-green-600 font-medium">✔️ Confirmed</span>
                                 @endif
-
-
-
-
-
-                                {{-- @foreach ($assignments as $assignment)
-                                    <div class="assignment-item flex justify-between items-center mb-4">
-                                        <span class="text-lg">{{ $assignment->territory->territory_name }}</span>
-
-                                        <!-- Метка подтверждения -->
-                                        @if ($assignment->confirmed)
-                                            <span class="text-sm text-green-500">Подтверждено</span>
-                                        @else
-                                            <span class="text-sm text-red-500">Не подтверждено</span>
-                                            <button class="btn btn-primary confirm-button" data-assignment-id="{{ $assignment->id }}">
-                                                Подтвердить
-                                            </button>
-                                        @endif
-                                    </div>
-                                @endforeach --}}
-
-
-                                {{-- <form action="/export-excel/{{$employee->id}}/{{$employee->territory->id}}" method="GET" onsubmit="return confirm('Are you sure you want to form OCE template?');">
-                                    @csrf
-                                    <button class="btn-primary bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded">Form Template</button>
-                                </form> --}}
                             </div>
                         </li>
                     @endforeach

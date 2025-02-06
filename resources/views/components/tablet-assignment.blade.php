@@ -1,4 +1,4 @@
-@props(['employee', 'availableTablets'])
+@props(['employee', 'availableTablets', 'tabletHistories'])
 
 <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
     <h2 class="text-xl font-semibold text-gray-800">Tablet Assignment</h2>
@@ -11,109 +11,44 @@
                     @foreach($employee->tablets as $tablet)
                         <li class="flex items-center justify-between text-sm text-gray-600 py-2 border-b border-gray-200">
                             <span>{{ $tablet->invent_number }} - {{ $tablet->serial_number }}</span>
-                            <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <!-- Кнопка печати -->
                                 <form action="/print-act/{{$employee->id}}/{{$tablet->id}}" method="POST">
                                     @csrf
-                                    <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
-                                        APP
+                                    <button class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                        🖨️ Print
                                     </button>
                                 </form>
 
+                                <!-- PDF -->
                                 @if($tablet->pdfAssignment && $tablet->pdfAssignment->pdf_path)
-                                    <!-- Если PDF загружен, показываем ссылку -->
-                                    <a href="{{ asset('storage/' . $tablet->pdfAssignment->pdf_path) }}" target="_blank" class="text-blue-500 underline">
-                                        Открыть PDF
+                                    <a href="{{ asset('storage/' . $tablet->pdfAssignment->pdf_path) }}" target="_blank"
+                                       class="text-blue-600 hover:text-blue-700 underline font-medium transition-all">
+                                        📄 Открыть PDF
                                     </a>
                                 @else
-                                    <!-- Если PDF нет, показываем форму загрузки -->
-                                    <form action="/upload-assign-pdf/{{ $employee->id }}/{{ $tablet->id }}" method="POST" enctype="multipart/form-data">
+                                    <form action="/upload-assign-pdf/{{ $employee->id }}/{{ $tablet->id }}" method="POST" enctype="multipart/form-data"
+                                          class="flex items-center space-x-1 border border-gray-300 rounded-md p-1 shadow-sm">
                                         @csrf
-                                        <label class="font-bold">Выберите PDF:</label>
-                                        <input type="file" name="pdf_file" accept="application/pdf" required class="border rounded p-1">
-                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                                            Загрузить
+                                        <input type="file" name="pdf_file" accept="application/pdf" required
+                                               class="text-gray-700 text-xs border-none focus:ring-0">
+                                        <button type="submit" class="bg-green-400 hover:bg-green-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                            ⬆️ Загрузить
                                         </button>
                                     </form>
                                 @endif
 
-                                <form action="{{ route('unassign-tablet', ['employee' => $employee->id, 'tablet' => $tablet->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to unassign the tablet?');">
+                                <!-- Кнопка отвязки -->
+                                <form action="{{ route('unassign-tablet', ['employee' => $employee->id, 'tablet' => $tablet->id]) }}" method="POST"
+                                      onsubmit="return confirm('Are you sure?');">
                                     @csrf
-                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-                                        Unassign tablet
+                                    <button type="submit" class="bg-red-400 hover:bg-red-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                        ❌ Unassign
                                     </button>
                                 </form>
 
-
-                                <!-- Кнопка Unassign tablet -->
-                                <button id="openModalBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-                                    Unassign with PDF
-                                </button>
-
-                                <!-- Затемненный фон и модальное окно -->
-                                <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
-                                    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-                                        <h2 class="text-lg font-bold mb-4">Прикрепите PDF перед отвязкой</h2>
-
-                                        <!-- Форма загрузки PDF -->
-                                        <form id="uploadForm" action="{{ route('upload-unassign-pdf', [$employee->id, $tablet->id]) }}"
-                                            method="POST" enctype="multipart/form-data">
-                                            @csrf
-                                            <input type="file" name="unassign_pdf" accept="application/pdf" required class="border rounded p-1 w-full mb-4">
-
-                                            <div class="flex justify-between">
-                                                <button type="button" id="closeModalBtn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">
-                                                    Отмена
-                                                </button>
-                                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                                                    Загрузить PDF
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-
-                                <!-- JavaScript -->
-                                <script>
-                                    document.addEventListener("DOMContentLoaded", function () {
-                                        const modal = document.getElementById("modal");
-                                        const openModalBtn = document.getElementById("openModalBtn");
-                                        const closeModalBtn = document.getElementById("closeModalBtn");
-                                        const uploadForm = document.getElementById("uploadForm");
-
-                                        // Открыть модальное окно
-                                        openModalBtn.addEventListener("click", function () {
-                                            modal.classList.remove("hidden");
-                                        });
-
-                                        // Закрыть модальное окно
-                                        closeModalBtn.addEventListener("click", function () {
-                                            modal.classList.add("hidden");
-                                        });
-
-                                        // При отправке формы скрываем модальное окно и обновляем страницу
-                                        uploadForm.addEventListener("submit", function () {
-                                            setTimeout(() => {
-                                                location.reload();
-                                            }, 1500);
-                                        });
-                                    });
-                                </script>
-
-
-
-
-
-                                {{-- @if($tablet->pdfAssignment && $tablet->pdfAssignment->pdf_path) --}}
-                                    {{-- <form action="/upload-unassign-pdf" method="POST" enctype="multipart/form-data" class="mb-4">
-                                        @csrf
-                                        <label class="font-bold">Прикрепите PDF перед отвязкой:</label>
-                                        <input type="file" name="unassign_pdf" accept="application/pdf" required class="border rounded p-1">
-                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                                            Загрузить PDF
-                                        </button>
-                                    </form> --}}
-                                {{-- @endif --}}
-
+                                <!-- Дополнительная форма -->
+                                <x-dark-form :employee="$employee" :tablet="$tablet"/>
                             </div>
 
                         </li>
@@ -139,6 +74,27 @@
         <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
     </form>
 </div>
+
+<div>
+    <h3 class="font-semibold text-sm text-gray-700">History:</h3>
+    <ul class="text-sm text-gray-500">
+        @foreach($tabletHistories as $history)
+            <li>
+                <span >{{ $history->tablet ? $history->tablet->serial_number : '' }} ----- </span>
+                <span class="text-sm">{{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} - {{ $history->returned_at ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y') : ''}}</span>
+                @if($history->pdf_path)
+                    - <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank">PDF1</a>
+                @endif
+                @if($history->unassign_pdf)
+                    - <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank">PDF2</a>
+                @endif
+
+            </li>
+        @endforeach
+    </ul>
+</div>
+
+
 
 <script>
     document.getElementById('toggle-bricks-btn').addEventListener('click', function () {

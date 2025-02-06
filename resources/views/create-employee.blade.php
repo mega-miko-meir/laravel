@@ -1,22 +1,30 @@
-@extends('layout')
+{{-- @extends('layout')
 
 @section('content')
     <div class="container mx-auto px-4 py-8">
         <x-back-button />
-        <h1>This is employee create form</h1>
+        <h1 class="text-2xl font-bold mb-6 text-gray-700">Create Employee</h1>
         <div class="p-6 bg-gray-100 rounded-lg shadow-md mb-8">
-            <h2 class="text-xl font-semibold mb-4">Create an employee</h2>
-            <form action="/create-employee" method="POST" class="space-y-4">
-                @csrf
-                <input name="full_name" type="text" placeholder="Full Name" class="w-full p-2 border rounded">
-                <input name="first_name" type="text" placeholder="First Name" class="w-full p-2 border rounded">
-                <input name="last_name" type="text" placeholder="Last Name" class="w-full p-2 border rounded">
-                <input name="birth_date" type="date" placeholder="Birth date" class="w-full p-2 border rounded">
-                <input name="email" type="email" placeholder="Email" class="w-full p-2 border rounded">
-                <input name="hiring_date" type="date" placeholder="Hiring Date" class="w-full p-2 border rounded">
-                <input name="position" type="text" placeholder="Position" class="w-full p-2 border rounded">
-                <button class="btn-primary bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Submit</button>
-            </form>
+            <x-employee-form action="/create-employee" />
+        </div>
+    </div>
+@endsection --}}
+
+@extends('layout')
+
+@section('content')
+    <div class="bg-gray-200 min-h-screen flex items-center justify-center">
+        <div class="p-8 bg-white rounded-lg shadow-lg w-full max-w-3xl">
+            <x-back-button />
+            <h1 class="text-2xl font-bold mb-6 text-gray-700">
+                {{ isset($employee) ? 'Edit Employee' : 'Create Employee' }}
+            </h1>
+            <x-employee-form
+                :employee="$employee ?? null"
+                action="{{ isset($employee) ? '/edit-employee/' . $employee->id : '/create-employee' }}"
+                method="{{ isset($employee) ? 'PUT' : 'POST' }}"
+            />
         </div>
     </div>
 @endsection
+

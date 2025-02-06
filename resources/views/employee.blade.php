@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto py-6">
 
     <x-flash-message />
     <x-back-button />
@@ -22,7 +22,11 @@
     <br>
 
     <!-- Tablet Assignment Section -->
-    <x-tablet-assignment :employee="$employee" :availableTablets="$availableTablets"/>
+    <x-tablet-assignment
+    :employee="$employee"
+    :availableTablets="$availableTablets"
+    :tabletHistories="$tabletHistories"
+    />
 
 </div>
 

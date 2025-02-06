@@ -1,4 +1,4 @@
-@props(['employee', 'tablet'])
+@props(['employee', 'tablet', 'hasPdf', 'pdfAssignment'])
 
 
 <div class="text-[10px]">
@@ -74,11 +74,15 @@
     <table class="w-4/5 mx-auto table-auto">
         <tr>
             <td class="py-2">Передал в указанном количестве и комплектации</td>
-            <td class="py-2 font-bold">Акимбеков Мейржан, CRM-менеджер</td>
+            <td class="py-2 font-bold">
+                {{ $hasPdf ? $employee->full_name :'Акимбеков Мейржан, CRM-менеджер' }}
+            </td>
         </tr>
         <tr>
             <td class="py-2">Принял в указанном количестве и комплектации</td>
-            <td class="py-2 font-bold">{{$employee->full_name}}</td>
+            <td class="py-2 font-bold">
+                {{ $hasPdf ? 'Акимбеков Мейржан, CRM-менеджер' : $employee->full_name }}
+            </td>
         </tr>
         <tr>
             <td class="py-2">Подтвердил передачу в указанном количестве и комплектации</td>

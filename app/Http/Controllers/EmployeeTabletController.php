@@ -15,12 +15,6 @@ class EmployeeTabletController extends Controller
     // {
     //     return view('components/upload-pdf');
     // }
-    protected $employeeController;
-
-    public function __construct(EmployeeController $employeeController)
-    {
-        $this->employeeController = $employeeController;
-    }
 
     public function uploadAssignPdf(Request $request, Employee $employee, Tablet $tablet){
         $request->validate([
@@ -83,7 +77,7 @@ class EmployeeTabletController extends Controller
         ]);
 
         // return back()->with('success', 'Файл успешно загружен! Теперь можно отвязать планшет.');
-        return $this->employeeController->unassignTablet($employee, $tablet);
+        return $this->unassignTablet($employee, $tablet);
     }
 
 
@@ -92,4 +86,82 @@ class EmployeeTabletController extends Controller
         $assignment = EmployeeTablet::findOrFail($id);
         return response()->download(storage_path("app/public/{$assignment->pdf_path}"));
     }
+
+    public function unassignTablet(Employee $employee, Tablet $tablet){
+        $pdfAssignment = DB::table('employee_tablet')
+            ->where('employee_id', $employee->id)
+            ->where('tablet_id', $tablet->id)
+            ->where('confirmed', 0)
+            ->orderByDesc('id') // Берем только поле pdf_path
+            ->first();
+
+        $pdfUnassignment = DB::table('employee_tablet')
+            ->where('employee_id', $employee->id)
+            ->where('tablet_id', $tablet->id)
+            ->orderByDesc('id') // Берем только поле pdf_path
+            ->first();
+
+
+        $tablet->employee()->dissociate();
+        $tablet->save();
+
+        if($pdfAssignment) {
+            DB::table('employee_tablet')
+            ->where('id', $pdfAssignment->id) // Указываем ID найденной записи
+            ->delete();
+
+            return redirect()->back()->with('success', 'Tablet unassigned and removed due to unconfirmed status.');
+        } else {
+            // if (!$pdfUnassignment || empty($pdfUnassignment->unassign_pdf)) {
+            //     return redirect()->back()->with('error', 'Для отвязки планшета необходимо загрузить PDF.');
+            // }
+            $tablet->old_employee_id = $employee->full_name;
+            $tablet->save();
+            $employee->employee_tablet()->updateExistingPivot($tablet->id, ['returned_at' => now()]);
+            return redirect()->back()->with('success', 'Tablet successfully unassigned from the employee.');
+        }
+
+
+    }
+
+    public function assignTablet(Request $request, Employee $employee){
+        // $employee = Employee::findOrFail($employee->id);
+        $tablet = Tablet::findOrFail($request->input('tablet_id'));
+
+        $tablet->employee()->associate($employee);
+        // $tablet->employee_id = $employee->id;
+        $tablet->save();
+        // Filling in employee_territory table
+        $employee->employee_tablet()->attach($tablet->id, ['assigned_at' => now()]);
+
+
+
+        return redirect()->back()->with('success', 'Tablet successfully assigned to the employee.');
+    }
+
+    public function printAct(Employee $employee, Tablet $tablet)
+    {
+        // Получаем PDF для планшета
+        $pdfAssignment = DB::table('employee_tablet')
+            ->where('employee_id', $employee->id)
+            ->where('tablet_id', $tablet->id)
+            ->select('id', 'pdf_path')
+            ->orderByDesc('id')
+            ->first();
+
+        // Проверка наличия pdfAssignment
+        $hasPdf = $pdfAssignment && $pdfAssignment->pdf_path;
+
+        // Данные, которые будут переданы в представление
+        return view('print-act', [
+            'employee' => $employee,
+            'tablet' => $tablet,
+            'hasPdf' => $hasPdf, // Флаг для наличия pdf
+            'pdfAssignment' => $pdfAssignment, // Для использования в компоненте
+            'showHeader' => false,
+            'printPadding' => 1
+        ]);
+    }
+
+
 }
