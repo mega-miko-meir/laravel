@@ -5,9 +5,10 @@ use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\BrickController;
 
+use App\Http\Controllers\BrickController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use App\Http\Controllers\TabletController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeTabletController;
 
@@ -23,11 +24,12 @@ Route::post('/login', [UserController::class, 'login']);
 
 Route::get('/create-employee', [EmployeeController::class, 'createEmployeeForm']);
 Route::post('/create-employee', [EmployeeController::class, 'createEmployee']);
-Route::get('/employee/{id}', [EmployeeController::class,'showEmployee']);
+Route::get('/employee/{id}', [EmployeeController::class,'showEmployee'])->name('employees.show');
 Route::get('/edit-employee/{employee}', [EmployeeController::class, 'showEditEmployee']);
 Route::put('/edit-employee/{employee}', [EmployeeController::class, 'actuallyEditEmployee']);
 Route::delete('/delete-employee/{employee}', [EmployeeController::class, 'deleteEmployee']);
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
+Route::get('/tablets', [TabletController::class, 'searchTablet'])->name('tablets.search');
 
 // Tablet assignment
 Route::post('/assign-tablet/{employee}', [EmployeeTabletController::class, 'assignTablet']);
@@ -78,3 +80,4 @@ Route::post('/upload-unassign-pdf/{employee}/{tablet}', [EmployeeTabletControlle
 // Route::post('/unassign-tablet/{employee}/{tablet}', [EmployeeTabletController::class, 'unassignTablet'])
 //     ->name('unassign-tablet');
 
+Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('tablets.show');

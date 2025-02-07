@@ -220,7 +220,10 @@ class EmployeeController extends Controller
         // Обновление данных модели
         $employee->update($incomingFields);
 
-        return redirect('/')->with('success', 'Employee updated successfully!');
+        // return redirect('/')->with('success', 'Employee updated successfully!');
+        return back()->with('success', 'Данные успешно загружены!');
+
+
     }
 
 

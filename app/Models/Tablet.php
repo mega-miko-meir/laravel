@@ -15,7 +15,10 @@ class Tablet extends Model
         'beeline_number_status',
         'status',
         'old_employee_id',
-        'employee_id'];
+        'employee_id',
+        'pdf_path',
+        'unassign_pdf'
+    ];
 
     public function employee(){
         return $this->belongsTo(Employee::class);
@@ -30,4 +33,15 @@ class Tablet extends Model
                     ->withPivot('assigned_at', 'returned_at', 'confirmed', 'pdf_path')
                     ->withTimestamps();
     }
+
+    public function currentAssignment(){
+        return $this->hasOne(EmployeeTablet::class, 'tablet_id')
+            ->orderByDesc('id'); // Последняя запись
+    }
+
+    // public function currentAssignment()
+    // {
+    //     return $this->hasOne(Assignment::class)->latestOfMany();
+    // }
+
 }

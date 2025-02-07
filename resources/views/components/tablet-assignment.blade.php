@@ -75,24 +75,49 @@
     </form>
 </div>
 
-<div>
-    <h3 class="font-semibold text-sm text-gray-700">History:</h3>
-    <ul class="text-sm text-gray-500">
-        @foreach($tabletHistories as $history)
-            <li>
-                <span >{{ $history->tablet ? $history->tablet->serial_number : '' }} ----- </span>
-                <span class="text-sm">{{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} - {{ $history->returned_at ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y') : ''}}</span>
-                @if($history->pdf_path)
-                    - <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank">PDF1</a>
-                @endif
-                @if($history->unassign_pdf)
-                    - <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank">PDF2</a>
-                @endif
+<div class="bg-white shadow-md rounded-lg p-4 mt-6">
+    <button onclick="toggleHistory()" class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
+        История планшетов
+        <svg id="arrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
 
+    <ul id="historyList" class="text-sm text-gray-600 space-y-2 hidden">
+        @foreach($tabletHistories as $history)
+            <li class="flex justify-between items-center border-b py-2">
+                <div>
+                    <span class="font-medium text-gray-800">
+                        {{ $history->tablet ? $history->tablet->serial_number : 'Неизвестный планшет' }}
+                    </span>
+                    <span class="text-sm text-gray-500 ml-2">
+                        {{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} -
+                        {{ $history->returned_at ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y') : 'Текущий пользователь' }}
+                    </span>
+                </div>
+                <div class="space-x-3">
+                    @if($history->pdf_path)
+                        <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank" class="text-blue-500 hover:underline">PDF1</a>
+                    @endif
+                    @if($history->unassign_pdf)
+                        <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank" class="text-blue-500 hover:underline">PDF2</a>
+                    @endif
+                </div>
             </li>
         @endforeach
     </ul>
 </div>
+
+<script>
+    function toggleHistory() {
+        let list = document.getElementById("historyList");
+        let arrow = document.getElementById("arrowIcon");
+
+        list.classList.toggle("hidden");
+        arrow.classList.toggle("rotate-180");
+    }
+</script>
+
 
 
 

@@ -69,16 +69,37 @@
         </form>
     @endif
 </div>
-<br>
-<div>
-    <h3 class="font-semibold text-sm text-gray-700">History:</h3>
-    <ul class="text-sm text-gray-500">
+<div class="bg-white shadow-md rounded-lg p-4 mt-6">
+    <button onclick="toggleTerritoryHistory()" class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
+        История территорий
+        <svg id="territoryArrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+
+    <ul id="territoryHistoryList" class="text-sm text-gray-600 space-y-2 hidden">
         @foreach($territoriesHistory as $history)
-            <li>
-                <span >{{ $history->territory ? $history->territory->territory_name : '' }}</span>
-                <span class="text-sm">{{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} - {{ $history->unassigned_at ? \Carbon\Carbon::parse($history->unassigned_at)->format('d.m.Y') : ''}}</span>
+            <li class="flex justify-between items-center border-b py-2">
+                <div>
+                    <span class="font-medium text-gray-800">
+                        {{ $history->territory ? $history->territory->territory_name : 'Неизвестная территория' }}
+                    </span>
+                    <span class="text-sm text-gray-500 ml-2">
+                        {{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} -
+                        {{ $history->unassigned_at ? \Carbon\Carbon::parse($history->unassigned_at)->format('d.m.Y') : 'Текущий' }}
+                    </span>
+                </div>
             </li>
         @endforeach
     </ul>
 </div>
-<br>
+
+<script>
+    function toggleTerritoryHistory() {
+        let list = document.getElementById("territoryHistoryList");
+        let arrow = document.getElementById("territoryArrowIcon");
+
+        list.classList.toggle("hidden");
+        arrow.classList.toggle("rotate-180");
+    }
+</script>

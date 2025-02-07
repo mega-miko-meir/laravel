@@ -16,40 +16,29 @@ class EmployeeTabletController extends Controller
     //     return view('components/upload-pdf');
     // }
 
-    public function uploadAssignPdf(Request $request, Employee $employee, Tablet $tablet){
+    public function uploadAssignPdf(Request $request, Employee $employee, Tablet $tablet)
+    {
         $request->validate([
             'pdf_file' => 'required|mimes:pdf|max:2048',
         ]);
 
-        // Сохранение файла в storage/app/public/uploads
-        $path = $request->file('pdf_file')->store('uploads/assign', 'public');
+        $pdfFile = $request->file('pdf_file');
 
-        // Обновление записи в пивотной таблице employee_tablet
-        // EmployeeTablet::where('employee_id', $employee->id)
-        // ->where('tablet_id', $tablet->id)
-        // ->update([
-        //     'confirmed' => true,
-        //     'pdf_path' => $path,
-        // ]);
+        // Добавляем timestamp к имени файла
+        $filename = $pdfFile->getClientOriginalName() . '_' . time();
 
+        // Сохраняем в storage/app/public/uploads/assign
+        $path = $pdfFile->storeAs('uploads/assign', $filename, 'public');
+
+        // Обновляем запись в пивотной таблице
         $employee->employee_tablet()->updateExistingPivot($tablet->id, [
             'confirmed' => true,
-            'pdf_path' => $path
+            'pdf_path' => $path,
         ]);
 
-        $pdfAssignment = DB::table('employee_tablet')
-                ->where('employee_id', $employee->id)
-                ->where('tablet_id', $tablet->id)
-                ->select('pdf_path')
-                ->orderByDesc('id') // Берем только поле pdf_path
-                ->first();
-
-
         return back()->with('success', 'Файл успешно загружен!');
-        // return view('employee', compact('pdf_path', 'employee'));
-
-        // return view('employee', compact('pdf_path'));
     }
+
 
     // public function confirmTerritory(Employee $employee, Territory $territory){
     //     $assignment = $employee->employee_territory()->where('territory_id', $territory->id)->first();
@@ -101,6 +90,8 @@ class EmployeeTabletController extends Controller
             ->orderByDesc('id') // Берем только поле pdf_path
             ->first();
 
+        // $tablet->currentAssignment()->delete();
+        // $tablet->refresh();
 
         $tablet->employee()->dissociate();
         $tablet->save();
