@@ -28,12 +28,12 @@ class Employee extends Model
     }
 
     public function tablets(){
-        return $this->hasMany(Tablet::class);
+        return $this->hasMany(Tablet::class, 'employee_id');
     }
 
     public function employee_tablet(){
         return $this->belongsToMany(Tablet::class, 'employee_tablet')
-                    ->withPivot('assigned_at', 'returned_at', 'confirmed', 'pdf_path')
+                    ->withPivot('id', 'assigned_at', 'returned_at', 'confirmed', 'pdf_path')
                     ->withTimestamps();
     }
 

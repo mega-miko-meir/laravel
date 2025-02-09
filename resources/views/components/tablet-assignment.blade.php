@@ -10,7 +10,9 @@
                 <ul class="space-y-4">
                     @foreach($employee->tablets as $tablet)
                         <li class="flex items-center justify-between text-sm text-gray-600 py-2 border-b border-gray-200">
-                            <span>{{ $tablet->invent_number }} - {{ $tablet->serial_number }}</span>
+                            <a href="{{route('tablets.show', $tablet->id)}}" class="text-blue-500 hover:underline">
+                                {{ $tablet->invent_number }} - {{ $tablet->serial_number }}
+                            </a>
                             <div class="flex items-center space-x-2 text-sm">
                                 <!-- Кнопка печати -->
                                 <form action="/print-act/{{$employee->id}}/{{$tablet->id}}" method="POST">

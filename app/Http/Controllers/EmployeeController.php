@@ -285,8 +285,6 @@ class EmployeeController extends Controller
             return $territory;
         });
 
-
-
         $tablets = $employee->tablets->map(function ($tablet) use ($employee) {
             $tablet->pdfAssignment = DB::table('employee_tablet')
                 ->where('employee_id', $employee->id)
@@ -297,6 +295,10 @@ class EmployeeController extends Controller
 
             return $tablet;
         });
+
+        // $tablets = $employee->employee_tablet->each(function ($tablet) {
+        //     $tablet->pdfAssignment = $tablet->pivot->pdf_path ?? null;
+        // });
 
         // dd($tablets);
 

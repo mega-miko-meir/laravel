@@ -10,6 +10,7 @@ use App\Http\Controllers\BrickController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use App\Http\Controllers\TabletController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\TerritoryController;
 use App\Http\Controllers\EmployeeTabletController;
 
 // Route::get('/', function(){
@@ -29,7 +30,6 @@ Route::get('/edit-employee/{employee}', [EmployeeController::class, 'showEditEmp
 Route::put('/edit-employee/{employee}', [EmployeeController::class, 'actuallyEditEmployee']);
 Route::delete('/delete-employee/{employee}', [EmployeeController::class, 'deleteEmployee']);
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
-Route::get('/tablets', [TabletController::class, 'searchTablet'])->name('tablets.search');
 
 // Tablet assignment
 Route::post('/assign-tablet/{employee}', [EmployeeTabletController::class, 'assignTablet']);
@@ -75,9 +75,13 @@ Route::post('/upload-assign-pdf/{employee}/{tablet}', [EmployeeTabletController:
 Route::get('/upload-assign-pdf/{id}', [EmployeeTabletController::class, 'download']);
 
 Route::post('/upload-unassign-pdf/{employee}/{tablet}', [EmployeeTabletController::class, 'uploadUnassignPdf'])
-    ->name('upload-unassign-pdf');
+->name('upload-unassign-pdf');
 
 // Route::post('/unassign-tablet/{employee}/{tablet}', [EmployeeTabletController::class, 'unassignTablet'])
 //     ->name('unassign-tablet');
 
+Route::get('/tablets', [TabletController::class, 'searchTablet'])->name('tablets.search');
 Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('tablets.show');
+
+Route::get('/territories', [TerritoryController::class, 'searchTerritory'])->name('territories.search');
+Route::get('/territories/{territory}', [TerritoryController::class, 'showTerritory'])->name('territories.show');

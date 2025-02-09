@@ -29,24 +29,15 @@ class TabletController extends Controller
 
 
     public function showTablet(Tablet $tablet)
-{
-    $previousUsers = DB::table('employee_tablet')
-        ->join('employees', 'employee_tablet.employee_id', '=', 'employees.id')
-        ->where('employee_tablet.tablet_id', $tablet->id)
-        ->select(
-            'employees.id',
-            'employees.full_name',
-            'employee_tablet.assigned_at',
-            'employee_tablet.returned_at',
-            'employee_tablet.pdf_path',
-            'employee_tablet.unassign_pdf'
-
-        )
-        ->orderByDesc('employee_tablet.assigned_at') // Сортируем по дате выдачи
+    {
+        $previousUsers = $tablet->employees()
+        ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf')
+        ->orderByDesc('employee_tablet.assigned_at')
         ->get();
 
-    return view('show-tablet', compact('tablet', 'previousUsers'));
-}
+
+        return view('show-tablet', compact('tablet', 'previousUsers'));
+    }
 
 
 }

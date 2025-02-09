@@ -25,7 +25,10 @@ class EmployeeTabletController extends Controller
         $pdfFile = $request->file('pdf_file');
 
         // Добавляем timestamp к имени файла
-        $filename = $pdfFile->getClientOriginalName() . '_' . time();
+        // $filename = $pdfFile->getClientOriginalName();
+        $timestamp = now()->format('d.m.Y');
+        $filename = "Передача_{$employee->first_name}_{$employee->last_name}_{$tablet->serial_number}_{$timestamp}.pdf";
+
 
         // Сохраняем в storage/app/public/uploads/assign
         $path = $pdfFile->storeAs('uploads/assign', $filename, 'public');

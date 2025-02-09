@@ -30,7 +30,7 @@ class Tablet extends Model
 
     public function employees(){
         return $this->belongsToMany(Employee::class, 'employee_tablet')
-                    ->withPivot('assigned_at', 'returned_at', 'confirmed', 'pdf_path')
+                    ->withPivot('assigned_at', 'returned_at', 'confirmed', 'pdf_path', 'unassign_pdf')
                     ->withTimestamps();
     }
 
