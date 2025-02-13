@@ -8,6 +8,7 @@ use App\Models\Tablet;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Http\Request;
+use App\Models\EmployeeEvent;
 use App\Models\EmployeeTablet;
 use App\Models\EmployeeTerritory;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,89 @@ use App\View\Components\employee as ComponentsEmployee;
 
 class EmployeeController extends Controller
 {
+
+    public function updateStatusAndEvent(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'status' => 'required|string',
+            'event_date' => 'nullable|date',
+        ]);
+
+        $eventDate = $request->event_date ?? now();
+
+        // Проверяем, изменился ли статус
+        if ($employee->status === $request->status) {
+            return back()->with('info', 'Статус сотрудника уже установлен, событие не добавлено.');
+        }
+
+        // Создаем запись в таблице событий
+        EmployeeEvent::create([
+            'employee_id' => $employee->id,
+            'event_type' => $request->status,
+            'event_date' => $eventDate,
+        ]);
+
+        // Обновляем статус и даты в таблице employees
+        $updateData = ['status' => $request->status];
+
+        if ($request->status === 'new') {
+            $updateData['hiring_date'] = $eventDate;
+        } elseif ($request->status === 'dismissed') {
+            $updateData['firing_date'] = $eventDate;
+        }
+
+        $employee->update($updateData);
+
+        return back()->with('success', 'Статус сотрудника обновлен, событие добавлено.');
+    }
+
+
+
+    // public function store(Request $request, Employee $employee){
+    //     $request->validate([
+    //         'event_type' => 'required|string',
+    //         'event_date' => 'nullable|date',
+    //     ]);
+
+    //     // Если дата не указана, используем текущую дату
+    //     $eventDate = $request->event_date ?? now();
+
+    //     // Записываем событие в таблицу employee_events
+    //     EmployeeEvent::create([
+    //         'employee_id' => $employee->id,
+    //         'event_type' => $request->event_type,
+    //         'event_date' => $eventDate,
+    //     ]);
+
+    //     // Обновляем статус и даты в таблице employees
+    //     if ($request->event_type === 'hired') {
+    //         $employee->update(['hiring_date' => $eventDate, 'status' => 'active']);
+    //     } elseif ($request->event_type === 'dismissed') {
+    //         $employee->update(['firing_date' => $eventDate, 'status' => 'dismissed']);
+    //     } else {
+    //         $employee->update(['status' => $request->event_type]);
+    //     }
+
+    //     return back()->with('success', 'Событие успешно добавлено.');
+    // }
+
+
+    public function updateStatus(Request $request, Employee $employee){
+        $request->validate([
+            'status' => 'required|in:new,active,dismissed,maternity_leave,long_vacation',
+        ]);
+
+        $employee->update([
+            'status' => $request->status,
+            'hiring_date' => $request->status === 'active' ? now() : $employee->hiring_date,
+            'firing_date' => in_array($request->status, ['dismissed', 'maternity_leave']) ? now() : null
+            // 'firing_date' => in_array($request->status, ['dismissed', 'maternity_leave']) ? null,
+        ]);
+
+        return redirect()->back()->with('success', 'Статус сотрудника успешно обновлен.');
+    }
+
+
 
     public function exportToExcel()
     {
@@ -182,6 +266,7 @@ class EmployeeController extends Controller
         $employees = Employee::where('first_name', 'like', "%$query%")
             ->orWhere('full_name', 'like', "%$query%")
             ->orWhere('email', 'like', "%$query%")
+            ->orWhere('status', 'like', "%$query%")
             ->orWhereHas('territories', function ($q) use ($query) {
                 $q->where('team', 'like', "%$query%")
                 ->orWhere('city', 'like', "%$query%");
@@ -235,22 +320,35 @@ class EmployeeController extends Controller
         return view('create-employee');
     }
 
-    public function createEmployee(Request $request){
-        $incomingFields = $request->validate(
-            [
-                'full_name' => 'required',
-                'first_name' => 'nullable',
-                'last_name' => 'nullable',
-                'birth_date' => 'nullable',
-                'email' => 'required|email|unique:employees,email',
-                'hiring_date' => 'nullable',
-                'position' => 'nullable',
-                'status' => 'nullable',
+    public function createEmployee(Request $request)
+    {
+        $incomingFields = $request->validate([
+            'full_name' => 'required',
+            'first_name' => 'nullable',
+            'last_name' => 'nullable',
+            'birth_date' => 'nullable',
+            'email' => 'required|email|unique:employees,email',
+            'hiring_date' => 'nullable|date',
+            'position' => 'nullable',
+            'status' => 'nullable',
+        ]);
 
-            ]
-        );
+        // Устанавливаем статус по умолчанию "new"
+        $incomingFields['status'] = 'new';
 
-        Employee::create($incomingFields);
+        // Если дата найма не передана, устанавливаем текущую дату
+        $incomingFields['hiring_date'] = $incomingFields['hiring_date'] ?? now();
+
+        // Создаём сотрудника
+        $employee = Employee::create($incomingFields);
+
+        // Создаём событие "new"
+        EmployeeEvent::create([
+            'employee_id' => $employee->id,
+            'event_type' => 'new',
+            'event_date' => $employee->hiring_date ?? now(), // Используем дату найма
+        ]);
+
         return redirect('/')->with('success', 'Employee added successfully!');
     }
 

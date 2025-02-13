@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
 
 class Employee extends Model
@@ -13,6 +14,7 @@ class Employee extends Model
         'birth_date',
         'email',
         'hiring_date',
+        'firing_date',
         'position',
         'status'
         ];
@@ -40,4 +42,41 @@ class Employee extends Model
     // public function oldTablets(){
     //     return $this->hasMany(Tablet::class);
     // }
+
+    public function setStatus(string $status){
+        $validStatuses = ['new', 'active', 'dismissed', 'maternity_leave'];
+
+        if (!in_array($status, $validStatuses)) {
+            throw new \InvalidArgumentException("Недопустимый статус: {$status}");
+        }
+
+        $this->update(['status' => $status]);
+    }
+
+    public function events(){
+        return $this->hasMany(EmployeeEvent::class);
+    }
+
+    protected static function boot(){
+        parent::boot();
+
+        static::creating(function ($employee) {
+            $employee->status = 'new';
+        });
+
+        static::updated(function ($employee) {
+            if ($employee->tablets()->count() === 0) {
+                // Проверяем, есть ли загруженный unassign_pdf
+                $hasReturnedTablet = DB::table('employee_tablet')
+                    ->where('employee_id', $employee->id)
+                    ->whereNotNull('returned_at')
+                    ->exists();
+
+                if ($hasReturnedTablet) {
+                    $employee->setStatus('dismissed');
+                }
+            }
+        });
+    }
+
 }

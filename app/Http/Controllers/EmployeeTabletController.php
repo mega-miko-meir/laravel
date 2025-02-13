@@ -39,6 +39,8 @@ class EmployeeTabletController extends Controller
             'pdf_path' => $path,
         ]);
 
+        $employee->setStatus('active');
+
         return back()->with('success', 'Файл успешно загружен!');
     }
 
@@ -87,14 +89,16 @@ class EmployeeTabletController extends Controller
             ->orderByDesc('id') // Берем только поле pdf_path
             ->first();
 
-        $pdfUnassignment = DB::table('employee_tablet')
+        $assignment = DB::table('employee_tablet')
             ->where('employee_id', $employee->id)
             ->where('tablet_id', $tablet->id)
-            ->orderByDesc('id') // Берем только поле pdf_path
+            ->whereNull('returned_at')
+            ->latest('assigned_at') // Берем только поле pdf_path
             ->first();
 
         // $tablet->currentAssignment()->delete();
         // $tablet->refresh();
+
 
         $tablet->employee()->dissociate();
         $tablet->save();

@@ -5,6 +5,7 @@
         <thead>
             <tr class="bg-gray-100 text-gray-700 text-sm">
                 <th class="px-4 py-3 text-left">Full Name</th>
+                <th class="px-4 py-3 text-left">Status</th>
                 <th class="px-4 py-3 text-left">Team</th>
                 <th class="px-4 py-3 text-left">City</th>
                 <th class="px-4 py-3 text-center">Actions</th>
@@ -17,6 +18,10 @@
                         <a href="/employee/{{ $employee->id }}" class="text-blue-500 hover:underline">
                             {{ $employee->full_name }}
                         </a>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">
+                        <x-status-badge :status="$employee->status" />
+
                     </td>
                     <td class="px-4 py-3 text-gray-700">
                         {{ $employee->territories->first()->team ?? '-' }}

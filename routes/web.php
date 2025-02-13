@@ -85,3 +85,8 @@ Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('
 
 Route::get('/territories', [TerritoryController::class, 'searchTerritory'])->name('territories.search');
 Route::get('/territories/{territory}', [TerritoryController::class, 'showTerritory'])->name('territories.show');
+
+Route::put('/employees/{employee}/dismiss', [EmployeeController::class, 'updateStatus'])->name('employees.updateStatus');
+
+Route::put('/employees/{employee}/update-status-event', [EmployeeController::class, 'updateStatusAndEvent'])
+    ->name('employees.updateStatusAndEvent');
