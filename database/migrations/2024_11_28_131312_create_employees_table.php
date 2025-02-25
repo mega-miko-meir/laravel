@@ -15,13 +15,13 @@ return new class extends Migration
             $table->id();
             $table->string('full_name');
             $table->string('first_name')->nullable();
-            $table->string('last_name');
+            $table->string('last_name')->nullable();
             $table->timestamp('birth_date')->nullable();
-            $table->string('email')->unique();
+            $table->string('email')->nullable()->unique();
             $table->timestamp('hiring_date')->nullable();
             $table->timestamp('firing_date')->nullable();
-            $table->string('position');
-            $table->string('status');
+            $table->string('position')->nullable();
+            $table->string('status')->nullable();
             $table->timestamps();
 
         });

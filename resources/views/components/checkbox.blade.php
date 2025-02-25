@@ -6,8 +6,6 @@
         Добавить брики
     </button>
     <br>
-    <br>
-    <br>
 
     <!-- Выпадающий список -->
     <div id="dropdown-menu" class="hidden whitespace-nowrap absolute right-100 mt-2 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
@@ -52,13 +50,13 @@
     </button> --}}
     <!-- Скрытый список бриков -->
 
-    <table id="bricks-list" class="min-w-full divide-y divide-gray-200">
-        <thead id="table-head" class="bg-gray-50 cursor-pointer">
+    <table id="bricks-list" class="w-full max-w-md border rounded-lg shadow-sm divide-y divide-gray-200">
+        <thead id="table-head" class="bg-gray-100 text-gray-700 text-sm uppercase font-semibold">
             <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-4 py-3 text-left tracking-wider">
                     Брики
                 </th>
-                <th id="action-column" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th id="action-column" class="px-4 py-3 text-left tracking-wider">
                     {{-- Действия --}}
                 </th>
             </tr>
@@ -66,30 +64,29 @@
         <tbody id="table-body" class="hidden bg-white divide-y divide-gray-200">
             @if($selectedBricks->isNotEmpty())
                 @foreach($selectedBricks as $brick)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">
                             {{ $brick->description }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500">
-                            {{-- <form action="{{ route('detach.brick', [$employee->territory->id, $brick->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this brick from the territory?');"> --}}
-                            <form action="{{ route('assign.bricks', [$employee->territories->first()->id, $brick->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this brick?');">
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            <form action="{{ route('assign.bricks', [$employee->territories->first()->id, $brick->id]) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот brick?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900">Удалить</button>
+                                <button type="submit" class="text-red-500 hover:text-red-700 font-medium">Удалить</button>
                             </form>
-
                         </td>
                     </tr>
                 @endforeach
             @else
                 <tr>
-                    <td colspan="2" class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 text-center">
+                    <td colspan="2" class="px-4 py-3 text-sm text-gray-500 text-center">
                         Нет привязанных бриков.
                     </td>
                 </tr>
             @endif
         </tbody>
     </table>
+
 </div>
 
 <script>

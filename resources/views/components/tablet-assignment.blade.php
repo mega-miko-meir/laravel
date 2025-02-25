@@ -64,17 +64,25 @@
     @endif
 
     <!-- Tablet Assign Form -->
+    {{-- <form action="/assign-tablet/{{$employee->id}}" method="GET" class="mt-4">
+        @csrf
+        <label for="tablet_search" class="block text-sm font-medium text-gray-600">Search Tablet</label>
+        <input type="text" id="tablet_search" name="search" class="w-full p-3 border rounded-lg mt-2" placeholder="Search by serial or invent number" value="{{ request('search') }}">
+
+        <button type="submit" class="btn-primary mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Search</button>
+    </form> --}}
     <form action="/assign-tablet/{{$employee->id}}" method="POST" class="mt-4">
         @csrf
         <label for="tablet" class="block text-sm font-medium text-gray-600">Assign Tablet</label>
         <select id="tablet" name="tablet_id" class="w-full p-3 border rounded-lg mt-2">
             <option value="">No Tablet</option>
             @foreach ($availableTablets as $tablet)
-                <option value="{{ $tablet->id }}">{{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->old_employee_id ?? ''}}</option>
+                <option value="{{ $tablet->id }}">{{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->old_employee_id ?? '' }}</option>
             @endforeach
         </select>
         <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
     </form>
+
 </div>
 
 <div class="bg-white shadow-md rounded-lg p-4 mt-6">

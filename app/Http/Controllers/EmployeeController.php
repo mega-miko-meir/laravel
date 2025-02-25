@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Models\EmployeeEvent;
 use App\Models\EmployeeTablet;
 use App\Models\EmployeeTerritory;
+use App\Models\EmployeeCredential;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
@@ -20,6 +21,38 @@ use App\View\Components\employee as ComponentsEmployee;
 
 class EmployeeController extends Controller
 {
+    public function updateCredentials(Request $request, $id)
+    {
+        $employee = Employee::findOrFail($id);
+
+        // Проверяем, есть ли уже такой логин
+        $credential = EmployeeCredential::where('employee_id', $employee->id)
+            ->where('system', $request->system)
+            ->first();
+
+        if ($credential) {
+            // Обновляем существующий логин
+            $credential->update([
+                'user_name' => trim($request->user_name) ?: '',
+                'login' => trim($request->login) ?: '',
+                'password' => trim($request->password) ?: '',
+                'add_password' => trim($request->add_password) ?: ''
+            ]);
+        } else {
+            // Создаём новый
+            EmployeeCredential::create([
+                'employee_id' => $employee->id,
+                'system' => $request->system,
+                'user_name' => trim($request->user_name) ?: '',
+                'login' => trim($request->login) ?: '',
+                'password' => trim($request->password) ?: '',
+                'add_password' => trim($request->add_password) ?: ''
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Данные обновлены.');
+    }
+
 
     public function updateStatusAndEvent(Request $request, Employee $employee)
     {
@@ -114,9 +147,11 @@ class EmployeeController extends Controller
         $sheet->setCellValue('B1', 'Имя');
         $sheet->setCellValue('C1', 'Фамилия');
         $sheet->setCellValue('D1', 'Имэйл');
+        $sheet->setCellValue('E1', 'Группа');
+        $sheet->setCellValue('F1', 'Департамент');
 
         // Получаем данные из БД
-        $employees = DB::table('employees')->get();
+        $employees = Employee::with('territories')->get();
         // return $employees;
         $row = 2;
 
@@ -125,6 +160,8 @@ class EmployeeController extends Controller
             $sheet->setCellValue("B$row", $employee->first_name);
             $sheet->setCellValue("C$row", $employee->last_name);
             $sheet->setCellValue("D$row", $employee->email);
+            $sheet->setCellValue("E$row", $employee->territories->first()->team ?? '');
+            $sheet->setCellValue("F$row", $employee->territories->first()->department ?? '');
             $row++;
         }
         // Сохраняем во временный файл
@@ -138,7 +175,7 @@ class EmployeeController extends Controller
     }
 
 
-
+    // This method should be rewritten for employees to upload
     public function uploadEmployees(Request $request)
     {
         $request->validate([
@@ -263,6 +300,11 @@ class EmployeeController extends Controller
     public function searchEmployee(Request $request){
 
         $query = $request->input('search');
+
+        $sort = $request->input('sort', 'full_name'); // По умолчанию сортируем по 'full_name'
+        $order = $request->input('order', 'asc'); // По умолчанию сортировка по возрастанию
+        $activeOnly = $request->input('active_only', 1);
+
         $employees = Employee::where('first_name', 'like', "%$query%")
             ->orWhere('full_name', 'like', "%$query%")
             ->orWhere('email', 'like', "%$query%")
@@ -271,8 +313,20 @@ class EmployeeController extends Controller
                 $q->where('team', 'like', "%$query%")
                 ->orWhere('city', 'like', "%$query%");
             })
+            ->orderBy($sort, $order)
             ->get();
-        return view('home', ['employees' => $employees, 'query' => $query]);
+
+        if ($activeOnly == 1) {
+            $employees = $employees->where('status', 'active');
+        }
+
+        return view('home', [
+            'employees' => $employees,
+            'query' => $query,
+            'sort' => $sort,
+            'order' => $order,
+            'activeOnly' => $activeOnly,
+        ]);
     }
 
     public function deleteEmployee(Employee $employee)
@@ -306,18 +360,16 @@ class EmployeeController extends Controller
         $employee->update($incomingFields);
 
         // return redirect('/')->with('success', 'Employee updated successfully!');
-        return back()->with('success', 'Данные успешно загружены!');
-
-
+        return back()->with('success', 'Данные успешно обновлены!');
     }
 
 
     public function showEditEmployee(Employee $employee){
-        return view('edit-employee', ['employee' => $employee]);
+        return view('create-edit-employee', ['employee' => $employee]);
     }
 
     public function createEmployeeForm(){
-        return view('create-employee');
+        return view('create-edit-employee');
     }
 
     public function createEmployee(Request $request)
@@ -353,7 +405,7 @@ class EmployeeController extends Controller
     }
 
     public function showEmployee($id){
-        $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet'])->findOrFail($id);
+        $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials'])->findOrFail($id);
         // $oldEmployee = Employee::with('tablets')->findOrFail($oldEmployeeId);
         $bricks = Brick::all();
         // $territories = $employee->territories();

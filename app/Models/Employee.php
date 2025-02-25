@@ -79,4 +79,9 @@ class Employee extends Model
         });
     }
 
+    public function credentials()
+    {
+        return $this->hasMany(EmployeeCredential::class);
+    }
+
 }

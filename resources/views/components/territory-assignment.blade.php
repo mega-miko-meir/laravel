@@ -45,11 +45,36 @@
                                 @endif
                             </div>
                         </li>
+                        @if ($territory->role === 'Rep')
+                            <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" />
+                        @else
+                            @if ($territory->children->isEmpty())
+                                <p>Нет дочерних территорий</p>
+                            @else
+                            <p>Дочерние территории</p>
+                            <ul>
+                                @foreach ($territory->children->sortBy(['team', 'asc'])->sortBy(['territory_name', 'asc']) as $child)
+                                <li>
+                                    <span class="font-semibold text-gray-700">{{ $child->team }}</span> -
+                                    <span class="text-gray-900">{{ $child->territory_name }}</span> -
+                                    @if ($child->employee)
+                                        <a href="{{ route('employees.show', $child->employee->id) }}" class="text-blue-600 hover:underline">
+                                            {{ $child->employee->full_name }}
+                                        </a>
+                                    @else
+                                        <span class="text-gray-500 italic">Нет сотрудника</span>
+                                    @endif
+
+                                </li>
+                                @endforeach
+                            </ul>
+                            @endif
+                        @endif
                     @endforeach
                 </ul>
             </p>
         </div>
-        <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" />
+
 
         {{-- Brick information section --}}
 

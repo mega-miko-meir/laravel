@@ -36,13 +36,20 @@ class UserController extends Controller
                 'last_name' => 'required',
                 'position' => 'nullable',
                 'email' => 'required|email|unique:users,email|max:255',
-                'password' => 'required|min:8',
+                'password' => 'required|min:8|confirmed',
             ]
         );
+
+        if ($request->password !== $request->password_confirmation) {
+            return redirect()->back()
+                ->withInput() // Возвращаем введённые данные
+                ->with('error', 'Пароли не совпадают.');
+        }
 
         $incomingFields['password'] = bcrypt($incomingFields['password']);
         $user = User::create($incomingFields);
         Auth::login($user);
+
         return redirect('/')->with('success', 'Congrats! You are logged in!');
     }
 

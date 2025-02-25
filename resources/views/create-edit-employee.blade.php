@@ -1,15 +1,3 @@
-{{-- @extends('layout')
-
-@section('content')
-    <div class="container mx-auto px-4 py-8">
-        <x-back-button />
-        <h1 class="text-2xl font-bold mb-6 text-gray-700">Create Employee</h1>
-        <div class="p-6 bg-gray-100 rounded-lg shadow-md mb-8">
-            <x-employee-form action="/create-employee" />
-        </div>
-    </div>
-@endsection --}}
-
 @extends('layout')
 
 @section('content')

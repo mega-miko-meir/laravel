@@ -123,19 +123,30 @@ class EmployeeTabletController extends Controller
     }
 
     public function assignTablet(Request $request, Employee $employee){
-        // $employee = Employee::findOrFail($employee->id);
+        // Валидируем input
+        $request->validate([
+            'tablet_id' => 'required|exists:tablets,id',
+        ]);
+
+        // Получаем планшет, который был выбран пользователем
         $tablet = Tablet::findOrFail($request->input('tablet_id'));
 
+        // Проверяем, если планшет уже назначен сотруднику, можем ли переназначить
+        if ($tablet->employee_id) {
+            return redirect()->back()->withErrors(['error' => 'This tablet is already assigned to another employee.']);
+        }
+
+        // Связываем планшет с сотрудником
         $tablet->employee()->associate($employee);
-        // $tablet->employee_id = $employee->id;
         $tablet->save();
-        // Filling in employee_territory table
+
+        // Заполняем таблицу связей employee_tablet
         $employee->employee_tablet()->attach($tablet->id, ['assigned_at' => now()]);
 
-
-
+        // Возвращаем успешный ответ
         return redirect()->back()->with('success', 'Tablet successfully assigned to the employee.');
     }
+
 
     public function printAct(Employee $employee, Tablet $tablet)
     {

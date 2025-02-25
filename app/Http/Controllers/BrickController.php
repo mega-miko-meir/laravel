@@ -6,6 +6,7 @@ use App\Models\Brick;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
@@ -49,25 +50,42 @@ class BrickController extends Controller{
         // Creating an excel file template and filling in the data
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        // $sheet->getDefaultColumnDimension()->setWidth(25);
+        $sheet->setTitle('User Creation');
 
         $sheet->setCellValue('A1', 'User');
-        $sheet->setCellValue('A2', $employee->full_name);
+        $sheet->setCellValue('A2', $employee->first_name . ' ' . $employee->last_name);
         $sheet->setCellValue('B1', 'Username');
         $sheet->setCellValue('B2', $employee->email);
         $sheet->setCellValue('C1', 'Email');
         $sheet->setCellValue('C2', $employee->email);
-        $sheet->setCellValue('D1', 'Territory');
-        $sheet->setCellValue('D2', $employee->territories->first()->territory_name);
-        $sheet->setCellValue('E1', 'Division');
-        $sheet->setCellValue('E2', $employee->territories->first()->team);
-        $sheet->setCellValue('F1', 'Manager');
-        $sheet->setCellValue('F2', $employee->territories->first()->manager_id);
+        $sheet->setCellValue('D1', 'FirstName');
+        $sheet->setCellValue('D2', $employee->first_name);
+        $sheet->setCellValue('E1', 'LastName');
+        $sheet->setCellValue('E2', $employee->last_name);
+        $sheet->setCellValue('F1', 'Territory Name');
+        $sheet->setCellValue('F2', $employee->territories->first()->territory_name);
+        $sheet->setCellValue('G1', 'Parent Territory Name');
+        $sheet->setCellValue('G2', $employee->territories->first()->parent->territory_name);
+        $sheet->setCellValue('H1', 'Division');
+        $sheet->setCellValue('H2', $employee->territories->first()->team);
+        $sheet->setCellValue('I1', 'EmployeeNumber');
+        $sheet->setCellValue('I2', '');
+        $sheet->setCellValue('J1', 'Country');
+        $sheet->setCellValue('J2', 'KAZAKHSTAN');
+        $sheet->setCellValue('K1', 'CompanyName');
+        $sheet->setCellValue('K2', 'Nobel Pharma KZ');
+        $sheet->setCellValue('L1', 'MobilePhone');
+        $sheet->setCellValue('L2', '');
+        $sheet->setCellValue('M1', 'Manager Employee Number');
+        $sheet->setCellValue('M2', '');
+        $sheet->setCellValue('N1', 'Manager Name');
+        $sheet->setCellValue('N2', $employee->territories->first()->parent->employee->first_name . ' ' . $employee->territories->first()->parent->employee->last_name);
 
 
 
         $sheet2 = $spreadsheet->createSheet();
         $sheet2->setTitle('Bricks');
+
         $sheet2->setCellValue('A1', 'Brick Code');
         $sheet2->setCellValue('B1', 'Brick Name');
         $sheet2->setCellValue('C1', 'Territory Name');
@@ -90,12 +108,14 @@ class BrickController extends Controller{
             $sheet2->getColumnDimension($column->getColumnIndex())->setAutoSize(true);
         }
 
-        $fileName = 'excel/OCE-P New User '.$employee->full_name . '.xlsx';
+        $fileName = 'OCE-P New User '.$employee->first_name . ' ' . $employee->last_name . '.xlsx';
+        $filePath = storage_path($fileName);
+        // $writer = new Xlsx($spreadsheet);
         $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $writer->save($fileName);
+        $writer->save($filePath);
 
-        return redirect()->back()->with('success', 'Completed template was created successfully!');
-
+        // Возвращаем файл пользователю
+        return response()->download($filePath)->deleteFileAfterSend(true);
     }
 
 

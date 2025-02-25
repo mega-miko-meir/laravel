@@ -16,7 +16,7 @@
 
                 <!-- Кнопка для создания сотрудника -->
                 <div class="absolute top-0 right-0 mt-4 mr-4">
-                    <x-create-employee-button />
+                    <x-create-territory-button />
                 </div>
 
                 <!-- Компонент поиска -->
@@ -33,7 +33,14 @@
                     <table class="w-full border-collapse border border-gray-300">
                         <thead>
                             <tr class="bg-gray-200">
-                                <th class="border border-gray-300 px-4 py-2">Территория</th>
+                                <th class="border border-gray-300 px-4 py-2">
+                                    <a href="{{route('territories.search', ['sort' => 'territory_name', 'order' => request('order') === 'asc' ? 'desc' : 'asc'])}}">
+                                        Территория
+                                        @if($sort === 'territory_name')
+                                            {!! $order === 'asc' ? '↑' : '↓' !!}
+                                        @endif
+                                    </a>
+                                </th>
                                 <th class="border border-gray-300 px-4 py-2">Группа</th>
                                 <th class="border border-gray-300 px-4 py-2">Департамент</th>
                                 <th class="border border-gray-300 px-4 py-2">Сотрудник</th>

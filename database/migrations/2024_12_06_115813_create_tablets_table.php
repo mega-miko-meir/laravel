@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::create('tablets', function (Blueprint $table) {
             $table->id();
             $table->string('model');
-            $table->string('invent_number')->unique();
+            $table->string('invent_number')->nullable()->unique();
             $table->string('serial_number')->unique();
-            $table->string('imei')->unique();
-            $table->string('beeline_number')->unique();
-            $table->string('beeline_number_status');
-            $table->string('status');
-            $table->string('old_employee_id');
+            $table->string('imei')->nullable()->unique();
+            $table->string('beeline_number')->nullable()->unique();
+            $table->string('beeline_number_status')->nullable();
+            $table->string('status')->nullable();
+            $table->string('old_employee_id')->nullable();
             $table->foreignId('employee_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
         });

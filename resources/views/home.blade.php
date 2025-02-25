@@ -14,10 +14,22 @@
                 <!-- Сообщение об успехе -->
                 <x-flash-message />
 
-                <!-- Кнопка для создания сотрудника -->
-                <div class="absolute top-0 right-0 mt-4 mr-4">
-                    <x-create-employee-button />
+                <div class="absolute top-4 right-4 flex gap-2">
+                    <!-- Кнопка для создания сотрудника -->
+                    <a href="/create-employee" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
+                        + Create
+                    </a>
+
+                    <!-- Кнопка для экспорта в Excel -->
+                    <a href="/export-excel" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
+                        📤 Export
+                    </a>
                 </div>
+
+
+
+
+                <x-active-employee-checkbox />
 
                 <!-- Компонент поиска -->
                 <x-search class="mb-6" />
@@ -28,7 +40,7 @@
                 </h2>
 
                 <!-- Список сотрудников -->
-                <x-employee-card :employees="$employees" />
+                <x-employee-card :employees="$employees" :sort="$sort" :order="$order"/>
             </div>
         </x-container>
     @else

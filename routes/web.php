@@ -12,6 +12,7 @@ use App\Http\Controllers\TabletController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\TerritoryController;
 use App\Http\Controllers\EmployeeTabletController;
+use App\Http\Controllers\ExcelDataUploadController;
 
 // Route::get('/', function(){
 //     $employees = Employee::all();
@@ -25,11 +26,20 @@ Route::post('/login', [UserController::class, 'login']);
 
 Route::get('/create-employee', [EmployeeController::class, 'createEmployeeForm']);
 Route::post('/create-employee', [EmployeeController::class, 'createEmployee']);
-Route::get('/employee/{id}', [EmployeeController::class,'showEmployee'])->name('employees.show');
 Route::get('/edit-employee/{employee}', [EmployeeController::class, 'showEditEmployee']);
 Route::put('/edit-employee/{employee}', [EmployeeController::class, 'actuallyEditEmployee']);
+
 Route::delete('/delete-employee/{employee}', [EmployeeController::class, 'deleteEmployee']);
+Route::get('/employee/{id}', [EmployeeController::class,'showEmployee'])->name('employees.show');
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
+
+// Creatind and editing territory
+Route::get('/create-territory', [TerritoryController::class, 'createTerritoryForm'])->name('territory.create');
+Route::post('/create-territory', [TerritoryController::class, 'createTerritory'])->name('territory.create');
+Route::get('/edit-territory/{territory}', [TerritoryController::class, 'editTerritoryForm'])->name('territory.edit');
+Route::put('/edit-territory/{territory}', [TerritoryController::class, 'editTerritory'])->name('territory.edit');
+
+
 
 // Tablet assignment
 Route::post('/assign-tablet/{employee}', [EmployeeTabletController::class, 'assignTablet']);
@@ -62,10 +72,13 @@ Route::match(['POST', 'DELETE'],'/assign-bricks/{territory}/{brick?}', [BrickCon
 Route::get('/upload', function () {
     return view('upload'); // Открывается страница для загрузки файла
 });
-Route::post('/uploadBricks', [BrickController::class, 'uploadBricks']);
-Route::post('/uploadTerritories', [BrickController::class, 'uploadTerritories']);
-Route::post('/uploadEmployees', [BrickController::class, 'uploadEmployees']);
 Route::get('/bricks', [BrickController::class, 'showBricks']);
+
+// Uploading files
+Route::post('/upload-bricks', [BrickController::class, 'uploadBricks']);
+Route::post('/upload-territories', [BrickController::class, 'uploadTerritories']);
+Route::post('/upload-employees', [ExcelDataUploadController::class, 'uploadEmployees']);
+Route::post('/upload-tablets', [ExcelDataUploadController::class, 'uploadTablets']);
 
 Route::get('/export-excel', [EmployeeController::class, 'exportToExcel']);
 
@@ -90,3 +103,9 @@ Route::put('/employees/{employee}/dismiss', [EmployeeController::class, 'updateS
 
 Route::put('/employees/{employee}/update-status-event', [EmployeeController::class, 'updateStatusAndEvent'])
     ->name('employees.updateStatusAndEvent');
+
+Route::put('/employees/{id}/update-credentials', [EmployeeController::class, 'updateCredentials'])
+    ->name('employees.updateCredentials');
+
+Route::delete('/employees/credentials/{id}', [EmployeeController::class, 'deleteCredential']);
+

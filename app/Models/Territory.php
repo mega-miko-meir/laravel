@@ -13,9 +13,11 @@ class Territory extends Model
         'team',
         'role',
         'manager_id',
+        'parent_id',
         'city',
         'old_employee_id',
-        'employee_id'
+        'employee_id',
+        'parent_territory_id'
     ];
 
     public function employee(){
@@ -34,6 +36,16 @@ class Territory extends Model
 
     public function bricks(){
         return $this->belongsToMany(Brick::class, 'brick_territory'); // Связь many-to-many с моделью Brick
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Territory::class, 'parent_territory_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Territory::class, 'parent_territory_id');
     }
 
 }
