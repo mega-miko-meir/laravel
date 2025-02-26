@@ -22,12 +22,9 @@
 
                     <!-- Кнопка для экспорта в Excel -->
                     <a href="/export-excel" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
-                        📤 Export
+                        Export
                     </a>
                 </div>
-
-
-
 
                 <x-active-employee-checkbox />
 

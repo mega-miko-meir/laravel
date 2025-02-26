@@ -104,6 +104,7 @@ Route::put('/employees/{employee}/dismiss', [EmployeeController::class, 'updateS
 Route::put('/employees/{employee}/update-status-event', [EmployeeController::class, 'updateStatusAndEvent'])
     ->name('employees.updateStatusAndEvent');
 
+
 Route::put('/employees/{id}/update-credentials', [EmployeeController::class, 'updateCredentials'])
     ->name('employees.updateCredentials');
 

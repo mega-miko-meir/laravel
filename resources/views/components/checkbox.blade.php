@@ -20,7 +20,10 @@
         </div>
 
         <!-- Список с чекбоксами -->
-        @if($employee->territories->isNotEmpty())
+        {{-- @if($employee->territories->isNotEmpty()) --}}
+        {{-- @if(optional($employee)->territories->isNotEmpty()) --}}
+        @if(optional($employee)->territories && $employee->territories->isNotEmpty())
+
         <form action="{{ route('assign.bricks', [$employee->territories->first()->id]) }}" method="POST">
             @csrf
             <div id="brick-list" class="max-h-48 overflow-y-auto">

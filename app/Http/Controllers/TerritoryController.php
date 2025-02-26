@@ -33,7 +33,9 @@ class TerritoryController extends Controller
 
         $employee = $territory->employee;
         $bricks = Brick::all();
-        $selectedBricks = $employee->territories->first()->bricks ?? collect();
+        // $selectedBricks = $employee->territories->first()->bricks ?? collect();
+        $selectedBricks = optional($employee?->territories->first())->bricks ?? collect();
+
         $previousUsers = $territory->employees()
         ->withPivot('assigned_at', 'unassigned_at')
         ->orderByDesc('employee_territory.assigned_at')

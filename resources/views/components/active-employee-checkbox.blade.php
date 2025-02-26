@@ -1,7 +1,7 @@
 <div style="display: flex; align-items: center; gap: 10px;">
     <label for="ticker" style="cursor: pointer; font-size: 16px;">Только активные сотрудники</label>
     @php
-        $activeOnly = request('active_only', 1); // По умолчанию 1 (включено)
+        $activeOnly = request('active_only', 1); // По умолчанию 1 включено
     @endphp
     <input type="checkbox" id="ticker" value="1" style="display: none;" {{ $activeOnly == 1 ? 'checked' : '' }}>
     <label for="ticker" style="width: 40px; height: 20px; background: {{ $activeOnly == 1 ? '#4CAF50' : '#ccc' }};
@@ -17,7 +17,7 @@
         checkbox.addEventListener('change', function () {
             let url = new URL(window.location.href);
             url.searchParams.set('active_only', checkbox.checked ? 1 : 0);
-            window.location.href = url.href; // Перезагрузка страницы
+            window.location.href = url.href;
         });
     });
 </script>

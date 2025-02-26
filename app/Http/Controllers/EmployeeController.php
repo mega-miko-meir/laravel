@@ -273,12 +273,15 @@ class EmployeeController extends Controller
 
 
     public function assignTerritory(Request $request, Employee $employee){
+        // $request->validate([
+        //     'assigned_at' => 'date'
+        // ]);
         $territory = Territory::findOrFail($request->input('territory_id'));
         $territory->employee()->associate($employee);
         $territory->save();
 
         // Filling in employee_territory table
-        $employee->employee_territory()->attach($territory->id, ['assigned_at' => now()]);
+        $employee->employee_territory()->attach($territory->id, ['assigned_at' => $request->input('assigned_at')]);
 
         return redirect()->back()->with('success', 'Territory successfully assigned to the employee.');
     }
@@ -301,8 +304,8 @@ class EmployeeController extends Controller
 
         $query = $request->input('search');
 
-        $sort = $request->input('sort', 'full_name'); // По умолчанию сортируем по 'full_name'
-        $order = $request->input('order', 'asc'); // По умолчанию сортировка по возрастанию
+        $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
+        $order = $request->input('order', 'desc'); // По умолчанию сортировка по возрастанию
         $activeOnly = $request->input('active_only', 1);
 
         $employees = Employee::where('first_name', 'like', "%$query%")
@@ -317,7 +320,7 @@ class EmployeeController extends Controller
             ->get();
 
         if ($activeOnly == 1) {
-            $employees = $employees->where('status', 'active');
+            $employees = $employees->whereIn('status', ['active', 'new']);
         }
 
         return view('home', [

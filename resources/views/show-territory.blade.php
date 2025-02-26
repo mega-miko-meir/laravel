@@ -10,7 +10,7 @@
         <p><strong>Группа:</strong> {{ $territory->team }}</p>
         <p><strong>Департамент:</strong> {{ $territory->department }}</p>
         <p><strong>Сотрудник:</strong> {{$territory->employee->full_name ?? 'Не назначен' }}</p>
-        <p><strong>Менеджер:</strong> {{ $territory->manager_id }}</p>
+        <p><strong>Менеджер:</strong> {{ $territory->parent->employee->first_name . ' ' .$territory->parent->employee->last_name }}</p>
 
         <x-edit-territory-button :territory="$territory"/>
         <br>

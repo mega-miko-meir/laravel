@@ -56,7 +56,9 @@
                                 @foreach ($territory->children->sortBy(['team', 'asc'])->sortBy(['territory_name', 'asc']) as $child)
                                 <li>
                                     <span class="font-semibold text-gray-700">{{ $child->team }}</span> -
-                                    <span class="text-gray-900">{{ $child->territory_name }}</span> -
+                                    <a href="{{route('territories.show', $child->id)}}" class="text-blue-600 hover:underline">
+                                        {{ $child->territory_name }}
+                                    </a> -
                                     @if ($child->employee)
                                         <a href="{{ route('employees.show', $child->employee->id) }}" class="text-blue-600 hover:underline">
                                             {{ $child->employee->full_name }}
@@ -87,9 +89,15 @@
             <select id="territory" name="territory_id" class="w-full p-3 border rounded-lg mt-2">
                 <option value="">No Territory</option>
                 @foreach ($availableTerritories as $territory)
-                    <option value="{{ $territory->id }}">{{ $territory->territory_name}} - {{ $territory->manager_id }} - {{ $territory->old_employee_id ?? ''}}</option>
+                <option value="{{ $territory->id }}">
+                    {{ $territory->territory_name }} -
+                    {{ $territory->parent && $territory->parent->employee ? $territory->parent->employee->first_name . ' ' . $territory->parent->employee->last_name : 'Нет руководителя' }} -
+                    {{ $territory->old_employee_id ?? '' }}
+                </option>
+
                 @endforeach
             </select>
+            <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d')}}">
             <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
         </form>
     @endif
