@@ -24,6 +24,7 @@
         <p>
             <span class="font-medium">Дата найма:</span>
             {{ $employee->hiring_date ? \Carbon\Carbon::parse($employee->hiring_date)->format('d.m.Y') : '-'}}
+
         </p>
     </div>
 
