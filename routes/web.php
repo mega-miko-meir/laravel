@@ -79,6 +79,7 @@ Route::post('/upload-bricks', [BrickController::class, 'uploadBricks']);
 Route::post('/upload-territories', [BrickController::class, 'uploadTerritories']);
 Route::post('/upload-employees', [ExcelDataUploadController::class, 'uploadEmployees']);
 Route::post('/upload-tablets', [ExcelDataUploadController::class, 'uploadTablets']);
+Route::post('/upload-tablets-assignment', [ExcelDataUploadController::class, 'uploadTabletsAssignment']);
 
 Route::get('/export-excel', [EmployeeController::class, 'exportToExcel']);
 
