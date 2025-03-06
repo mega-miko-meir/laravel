@@ -27,8 +27,9 @@
                 @foreach($previousUsers as $record)
                     <tr>
                         <td class="border border-gray-300 px-4 py-2">{{ $record->full_name }}</td>
-                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->assigned_at ?? '—' }}</td>
-                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ?? '—' }}</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->assigned_at ? \Carbon\Carbon::parse($record->pivot->assigned_at)->format('d.m.Y')  : '—'}}</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ? \Carbon\Carbon::parse($record->pivot->returned_at)->format('d.m.Y')  : '—'}}</td>
+                        {{-- <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ?? '—' }}</td> --}}
                         <td class="border border-gray-300 px-4 py-2">
                             @if($record->pivot->pdf_path)
                                 <a href="{{ asset('storage/' . $record->pivot->pdf_path) }}" class="text-blue-500 hover:underline" target="_blank">📄 PDF</a>

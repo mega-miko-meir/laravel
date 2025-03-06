@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Brick;
 use App\Models\Employee;
+use App\Models\EmployeeTerritory;
 use App\Models\Territory;
 use Illuminate\Http\Request;
 use App\View\Components\territory as ComponentsTerritory;
@@ -30,19 +31,24 @@ class TerritoryController extends Controller
 
     public function showTerritory(Territory $territory)
     {
-
         $employee = $territory->employee;
         $bricks = Brick::all();
         // $selectedBricks = $employee->territories->first()->bricks ?? collect();
         $selectedBricks = optional($employee?->territories->first())->bricks ?? collect();
 
         $previousUsers = $territory->employees()
-        ->withPivot('assigned_at', 'unassigned_at')
+        ->withPivot('assigned_at', 'unassigned_at', 'id')
         ->orderByDesc('employee_territory.assigned_at')
         ->get();
 
+        // $availableEmployees = Employee::whereNull('firing_date')->get();
+        $availableEmployees = Employee::whereNull('firing_date') // Сотрудники, у которых нет даты увольнения
+            ->whereDoesntHave('employee_territory', function ($query) {
+                $query->whereNull('unassigned_at'); // Исключаем тех, кто все еще привязан к территории
+            })
+            ->get();
 
-        return view('show-territory', compact('territory', 'previousUsers', 'employee', 'bricks', 'selectedBricks'));
+        return view('show-territory', compact('territory', 'previousUsers', 'employee', 'bricks', 'selectedBricks', 'availableEmployees'));
     }
 
     public function createTerritoryForm(){

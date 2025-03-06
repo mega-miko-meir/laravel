@@ -21,6 +21,22 @@ use App\View\Components\employee as ComponentsEmployee;
 
 class EmployeeController extends Controller
 {
+    public function updateDate(Request $request, $id)
+    {
+        $request->validate([
+            'date_value' => 'required|date',
+            'field_name' => 'required|in:assigned_at,unassigned_at',
+        ]);
+
+        DB::table('employee_territory')
+            ->where('id', $id)
+            ->update([$request->field_name => $request->date_value]);
+
+        return back()->with('success', 'Дата обновлена');
+    }
+
+
+
     public function updateCredentials(Request $request, $id)
     {
         $employee = Employee::findOrFail($id);
@@ -78,8 +94,9 @@ class EmployeeController extends Controller
         // Обновляем статус и даты в таблице employees
         $updateData = ['status' => $request->status];
 
-        if ($request->status === 'new') {
+        if ($request->status === 'hire') {
             $updateData['hiring_date'] = $eventDate;
+            $updateData['firing_date'] = null;
         } elseif ($request->status === 'dismissed') {
             $updateData['firing_date'] = $eventDate;
         }
@@ -232,7 +249,7 @@ class EmployeeController extends Controller
     //     return redirect()->back()->with('success', 'Tablet successfully unassigned from the employee.');
     // }
 
-    public function unassignTerritory(Employee $employee, Territory $territory)
+    public function unassignTerritory(Employee $employee, Territory $territory, Request $request)
     {
         $assignmentToRemove = DB::table('employee_territory')
             ->where('employee_id', $employee->id)
@@ -259,7 +276,7 @@ class EmployeeController extends Controller
                 return redirect()->back()->with('success', 'Territory unassigned and removed due to unconfirmed status.');
             } else {
                 // Обновляем колонку unassigned_at только для этой строки
-                $employee->employee_territory()->updateExistingPivot($territory->id, ['unassigned_at' => now()]);
+                $employee->employee_territory()->updateExistingPivot($territory->id, ['unassigned_at' => $request->input('unassigned_at')]);
                 // Обновляем old_employee_id на территории
                 $territory->old_employee_id = $employee->full_name;
                 $territory->save();
@@ -285,6 +302,22 @@ class EmployeeController extends Controller
 
         return redirect()->back()->with('success', 'Territory successfully assigned to the employee.');
     }
+
+    public function assignEmployee(Request $request, Territory $territory)
+    {
+        // Найти сотрудника по переданному ID
+        $employee = Employee::findOrFail($request->input('employee_id'));
+
+        // Привязать сотрудника к территории
+        $territory->employee()->associate($employee);
+        $territory->save();
+
+        // Запись в таблицу `employee_territory`
+        $employee->employee_territory()->attach($territory->id, ['assigned_at' => $request->input('assigned_at')]);
+
+        return redirect()->back()->with('success', 'Employee successfully assigned to the territory.');
+    }
+
 
 
     public function confirmTerritory(Employee $employee, Territory $territory){
@@ -415,15 +448,26 @@ class EmployeeController extends Controller
         $selectedBricks = $employee->territories->first()->bricks ?? collect();
         $availableTablets = Tablet::whereNull('employee_id')->with('oldEmployee')->get();
         $availableTerritories = Territory::whereNull('employee_id')->with('oldEmployee')->get();
-        $territoriesHistory = EmployeeTerritory::where('employee_id', $employee->id)
-        ->whereNotNull('unassigned_at')
-        ->with(['territory']) // Подгружаем данные из модели Territory, если есть связь
-        ->orderByDesc('assigned_at') // Сортировка по дате изменения
-        ->get();
+        // $territoriesHistory = EmployeeTerritory::where('employee_id', $employee->id)
+        // // ->whereNotNull('unassigned_at')
+        // ->with(['territory']) // Подгружаем данные из модели Territory, если есть связь
+        // ->orderByDesc('assigned_at') // Сортировка по дате изменения
+        // ->get();
         // dd($territoriesHistory);
+
+        $lastTerritory = $employee->employee_territory()
+        ->withPivot('assigned_at', 'unassigned_at')
+        ->orderByDesc('assigned_at')
+        ->first();
+
+        $territoriesHistory = $employee->employee_territory()
+        ->withPivot('assigned_at', 'unassigned_at', 'id')
+        ->orderByDesc('assigned_at')
+        ->get();
+
         $tabletHistories = EmployeeTablet::where('employee_id', $employee->id)
         ->with(['tablet'])
-        ->whereNotNull('returned_at') // Только подтвержденные записи
+        // ->whereNotNull('returned_at') // Только подтвержденные записи
         ->orderByDesc('assigned_at')
         ->get();
 
@@ -456,7 +500,7 @@ class EmployeeController extends Controller
         // dd($tablets);
 
 
-        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories'));
+        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories', 'lastTerritory'));
 
 
         // return view('employee.show', compact('employee', 'availableTablets'));

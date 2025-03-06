@@ -86,7 +86,7 @@
             <option value="">No Parent Territory</option>
             @foreach ($parentTerritories as $parentTerritory)
                 <option value="{{ $parentTerritory->id }}" {{ old('parent_territory_id', $territory->parent_territory_id ?? '') == $parentTerritory->id ? 'selected' : '' }}>
-                    {{ $parentTerritory->territory_name }} - {{ $parentTerritory->employee ? $parentTerritory->employee->first_name . ' ' . $parentTerritory->employee ? $parentTerritory->employee->last_name : 'No employee'}}
+                    {{ $parentTerritory->territory_name }} - {{ $parentTerritory->employee ? $parentTerritory->employee->first_name . ' ' . $parentTerritory->employee->last_name : 'No employee'}}
                 </option>
             @endforeach
         </select>

@@ -17,6 +17,7 @@
         :selectedBricks="$selectedBricks"
         :availableTerritories="$availableTerritories"
         :territoriesHistory="$territoriesHistory"
+        :lastTerritory="$lastTerritory"
 
     />
     <br>

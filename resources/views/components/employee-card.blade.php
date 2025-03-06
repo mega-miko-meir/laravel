@@ -48,9 +48,16 @@
                     <td class="px-4 py-3 text-gray-700">
                         {{ $employee->hiring_date ? \Carbon\Carbon::parse($employee->hiring_date)->format('d.m.Y') : '-'}}
                     </td>
-                    <td class="px-4 py-3 text-gray-700">
+                    {{-- <td class="px-4 py-3 text-gray-700">
                         {{ $employee->firing_date ? \Carbon\Carbon::parse($employee->firing_date)->format('d.m.Y') : '-'}}
+                    </td> --}}
+                    <td class="px-4 py-3 text-gray-700">
+                        @php
+                            $lastEvent = optional($employee->events->whereIn('event_type', ['maternity_leave', 'dismissed', 'changed_position'])->last());
+                        @endphp
+                        {{ $lastEvent->event_date ? \Carbon\Carbon::parse($lastEvent->event_date)->format('d.m.Y') : '-' }}
                     </td>
+
                     <td class="px-4 py-3 text-gray-700">
                         {{ $employee->territories->first()->team ?? '-' }}
                     </td>

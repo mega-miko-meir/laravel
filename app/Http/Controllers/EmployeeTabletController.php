@@ -23,6 +23,7 @@ class EmployeeTabletController extends Controller
         ]);
 
         $pdfFile = $request->file('pdf_file');
+        $assignmentDate = $request->input('assigned_at');
 
         // Добавляем timestamp к имени файла
         // $filename = $pdfFile->getClientOriginalName();
@@ -37,6 +38,7 @@ class EmployeeTabletController extends Controller
         $employee->employee_tablet()->updateExistingPivot($tablet->id, [
             'confirmed' => true,
             'pdf_path' => $path,
+            'assigned_at' => $assignmentDate
         ]);
 
         $employee->setStatus('active');

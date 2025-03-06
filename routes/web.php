@@ -111,3 +111,9 @@ Route::put('/employees/{id}/update-credentials', [EmployeeController::class, 'up
 
 Route::delete('/employees/credentials/{id}', [EmployeeController::class, 'deleteCredential']);
 
+
+Route::post('/assign-employee/{territory}', [EmployeeController::class, 'assignEmployee'])->name('assign.employee');
+
+Route::patch('/employee-territory/{id}/update', [EmployeeController::class, 'updateDate'])->name('employee-territory.updateDate');
+
+

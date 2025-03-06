@@ -38,18 +38,19 @@
     <x-edit-employee-button :employee="$employee"/>
 
     <!-- Форма обновления статуса (изначально скрыта) -->
-    <form action="{{ route('employees.updateStatusAndEvent', $employee->id) }}" method="POST" id="editForm" class="bg-gray-50 p-4 rounded-lg shadow-sm hidden">
+    <form action="{{ route('employees.updateStatusAndEvent', $employee->id) }}" method="POST" id="editForm" class="bg-gray-50 p-4 rounded-lg shadow-sm hidden"
+        onsubmit="return confirm('Are you sure you want to add an event and change the status?');">
         @csrf
         @method('PUT')
         <label for="status" class="block text-sm font-medium mb-1">Выберите статус:</label>
         <select name="status" id="status" class="w-full p-2 border rounded text-sm">
-            <option value="new" {{ $employee->status === 'new' ? 'selected' : '' }}>Новый</option>
-            <option value="active" {{ $employee->status === 'active' ? 'selected' : '' }}>Активен</option>
-            <option value="dismissed" {{ $employee->status === 'dismissed' ? 'selected' : '' }}>Уволен</option>
-            <option value="maternity_leave" {{ $employee->status === 'maternity_leave' ? 'selected' : '' }}>Декрет</option>
-            <option value="long_vacation" {{ $employee->status === 'long_vacation' ? 'selected' : '' }}>Длительный отпуск</option>
+            <option value="active" {{ $employee->status === 'active' ? 'selected' : '' }}>Hired</option>
+            <option value="dismissed" {{ $employee->status === 'dismissed' ? 'selected' : '' }}>Dismissed</option>
+            <option value="maternity_leave" {{ $employee->status === 'maternity_leave' ? 'selected' : '' }}>Maternity leave</option>
+            <option value="change_position" {{ $employee->status === 'changed_position' ? 'selected' : '' }}>Changed position</option>
+            <option value="long_vacation" {{ $employee->status === 'long_vacation' ? 'selected' : '' }}>Long vacation</option>
         </select>
-        <label for="event_date" class="block text-sm font-medium mt-2">Дата события:</label>
+        <label for="event_date" class="block text-sm font-medium mt-2">Event date:</label>
         <input type="date" name="event_date" id="event_date" class="w-full p-2 border rounded text-sm"
             value="{{ now()->format('Y-m-d') }}">
 

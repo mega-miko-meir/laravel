@@ -22,35 +22,10 @@
                                     </button>
                                 </form>
 
-                                <!-- PDF -->
-                                @if($tablet->pdfAssignment && $tablet->pdfAssignment->pdf_path)
-                                    <a href="{{ asset('storage/' . $tablet->pdfAssignment->pdf_path) }}" target="_blank"
-                                       class="text-blue-600 hover:text-blue-700 underline font-medium transition-all">
-                                        📄 Открыть PDF
-                                    </a>
-                                @else
-                                    <form action="/upload-assign-pdf/{{ $employee->id }}/{{ $tablet->id }}" method="POST" enctype="multipart/form-data"
-                                          class="flex items-center space-x-1 border border-gray-300 rounded-md p-1 shadow-sm">
-                                        @csrf
-                                        <input type="file" name="pdf_file" accept="application/pdf" required
-                                               class="text-gray-700 text-xs border-none focus:ring-0">
-                                        <button type="submit" class="bg-green-400 hover:bg-green-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
-                                            ⬆️ Загрузить
-                                        </button>
-                                    </form>
-                                @endif
-
-                                <!-- Кнопка отвязки -->
-                                <form action="{{ route('unassign-tablet', ['employee' => $employee->id, 'tablet' => $tablet->id]) }}" method="POST"
-                                      onsubmit="return confirm('Are you sure?');">
-                                    @csrf
-                                    <button type="submit" class="bg-red-400 hover:bg-red-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
-                                        ❌ Unassign
-                                    </button>
-                                </form>
+                                <x-pdf-upload-form :employee="$employee" :tablet="$tablet"/>
 
                                 <!-- Дополнительная форма -->
-                                <x-dark-form :employee="$employee" :tablet="$tablet"/>
+                                <x-unassign-tablet-buttons :employee="$employee" :tablet="$tablet"/>
                             </div>
 
                         </li>
@@ -61,6 +36,17 @@
         </div>
     @else
         <p class="text-lg text-gray-600">No tablets assigned</p>
+        <form action="/assign-tablet/{{$employee->id}}" method="POST" class="mt-4">
+            @csrf
+            <label for="tablet" class="block text-sm font-medium text-gray-600">Assign Tablet</label>
+            <select id="tablet" name="tablet_id" class="w-full p-3 border rounded-lg mt-2">
+                <option value="">No Tablet</option>
+                @foreach ($availableTablets as $tablet)
+                    <option value="{{ $tablet->id }}">{{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->employees->last()->full_name ?? '' }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
+        </form>
     @endif
 
     <!-- Tablet Assign Form -->
@@ -71,17 +57,7 @@
 
         <button type="submit" class="btn-primary mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Search</button>
     </form> --}}
-    <form action="/assign-tablet/{{$employee->id}}" method="POST" class="mt-4">
-        @csrf
-        <label for="tablet" class="block text-sm font-medium text-gray-600">Assign Tablet</label>
-        <select id="tablet" name="tablet_id" class="w-full p-3 border rounded-lg mt-2">
-            <option value="">No Tablet</option>
-            @foreach ($availableTablets as $tablet)
-                <option value="{{ $tablet->id }}">{{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->old_employee_id ?? '' }}</option>
-            @endforeach
-        </select>
-        <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
-    </form>
+
 
 </div>
 
@@ -108,6 +84,8 @@
                 <div class="space-x-3">
                     @if($history->pdf_path)
                         <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank" class="text-blue-500 hover:underline">PDF1</a>
+                    @else
+                        <form action="/upload"></form>
                     @endif
                     @if($history->unassign_pdf)
                         <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank" class="text-blue-500 hover:underline">PDF2</a>

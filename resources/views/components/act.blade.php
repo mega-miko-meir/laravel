@@ -75,13 +75,13 @@
         <tr>
             <td class="py-2">Передал в указанном количестве и комплектации</td>
             <td class="py-2 font-bold">
-                {{ $hasPdf ? $employee->full_name :'Акимбеков Мейржан, CRM-менеджер' }}
+                {{ $hasPdf ? $employee->full_name . ', медицинский предствитель' :'Акимбеков Мейржан, CRM-менеджер' }}
             </td>
         </tr>
         <tr>
             <td class="py-2">Принял в указанном количестве и комплектации</td>
             <td class="py-2 font-bold">
-                {{ $hasPdf ? 'Акимбеков Мейржан, CRM-менеджер' : $employee->full_name }}
+                {{ $hasPdf ? 'Акимбеков Мейржан, CRM-менеджер' : $employee->full_name  . ', медицинский предствитель'}}
             </td>
         </tr>
         <tr>

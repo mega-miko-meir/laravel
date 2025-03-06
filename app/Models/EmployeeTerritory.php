@@ -15,6 +15,10 @@ class EmployeeTerritory extends Model
         'unassigned_at'
     ];
 
+    protected $casts = [
+        'confirmed' => 'boolean',
+    ];
+
     protected $dates = [
         'assigned_at',
         'unassigned_at'

@@ -6,7 +6,8 @@
         'active' => 'bg-blue-500 text-white',
         'dismissed' => 'bg-red-500 text-white',
         'maternity_leave' => 'bg-yellow-500 text-black',
-        'long_vacation' => 'bg-yellow-500 text-black'
+        'long_vacation' => 'bg-pink-500 text-black',
+        'changed_position' => 'bg-green-800 text-black'
     ];
 
     $class = $colors[$status] ?? 'bg-gray-500 text-white';

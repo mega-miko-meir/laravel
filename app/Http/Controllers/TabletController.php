@@ -10,6 +10,8 @@ class TabletController extends Controller
 {
     public function searchTablet(Request $request){
         $query = $request->input('search');
+        $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
+        $order = $request->input('order', 'desc'); // По умолчанию сортировка по возрастанию
 
         $tablets = Tablet::where('serial_number', 'like', "%$query%")
             ->orWhere('invent_number', 'like', "%$query%")
@@ -31,7 +33,7 @@ class TabletController extends Controller
     public function showTablet(Tablet $tablet)
     {
         $previousUsers = $tablet->employees()
-        ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf')
+        // ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf')
         ->orderByDesc('employee_tablet.assigned_at')
         ->get();
 
