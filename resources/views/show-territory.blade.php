@@ -47,7 +47,7 @@
         <x-edit-territory-button :territory="$territory"/>
         <br>
         @if ($territory->role === 'Rep')
-            <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" />
+            <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" :lastTerritory="$lastTerritory" />
         @endif
         <h3 class="text-xl font-semibold mt-6">История пользователей</h3>
         <table class="w-full border-collapse border border-gray-300">
@@ -69,56 +69,19 @@
                             </a>
                         </td>
                         <td class="border border-gray-300 px-4 py-2">
-                            {{ $record->pivot->assigned_at ? \Carbon\Carbon::parse($record->pivot->assigned_at)->format('d.m.Y') : '—' }}
-                            <button onclick="openEditModal('{{ $record->pivot->id }}', 'assigned_at', '{{ $record->pivot->assigned_at }}')"
+                            {{ $record->pivot->assigned_at ? \Carbon\Carbon::parse($record->pivot->assigned_at)->format('d.m.Y') : '-' }}
+                            <button onclick="openEditModal('{{ $record->pivot->id }}', 'assigned_at', '{{ $record->pivot->assigned_at }}', 'territory')"
                                 class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
                         </td>
                         <td class="border border-gray-300 px-4 py-2">
-                            {{ $record->pivot->unassigned_at ? \Carbon\Carbon::parse($record->pivot->unassigned_at)->format('d.m.Y') : '—' }}
-                            <button onclick="openEditModal('{{ $record->pivot->id }}', 'unassigned_at', '{{ $record->pivot->unassigned_at }}')"
+                            {{ $record->pivot->unassigned_at ? \Carbon\Carbon::parse($record->pivot->unassigned_at)->format('d.m.Y') : 'Текущий пользователь' }}
+                            <button onclick="openEditModal('{{ $record->pivot->id }}', 'unassigned_at', '{{ $record->pivot->unassigned_at }}', 'territory')"
                                 class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
                         </td>
                     </tr>
                 @endforeach
 
-                <div id="editModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
-                    <div class="bg-white p-6 rounded-lg shadow-lg">
-                        <h2 class="text-lg font-semibold mb-4">Редактировать дату</h2>
-                        <form id="editForm" method="POST">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" id="record_pivot_id" name="record_pivot_id">
-                            <input type="hidden" id="field_name" name="field_name">
-
-                            <label for="new_date" class="block text-sm font-medium text-gray-600">Новая дата:</label>
-                            <input type="date" id="new_date" name="date_value" class="w-full p-2 border rounded-lg mt-2">
-
-                            <div class="mt-4 flex justify-end">
-                                <button type="button" onclick="closeEditModal()" class="mr-2 px-4 py-2 bg-gray-300 rounded">
-                                    Отмена
-                                </button>
-                                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">
-                                    Сохранить
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-
-                <script>
-                    function openEditModal(recordPivotId, fieldName, currentValue) {
-                        document.getElementById('record_pivot_id').value = recordPivotId;
-                        document.getElementById('field_name').value = fieldName;
-                        document.getElementById('new_date').value = currentValue || '';
-                        document.getElementById('editForm').action = `/employee-territory/${recordPivotId}/update`;
-                        document.getElementById('editModal').classList.remove('hidden');
-                    }
-
-                    function closeEditModal() {
-                        document.getElementById('editModal').classList.add('hidden');
-                    }
-                </script>
+                <x-date-edit-modal />
 
 
             </tbody>

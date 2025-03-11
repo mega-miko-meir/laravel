@@ -112,9 +112,6 @@ class EmployeeTabletController extends Controller
 
             return redirect()->back()->with('success', 'Tablet unassigned and removed due to unconfirmed status.');
         } else {
-            // if (!$pdfUnassignment || empty($pdfUnassignment->unassign_pdf)) {
-            //     return redirect()->back()->with('error', 'Для отвязки планшета необходимо загрузить PDF.');
-            // }
             $tablet->old_employee_id = $employee->full_name;
             $tablet->save();
             $employee->employee_tablet()->updateExistingPivot($tablet->id, ['returned_at' => now()]);

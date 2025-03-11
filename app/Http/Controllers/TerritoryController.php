@@ -41,6 +41,20 @@ class TerritoryController extends Controller
         ->orderByDesc('employee_territory.assigned_at')
         ->get();
 
+        // dd($employee);
+        // $lastTerritory = $employee->employee_territory()
+        // ->withPivot('assigned_at', 'unassigned_at')
+        // ->orderByDesc('assigned_at')
+        // ->first();
+
+        $lastTerritory = EmployeeTerritory::where('employee_id', $employee->id ?? null)
+        ->whereNull('unassigned_at') // Фильтруем только активные записи
+        ->orderByDesc('assigned_at') // Берём последнюю по дате назначения
+        ->first();
+
+
+        // $lastTerritory = $lastTerritory ?? 'Нет данных';
+
         // $availableEmployees = Employee::whereNull('firing_date')->get();
         $availableEmployees = Employee::whereNull('firing_date') // Сотрудники, у которых нет даты увольнения
             ->whereDoesntHave('employee_territory', function ($query) {
@@ -48,7 +62,7 @@ class TerritoryController extends Controller
             })
             ->get();
 
-        return view('show-territory', compact('territory', 'previousUsers', 'employee', 'bricks', 'selectedBricks', 'availableEmployees'));
+        return view('show-territory', compact('territory', 'previousUsers', 'employee', 'bricks', 'selectedBricks', 'availableEmployees', 'lastTerritory'));
     }
 
     public function createTerritoryForm(){

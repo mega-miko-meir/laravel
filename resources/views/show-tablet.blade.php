@@ -27,8 +27,14 @@
                 @foreach($previousUsers as $record)
                     <tr>
                         <td class="border border-gray-300 px-4 py-2">{{ $record->full_name }}</td>
-                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->assigned_at ? \Carbon\Carbon::parse($record->pivot->assigned_at)->format('d.m.Y')  : '—'}}</td>
-                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ? \Carbon\Carbon::parse($record->pivot->returned_at)->format('d.m.Y')  : '—'}}</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->assigned_at ? \Carbon\Carbon::parse($record->pivot->assigned_at)->format('d.m.Y')  : '—'}}
+                            <button onclick="openEditModal('{{ $record->pivot->id }}', 'assigned_at', '{{ $record->pivot->assigned_at }}', 'tablet')"
+                                class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ? \Carbon\Carbon::parse($record->pivot->returned_at)->format('d.m.Y')  : '—'}}
+                            <button onclick="openEditModal('{{ $record->pivot->id }}', 'returned_at', '{{ $record->pivot->returned_at }}', 'tablet')"
+                                class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
+                        </td>
                         {{-- <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ?? '—' }}</td> --}}
                         <td class="border border-gray-300 px-4 py-2">
                             @if($record->pivot->pdf_path)
@@ -46,6 +52,7 @@
                         </td>
                     </tr>
                 @endforeach
+                <x-date-edit-modal />
             </tbody>
         </table>
 

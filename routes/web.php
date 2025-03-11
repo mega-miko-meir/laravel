@@ -115,5 +115,6 @@ Route::delete('/employees/credentials/{id}', [EmployeeController::class, 'delete
 Route::post('/assign-employee/{territory}', [EmployeeController::class, 'assignEmployee'])->name('assign.employee');
 
 Route::patch('/employee-territory/{id}/update', [EmployeeController::class, 'updateDate'])->name('employee-territory.updateDate');
+Route::patch('/employee-tablet/{id}/update', [TabletController::class, 'updateDate'])->name('employee-tablet.updateDate');
 
 

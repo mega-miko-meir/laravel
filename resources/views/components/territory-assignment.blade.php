@@ -7,11 +7,7 @@
     @if ($lastTerritory && is_null(optional($lastTerritory->pivot)->unassigned_at))
         <div class="mt-4">
             <span class="font-medium text-gray-800">Territory:</span>
-            {{-- @php
-                $lastTerritory = $employee->pivot->last();
-                $lastTerritoryId = optional($lastTerritory)->id;
-            @endphp --}}
-            {{-- @dump($lastTerritory) --}}
+
                 <li class="flex items-center justify-between text-gray-600 py-2">
                     <a href="{{ route('territories.show', $lastTerritory->id) }}" class="text-blue-600 hover:underline">
                         {{ $lastTerritory->territory_name }}
@@ -56,7 +52,9 @@
                 </li>
 
                 @if ($lastTerritory->role === 'Rep')
-                    <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" />
+                    <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" :lastTerritory="$lastTerritory"/>
+
+
                 @else
                     @if ($lastTerritory->children->isEmpty())
                         <p>Нет дочерних территорий</p>

@@ -8,6 +8,20 @@ use Illuminate\Support\Facades\DB;
 
 class TabletController extends Controller
 {
+    public function updateDate(Request $request, $id)
+    {
+        $request->validate([
+            'date_value' => 'required|date',
+            'field_name' => 'required|in:assigned_at,returned_at',
+        ]);
+
+        DB::table('employee_tablet')
+            ->where('id', $id)
+            ->update([$request->field_name => $request->date_value]);
+
+        return back()->with('success', 'Дата обновлена');
+    }
+
     public function searchTablet(Request $request){
         $query = $request->input('search');
         $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
@@ -33,7 +47,7 @@ class TabletController extends Controller
     public function showTablet(Tablet $tablet)
     {
         $previousUsers = $tablet->employees()
-        // ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf')
+        ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf', 'id')
         ->orderByDesc('employee_tablet.assigned_at')
         ->get();
 
