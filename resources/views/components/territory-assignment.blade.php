@@ -107,21 +107,24 @@
             </form>
     @endif
 </div>
-<div class="bg-white shadow-md rounded-lg p-4 mt-6">
-    <button onclick="toggleTerritoryHistory()" class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
+<div x-data="{open:false}" class="bg-white shadow-md rounded-lg p-4 mt-6">
+    <button
+    {{-- onclick="toggleTerritoryHistory()" --}}
+    x-on:click="open = !open"
+    class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
         История территорий
-        <svg id="territoryArrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg :class="{'rotate-180': open}" id="territoryArrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
     </button>
 
-    <ul id="territoryHistoryList" class="text-sm text-gray-600 space-y-2 hidden">
+    <ul x-show="open" id="territoryHistoryList" class="text-sm text-gray-600 space-y-2" style="display:none">
         @foreach($territoriesHistory as $history)
             <li class="flex justify-between items-center border-b py-2">
                 <div>
                     <span>{{$history->pivot->id}}</span>
                     <span class="font-medium text-gray-800">
-                        {{ $history->territory_name ?? 'Неизвестная территория' }}
+                        <a href="{{route('territories.show', $history->id)}}" class="text-blue-500 hover:underline" >{{ $history->territory_name ?? 'Неизвестная территория' }}</a>
                     </span>
                     <span class="text-sm text-gray-500 ml-2">
                         {{ \Carbon\Carbon::parse($history->pivot->assigned_at)->format('d.m.Y') }} -
@@ -133,7 +136,7 @@
     </ul>
 </div>
 
-<script>
+{{-- <script>
     function toggleTerritoryHistory() {
         let list = document.getElementById("territoryHistoryList");
         let arrow = document.getElementById("territoryArrowIcon");
@@ -141,4 +144,4 @@
         list.classList.toggle("hidden");
         arrow.classList.toggle("rotate-180");
     }
-</script>
+</script> --}}

@@ -12,9 +12,9 @@
         <div x-data="{ showForm: false }">
             <p>
                 <strong>Сотрудник:</strong>
-                {{ $territory->employee->full_name ?? 'Не назначен' }}
+                {{ $employee->full_name ?? 'Не назначен' }}
 
-                @if(!$territory->employee)
+                @if(!$employee)
                     <button @click="showForm = !showForm"
                         class="ml-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-700 transition">
                         Назначить
@@ -81,7 +81,7 @@
                     </tr>
                 @endforeach
 
-                <x-date-edit-modal />
+                <x-data-edit-modal />
 
 
             </tbody>

@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
-class date-update-modal-window extends Component
+class data-update-modal-window extends Component
 {
     /**
      * Create a new component instance.
@@ -21,6 +21,6 @@ class date-update-modal-window extends Component
      */
     public function render(): View|Closure|string
     {
-        return view('components.date-update-modal-window');
+        return view('components.data-update-modal-window');
     }
 }

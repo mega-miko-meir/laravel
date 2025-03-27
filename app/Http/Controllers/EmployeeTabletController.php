@@ -9,12 +9,24 @@ use Illuminate\Http\Request;
 use App\Models\EmployeeTablet;
 use Illuminate\Support\Facades\DB;
 
+use App\Services;
+use App\Services\AssignmentService;
+use App\Services\PdfUploadService;
+
 class EmployeeTabletController extends Controller
 {
     // public function showForm()
     // {
     //     return view('components/upload-pdf');
     // }
+
+    protected $pdfUploadService;
+    protected $assignmentService;
+
+    public function __construct(PdfUploadService $pdfUploadService, AssignmentService $assignmentService){
+        $this->pdfUploadService = $pdfUploadService;
+        $this->assignmentService = $assignmentService;
+    }
 
     public function uploadAssignPdf(Request $request, Employee $employee, Tablet $tablet)
     {
@@ -25,22 +37,17 @@ class EmployeeTabletController extends Controller
         $pdfFile = $request->file('pdf_file');
         $assignmentDate = $request->input('assigned_at');
 
-        // Добавляем timestamp к имени файла
-        // $filename = $pdfFile->getClientOriginalName();
-        $timestamp = now()->format('d.m.Y');
-        $filename = "Передача_{$employee->first_name}_{$employee->last_name}_{$tablet->serial_number}_{$timestamp}.pdf";
+        $path = $this->pdfUploadService->upload($pdfFile, $employee, $tablet);
 
+        $this->assignmentService->tabletAssignmentWithPdf($employee, $tablet, $path, $assignmentDate);
 
-        // Сохраняем в storage/app/public/uploads/assign
-        $path = $pdfFile->storeAs('uploads/assign', $filename, 'public');
+        return back()->with('success', 'Файл успешно загружен!');
+    }
 
-        // Обновляем запись в пивотной таблице
-        $employee->employee_tablet()->updateExistingPivot($tablet->id, [
-            'confirmed' => true,
-            'pdf_path' => $path,
-            'assigned_at' => $assignmentDate
-        ]);
+    public function tabletAssignment(Request $request, Employee $employee, Tablet $tablet){
+        $assignmentDate = $request->input('assigned_at');
 
+        $this->assignmentService->confirmTablet($employee, $tablet, $assignmentDate);
         $employee->setStatus('active');
 
         return back()->with('success', 'Файл успешно загружен!');
@@ -81,6 +88,18 @@ class EmployeeTabletController extends Controller
     {
         $assignment = EmployeeTablet::findOrFail($id);
         return response()->download(storage_path("app/public/{$assignment->pdf_path}"));
+    }
+
+    public function confirmTablet(Employee $employee, Tablet $tablet){
+        $assignment = $employee->employee_tablet()->where('tablet_id', $tablet->id)->first();
+        if (!$assignment) {
+            return redirect()->back()->with('error', 'Tablet assignment not found.');
+        }
+
+        // Обновляем запись
+        $employee->employee_tablet()->updateExistingPivot($tablet->id, ['confirmed' => true]);
+
+        return redirect()->back()->with('success', 'Territory confirmed.');
     }
 
     public function unassignTablet(Employee $employee, Tablet $tablet){
@@ -140,7 +159,7 @@ class EmployeeTabletController extends Controller
         $tablet->save();
 
         // Заполняем таблицу связей employee_tablet
-        $employee->employee_tablet()->attach($tablet->id, ['assigned_at' => now()]);
+        $employee->employee_tablet()->attach($tablet->id, ['assigned_at' => $request->input('assigned_at')]);
 
         // Возвращаем успешный ответ
         return redirect()->back()->with('success', 'Tablet successfully assigned to the employee.');
@@ -153,12 +172,13 @@ class EmployeeTabletController extends Controller
         $pdfAssignment = DB::table('employee_tablet')
             ->where('employee_id', $employee->id)
             ->where('tablet_id', $tablet->id)
-            ->select('id', 'pdf_path')
+            ->select('id', 'pdf_path', 'confirmed')
             ->orderByDesc('id')
             ->first();
 
         // Проверка наличия pdfAssignment
         $hasPdf = $pdfAssignment && $pdfAssignment->pdf_path;
+        $tabletConf = $pdfAssignment && $pdfAssignment->confirmed;
 
         // Данные, которые будут переданы в представление
         return view('print-act', [
@@ -166,6 +186,7 @@ class EmployeeTabletController extends Controller
             'tablet' => $tablet,
             'hasPdf' => $hasPdf, // Флаг для наличия pdf
             'pdfAssignment' => $pdfAssignment, // Для использования в компоненте
+            'tabletConf' => $tabletConf,
             'showHeader' => false,
             'printPadding' => 1
         ]);

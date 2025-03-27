@@ -62,9 +62,18 @@
                                         {{ $territory->department }}
                                     </td>
                                     <td class="px-4 py-2">
-                                        @if ($territory->employee)
-                                            <a href="{{ route('employees.show', $territory->employee->id) }}" class="text-blue-500 hover:underline">
-                                                {{ $territory->employee->full_name }}
+                                        @php
+                                            $employeeTerritory = \App\Models\EmployeeTerritory::where('territory_id', $territory->id)
+                                                ->whereNull('unassigned_at')
+                                                ->latest('assigned_at')
+                                                ->first();
+                                            $employee = $employeeTerritory ? $employeeTerritory->employee : null;
+                                        @endphp
+
+
+                                        @if ($employee)
+                                            <a href="{{ route('employees.show', $employee->id) }}" class="text-blue-500 hover:underline">
+                                                {{ $employee->full_name }}
                                             </a>
                                         @else
                                             Не назначен
@@ -73,6 +82,7 @@
                                     <td class="px-4 py-2">
                                         {{ $territory->manager_id }}
                                     </td>
+
                                 </tr>
                             @endforeach
 

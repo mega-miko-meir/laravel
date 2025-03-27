@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EmployeeTablet;
 use App\Models\Tablet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,8 +52,13 @@ class TabletController extends Controller
         ->orderByDesc('employee_tablet.assigned_at')
         ->get();
 
+        $lastTablet = EmployeeTablet::where('employee_id', $employee->id ?? null)
+        ->whereNull('returned_at') // Фильтруем только активные записи
+        ->orderByDesc('assigned_at') // Берём последнюю по дате назначения
+        ->first();
 
-        return view('show-tablet', compact('tablet', 'previousUsers'));
+
+        return view('show-tablet', compact('tablet', 'previousUsers', 'lastTablet'));
     }
 
 

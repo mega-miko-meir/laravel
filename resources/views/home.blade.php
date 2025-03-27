@@ -28,16 +28,50 @@
 
                 <x-active-employee-checkbox />
 
-                <!-- Компонент поиска -->
                 <x-search class="mb-6" />
 
-                <!-- Заголовок с количеством сотрудников -->
                 <h2 class="text-2xl font-bold mb-4 mt-6">
-                    Список всех сотрудников ({{ $employees->count() }})
+                    Список всех сотрудников (<span id="employee-count">{{ $employees->count() }}</span>)
                 </h2>
 
-                <!-- Список сотрудников -->
-                <x-employee-card :employees="$employees" :sort="$sort" :order="$order"/>
+                <div id="employees-container">
+                    <x-employee-card :employees="$employees" :sort="$sort" :order="$order"/>
+                </div>
+
+                <!-- Подключаем внешний JS -->
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        let checkbox = document.getElementById('ticker'); // ID чекбокса из x-active-employee-checkbox
+
+                        async function loadEmployees(activeOnly) {
+                            try {
+                                const response = await fetch(`/employees?active_only=${activeOnly}`, {
+                                    headers: { "X-Requested-With": "XMLHttpRequest" } // Указываем, что это AJAX-запрос
+                                });
+
+                                const html = await response.text(); // Получаем HTML-код
+                                document.getElementById("employees-container").innerHTML = html;
+
+                                // Обновляем счетчик сотрудников
+                                let parser = new DOMParser();
+                                let doc = parser.parseFromString(html, 'text/html');
+                                let count = doc.querySelectorAll('.employee-card').length;
+                                document.getElementById("employee-count").textContent = count;
+
+                            } catch (error) {
+                                console.error("Ошибка загрузки сотрудников:", error);
+                            }
+                        }
+
+                        checkbox.addEventListener('change', function () {
+                            let activeOnly = checkbox.checked ? 1 : 0;
+                            loadEmployees(activeOnly);
+                        });
+                    });
+                </script>
+
+
+                <script src="{{ asset('js/employees.js') }}" defer></script>
             </div>
         </x-container>
     @else

@@ -22,19 +22,22 @@
             <p><span class="font-medium">Менеджер:</span> {{ $employee->territories->first()->parent->employee->full_name ?? '' }}</p>
         @endif
         <p>
-            <span class="font-medium">Дата найма:</span>
-            {{ $employee->hiring_date ? \Carbon\Carbon::parse($employee->hiring_date)->format('d.m.Y') : '-'}}
-
+            <span class="font-medium">Дата найма/увольнения:</span>
+            {{ $employee->hiring_date && optional($employee->events()->latest()->first())->event_date
+                ? \Carbon\Carbon::parse($employee->events()->latest()->first()->event_date)->format('d.m.Y')
+                : '-'
+            }} -
+            {{ $employee->firing_date ? \Carbon\Carbon::parse($employee->firing_date)->format('d.m.Y') : '-' }}
         </p>
     </div>
 
 
-    @if ($employee->status === 'dismissed' && $employee->firing_date)
+    {{-- @if ($employee->status === 'dismissed' && $employee->firing_date)
         <p class="text-sm text-gray-700 mb-4">
             <span class="font-medium">Дата увольнения:</span>
             {{ $employee->firing_date ? \Carbon\Carbon::parse($employee->firing_date)->format('d.m.Y') : '-'}}
         </p>
-    @endif
+    @endif --}}
     <x-edit-employee-button :employee="$employee"/>
 
     <!-- Форма обновления статуса (изначально скрыта) -->

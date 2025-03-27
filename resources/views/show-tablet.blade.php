@@ -26,7 +26,9 @@
             <tbody>
                 @foreach($previousUsers as $record)
                     <tr>
-                        <td class="border border-gray-300 px-4 py-2">{{ $record->full_name }}</td>
+                        <td class="border border-gray-300 px-4 py-2">
+                            <a href="{{route('employees.show', $record->id)}}" class="text-blue-500 hover:underline">{{ $record->full_name }}</a>
+                        </td>
                         <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->assigned_at ? \Carbon\Carbon::parse($record->pivot->assigned_at)->format('d.m.Y')  : '—'}}
                             <button onclick="openEditModal('{{ $record->pivot->id }}', 'assigned_at', '{{ $record->pivot->assigned_at }}', 'tablet')"
                                 class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
@@ -39,6 +41,8 @@
                         <td class="border border-gray-300 px-4 py-2">
                             @if($record->pivot->pdf_path)
                                 <a href="{{ asset('storage/' . $record->pivot->pdf_path) }}" class="text-blue-500 hover:underline" target="_blank">📄 PDF</a>
+                                <button onclick="openPdfModal('{{ $record->pivot->id }}', 'pdf_path', '{{ $record->pivot->pdf_path }}', 'tablet')"
+                                    class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
                             @else
                                 —
                             @endif
@@ -52,7 +56,9 @@
                         </td>
                     </tr>
                 @endforeach
-                <x-date-edit-modal />
+                <x-data-edit-modal />
+                {{-- <x-pdf-edit-modal /> --}}
+
             </tbody>
         </table>
 

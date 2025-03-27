@@ -21,6 +21,7 @@ use App\View\Components\employee as ComponentsEmployee;
 
 class EmployeeController extends Controller
 {
+
     public function updateDate(Request $request, $id)
     {
         $request->validate([
@@ -94,10 +95,10 @@ class EmployeeController extends Controller
         // Обновляем статус и даты в таблице employees
         $updateData = ['status' => $request->status];
 
-        if ($request->status === 'hire') {
+        if ($request->status === 'hired') {
             $updateData['hiring_date'] = $eventDate;
             $updateData['firing_date'] = null;
-        } elseif ($request->status === 'dismissed') {
+        } elseif ($request->status === 'dismissed' || $request->status === 'maternity_leave' || $request->status === 'changed_position') {
             $updateData['firing_date'] = $eventDate;
         }
 
@@ -249,59 +250,6 @@ class EmployeeController extends Controller
     //     return redirect()->back()->with('success', 'Tablet successfully unassigned from the employee.');
     // }
 
-    public function unassignTerritory(Employee $employee, Territory $territory, Request $request)
-    {
-        $assignmentToRemove = DB::table('employee_territory')
-            ->where('employee_id', $employee->id)
-            ->where('territory_id', $territory->id)
-            ->where('confirmed', 0)
-            ->orderByDesc('id') // Сортируем по убыванию ID
-            ->first();
-
-        // dd($assignmentToRemove2);
-        $territory->employee()->dissociate();
-        $territory->save();
-
-        // if ($assignment) {
-            // Отвязываем территорию от сотрудника
-
-            // Если запись существует и confirmed = false, удаляем только эту строку
-            if ($assignmentToRemove) {
-                DB::table('employee_territory')
-                    ->where('id', $assignmentToRemove->id) // Указываем ID найденной записи
-                    ->delete();
-
-
-
-                return redirect()->back()->with('success', 'Territory unassigned and removed due to unconfirmed status.');
-            } else {
-                // Обновляем колонку unassigned_at только для этой строки
-                $employee->employee_territory()->updateExistingPivot($territory->id, ['unassigned_at' => $request->input('unassigned_at')]);
-                // Обновляем old_employee_id на территории
-                $territory->old_employee_id = $employee->full_name;
-                $territory->save();
-                return redirect()->back()->with('success', 'Territory successfully unassigned from the employee.');
-            }
-        // } else {
-        //     // Если привязки не существует
-        //     return redirect()->back()->with('error', 'Assignment not found.');
-        // }
-    }
-
-
-    public function assignTerritory(Request $request, Employee $employee){
-        // $request->validate([
-        //     'assigned_at' => 'date'
-        // ]);
-        $territory = Territory::findOrFail($request->input('territory_id'));
-        $territory->employee()->associate($employee);
-        $territory->save();
-
-        // Filling in employee_territory table
-        $employee->employee_territory()->attach($territory->id, ['assigned_at' => $request->input('assigned_at')]);
-
-        return redirect()->back()->with('success', 'Territory successfully assigned to the employee.');
-    }
 
     public function assignEmployee(Request $request, Territory $territory)
     {
@@ -320,21 +268,29 @@ class EmployeeController extends Controller
 
 
 
-    public function confirmTerritory(Employee $employee, Territory $territory){
-        $assignment = $employee->employee_territory()->where('territory_id', $territory->id)->first();
-        if (!$assignment) {
-            return redirect()->back()->with('error', 'Territory assignment not found.');
+    public function index(Request $request)
+    {
+        $activeOnly = $request->query('active_only', 1);
+
+        $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
+        $order = $request->input('order', 'desc');
+        // Фильтруем сотрудников: показываем только активных, если $activeOnly == 1
+        $employees = Employee::when($activeOnly == 1, function ($query) {
+            return $query->whereIn('status', ['active', 'new']);
+        })->orderBy('full_name')->get();
+
+        // Если это AJAX-запрос, рендерим только компонент `x-employee-card`
+        if ($request->ajax()) {
+            return view('components.employee-card', ['employees' => $employees, 'sort' => $sort,
+            'order' => $order])->render();
         }
 
-        // Обновляем запись
-        $employee->employee_territory()->updateExistingPivot($territory->id, ['confirmed' => true]);
-
-        return redirect()->back()->with('success', 'Territory confirmed.');
+        // Если обычный запрос, возвращаем полную страницу
+        return view('home', compact('employees'));
     }
 
 
     public function searchEmployee(Request $request){
-
         $query = $request->input('search');
 
         $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
@@ -343,6 +299,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::where('first_name', 'like', "%$query%")
             ->orWhere('full_name', 'like', "%$query%")
+            ->orWhere('last_name', 'like', "%$query%")
             ->orWhere('email', 'like', "%$query%")
             ->orWhere('status', 'like', "%$query%")
             ->orWhereHas('territories', function ($q) use ($query) {
@@ -433,7 +390,7 @@ class EmployeeController extends Controller
         // Создаём событие "new"
         EmployeeEvent::create([
             'employee_id' => $employee->id,
-            'event_type' => 'new',
+            'event_type' => 'hired',
             'event_date' => $employee->hiring_date ?? now(), // Используем дату найма
         ]);
 
@@ -459,6 +416,13 @@ class EmployeeController extends Controller
         ->withPivot('assigned_at', 'unassigned_at')
         ->orderByDesc('assigned_at')
         ->first();
+
+        $lastTablet = $employee->employee_tablet()
+        ->withPivot('assigned_at', 'returned_at')
+        ->orderByDesc('assigned_at')
+        ->first();
+
+
 
         $territoriesHistory = $employee->employee_territory()
         ->withPivot('assigned_at', 'unassigned_at', 'id')
@@ -500,7 +464,7 @@ class EmployeeController extends Controller
         // dd($tablets);
 
 
-        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories', 'lastTerritory'));
+        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories', 'lastTerritory', 'lastTablet'));
 
 
         // return view('employee.show', compact('employee', 'availableTablets'));

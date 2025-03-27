@@ -4,13 +4,81 @@ namespace App\Http\Controllers;
 
 use App\Models\Brick;
 use App\Models\Employee;
-use App\Models\EmployeeTerritory;
 use App\Models\Territory;
 use Illuminate\Http\Request;
+use App\Models\EmployeeTerritory;
+use Illuminate\Support\Facades\DB;
 use App\View\Components\territory as ComponentsTerritory;
 
 class TerritoryController extends Controller
 {
+    public function unassignTerritory(Employee $employee, Territory $territory, Request $request)
+    {
+        $assignmentToRemove = DB::table('employee_territory')
+            ->where('employee_id', $employee->id)
+            ->where('territory_id', $territory->id)
+            ->where('confirmed', 0)
+            ->orderByDesc('id') // Сортируем по убыванию ID
+            ->first();
+
+        // dd($assignmentToRemove2);
+        $territory->employee()->dissociate();
+        $territory->save();
+
+        // if ($assignment) {
+            // Отвязываем территорию от сотрудника
+
+            // Если запись существует и confirmed = false, удаляем только эту строку
+            if ($assignmentToRemove) {
+                DB::table('employee_territory')
+                    ->where('id', $assignmentToRemove->id) // Указываем ID найденной записи
+                    ->delete();
+
+
+
+                return redirect()->back()->with('success', 'Territory unassigned and removed due to unconfirmed status.');
+            } else {
+                // Обновляем колонку unassigned_at только для этой строки
+                $employee->employee_territory()->updateExistingPivot($territory->id, ['unassigned_at' => $request->input('unassigned_at')]);
+                // Обновляем old_employee_id на территории
+                $territory->old_employee_id = $employee->full_name;
+                $territory->save();
+                return redirect()->back()->with('success', 'Territory successfully unassigned from the employee.');
+            }
+        // } else {
+        //     // Если привязки не существует
+        //     return redirect()->back()->with('error', 'Assignment not found.');
+        // }
+    }
+
+
+    public function assignTerritory(Request $request, Employee $employee){
+        // $request->validate([
+        //     'assigned_at' => 'date'
+        // ]);
+        $territory = Territory::findOrFail($request->input('territory_id'));
+        $territory->employee()->associate($employee);
+        $territory->save();
+
+        // Filling in employee_territory table
+        $employee->employee_territory()->attach($territory->id, ['assigned_at' => $request->input('assigned_at')]);
+
+        return redirect()->back()->with('success', 'Territory successfully assigned to the employee.');
+    }
+
+    public function confirmTerritory(Employee $employee, Territory $territory){
+        $assignment = $employee->employee_territory()->where('territory_id', $territory->id)->first();
+        if (!$assignment) {
+            return redirect()->back()->with('error', 'Territory assignment not found.');
+        }
+
+        // Обновляем запись
+        $employee->employee_territory()->updateExistingPivot($territory->id, ['confirmed' => true]);
+
+        return redirect()->back()->with('success', 'Territory confirmed.');
+    }
+
+
     public function searchTerritory(Request $request){
         $query = $request->input('search');
         $sort = $request->input('sort', 'territory_name');
@@ -26,12 +94,20 @@ class TerritoryController extends Controller
             ->orderBy($sort, $order)
             ->get();
 
+
         return view('territories', ['territories' => $territories, 'query' => $query, 'sort' => $sort, 'order' => $order]);
     }
 
     public function showTerritory(Territory $territory)
     {
-        $employee = $territory->employee;
+        $employeeTerritory = EmployeeTerritory::where('territory_id', $territory->id)
+        ->whereNull('unassigned_at')
+        ->latest('assigned_at') // Берем последнюю запись по дате назначения
+        ->first();
+
+        $employee = $employeeTerritory ? $employeeTerritory->employee : null;
+
+        // $employee = $territory->employee;
         $bricks = Brick::all();
         // $selectedBricks = $employee->territories->first()->bricks ?? collect();
         $selectedBricks = optional($employee?->territories->first())->bricks ?? collect();
@@ -56,11 +132,37 @@ class TerritoryController extends Controller
         // $lastTerritory = $lastTerritory ?? 'Нет данных';
 
         // $availableEmployees = Employee::whereNull('firing_date')->get();
-        $availableEmployees = Employee::whereNull('firing_date') // Сотрудники, у которых нет даты увольнения
-            ->whereDoesntHave('employee_territory', function ($query) {
-                $query->whereNull('unassigned_at'); // Исключаем тех, кто все еще привязан к территории
+        $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
+        ->where(function ($query) {
+            $query->whereHas('employee_territory', function ($subQuery) {
+                $subQuery->whereNotNull('unassigned_at') // unassigned_at не null
+                    ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
             })
-            ->get();
+            ->orWhereDoesntHave('employee_territory'); // Нет записей в employee_territory
+        })
+        ->get();
+
+
+        $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
+        ->where(function ($query) {
+            $query->whereDoesntHave('employee_territory') // Сотрудники, у которых нет записей в employee_territory
+                  ->orWhereHas('employee_territory', function ($subQuery) {
+                      $subQuery->whereNotNull('unassigned_at') // Последняя запись с unassigned_at != null
+                          ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
+                  });
+        })
+        ->get();
+
+
+        // $availableEmployees = Employee::whereNull('firing_date') // Сотрудники без даты увольнения
+        // ->where(function ($query) {
+        //     $query->whereDoesntHave('employee_territory') // Исключаем тех, у кого вообще нет привязки
+        //             ->orWhereHas('employee_territory', function ($subQuery) {
+        //                 $subQuery->whereNotNull('unassigned_at'); // Берем только тех, у кого есть отвязанная территория
+        //             });
+        // })
+        // ->get();
+
 
         return view('show-territory', compact('territory', 'previousUsers', 'employee', 'bricks', 'selectedBricks', 'availableEmployees', 'lastTerritory'));
     }
@@ -81,6 +183,8 @@ class TerritoryController extends Controller
         ->get();
         return view('create-edit-territory', ['territory' => $territory, 'parentTerritories' => $parentTerritories]);
     }
+
+
 
 
     public function createTerritory(Request $request){

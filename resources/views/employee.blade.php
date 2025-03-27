@@ -27,6 +27,7 @@
     :employee="$employee"
     :availableTablets="$availableTablets"
     :tabletHistories="$tabletHistories"
+    :lastTablet="$lastTablet"
     />
 
 </div>
