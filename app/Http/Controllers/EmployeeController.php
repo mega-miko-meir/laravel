@@ -22,137 +22,6 @@ use App\View\Components\employee as ComponentsEmployee;
 class EmployeeController extends Controller
 {
 
-    public function updateDate(Request $request, $id)
-    {
-        $request->validate([
-            'date_value' => 'required|date',
-            'field_name' => 'required|in:assigned_at,unassigned_at',
-        ]);
-
-        DB::table('employee_territory')
-            ->where('id', $id)
-            ->update([$request->field_name => $request->date_value]);
-
-        return back()->with('success', 'Дата обновлена');
-    }
-
-
-
-    public function updateCredentials(Request $request, $id)
-    {
-        $employee = Employee::findOrFail($id);
-
-        // Проверяем, есть ли уже такой логин
-        $credential = EmployeeCredential::where('employee_id', $employee->id)
-            ->where('system', $request->system)
-            ->first();
-
-        if ($credential) {
-            // Обновляем существующий логин
-            $credential->update([
-                'user_name' => trim($request->user_name) ?: '',
-                'login' => trim($request->login) ?: '',
-                'password' => trim($request->password) ?: '',
-                'add_password' => trim($request->add_password) ?: ''
-            ]);
-        } else {
-            // Создаём новый
-            EmployeeCredential::create([
-                'employee_id' => $employee->id,
-                'system' => $request->system,
-                'user_name' => trim($request->user_name) ?: '',
-                'login' => trim($request->login) ?: '',
-                'password' => trim($request->password) ?: '',
-                'add_password' => trim($request->add_password) ?: ''
-            ]);
-        }
-
-        return redirect()->back()->with('success', 'Данные обновлены.');
-    }
-
-
-    public function updateStatusAndEvent(Request $request, Employee $employee)
-    {
-        $request->validate([
-            'status' => 'required|string',
-            'event_date' => 'nullable|date',
-        ]);
-
-        $eventDate = $request->event_date ?? now();
-
-        // Проверяем, изменился ли статус
-        if ($employee->status === $request->status) {
-            return back()->with('info', 'Статус сотрудника уже установлен, событие не добавлено.');
-        }
-
-        // Создаем запись в таблице событий
-        EmployeeEvent::create([
-            'employee_id' => $employee->id,
-            'event_type' => $request->status,
-            'event_date' => $eventDate,
-        ]);
-
-        // Обновляем статус и даты в таблице employees
-        $updateData = ['status' => $request->status];
-
-        if ($request->status === 'hired') {
-            $updateData['hiring_date'] = $eventDate;
-            $updateData['firing_date'] = null;
-        } elseif ($request->status === 'dismissed' || $request->status === 'maternity_leave' || $request->status === 'changed_position') {
-            $updateData['firing_date'] = $eventDate;
-        }
-
-        $employee->update($updateData);
-
-        return back()->with('success', 'Статус сотрудника обновлен, событие добавлено.');
-    }
-
-
-
-    // public function store(Request $request, Employee $employee){
-    //     $request->validate([
-    //         'event_type' => 'required|string',
-    //         'event_date' => 'nullable|date',
-    //     ]);
-
-    //     // Если дата не указана, используем текущую дату
-    //     $eventDate = $request->event_date ?? now();
-
-    //     // Записываем событие в таблицу employee_events
-    //     EmployeeEvent::create([
-    //         'employee_id' => $employee->id,
-    //         'event_type' => $request->event_type,
-    //         'event_date' => $eventDate,
-    //     ]);
-
-    //     // Обновляем статус и даты в таблице employees
-    //     if ($request->event_type === 'hired') {
-    //         $employee->update(['hiring_date' => $eventDate, 'status' => 'active']);
-    //     } elseif ($request->event_type === 'dismissed') {
-    //         $employee->update(['firing_date' => $eventDate, 'status' => 'dismissed']);
-    //     } else {
-    //         $employee->update(['status' => $request->event_type]);
-    //     }
-
-    //     return back()->with('success', 'Событие успешно добавлено.');
-    // }
-
-
-    public function updateStatus(Request $request, Employee $employee){
-        $request->validate([
-            'status' => 'required|in:new,active,dismissed,maternity_leave,long_vacation',
-        ]);
-
-        $employee->update([
-            'status' => $request->status,
-            'hiring_date' => $request->status === 'active' ? now() : $employee->hiring_date,
-            'firing_date' => in_array($request->status, ['dismissed', 'maternity_leave']) ? now() : null
-            // 'firing_date' => in_array($request->status, ['dismissed', 'maternity_leave']) ? null,
-        ]);
-
-        return redirect()->back()->with('success', 'Статус сотрудника успешно обновлен.');
-    }
-
 
 
     public function exportToExcel()
@@ -251,67 +120,82 @@ class EmployeeController extends Controller
     // }
 
 
-    public function assignEmployee(Request $request, Territory $territory)
-    {
-        // Найти сотрудника по переданному ID
-        $employee = Employee::findOrFail($request->input('employee_id'));
-
-        // Привязать сотрудника к территории
-        $territory->employee()->associate($employee);
-        $territory->save();
-
-        // Запись в таблицу `employee_territory`
-        $employee->employee_territory()->attach($territory->id, ['assigned_at' => $request->input('assigned_at')]);
-
-        return redirect()->back()->with('success', 'Employee successfully assigned to the territory.');
-    }
-
-
 
     public function index(Request $request)
     {
         $activeOnly = $request->query('active_only', 1);
-
-        $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
+        $sort = $request->input('sort', 'latest_event_date'); // Сортируем по последнему событию
         $order = $request->input('order', 'desc');
-        // Фильтруем сотрудников: показываем только активных, если $activeOnly == 1
-        $employees = Employee::when($activeOnly == 1, function ($query) {
-            return $query->whereIn('status', ['active', 'new']);
-        })->orderBy('full_name')->get();
+
+        // Подзапрос для получения последнего события каждого сотрудника
+        $employees = Employee::leftJoinSub(
+                DB::table('employee_events')
+                    ->select('employee_id', DB::raw('MAX(event_date) as latest_event_date'))
+                    ->groupBy('employee_id'),
+                'latest_events',
+                'employees.id',
+                '=',
+                'latest_events.employee_id'
+            )
+            ->select('employees.*', 'latest_events.latest_event_date') // Используем latest_event_date
+            ->when($activeOnly == 1, function ($query) {
+                return $query->whereIn('employees.status', ['active', 'new']);
+            })
+            ->orderBy($sort === 'latest_event_date' ? 'latest_events.latest_event_date' : 'employees.'.$sort, $order)
+            ->orderBy('employees.full_name')
+            ->get();
 
         // Если это AJAX-запрос, рендерим только компонент `x-employee-card`
         if ($request->ajax()) {
-            return view('components.employee-card', ['employees' => $employees, 'sort' => $sort,
-            'order' => $order])->render();
+            return view('components.employee-card', [
+                'employees' => $employees,
+                'sort' => $sort,
+                'order' => $order
+            ])->render();
         }
 
         // Если обычный запрос, возвращаем полную страницу
-        return view('home', compact('employees'));
+        return view('home', compact('employees', 'sort', 'order', 'activeOnly'));
     }
 
 
-    public function searchEmployee(Request $request){
+
+
+    public function searchEmployee(Request $request)
+    {
         $query = $request->input('search');
 
-        $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
-        $order = $request->input('order', 'desc'); // По умолчанию сортировка по возрастанию
+        $sort = $request->input('sort', 'latest_event_date'); // По умолчанию сортируем по дате последнего события
+        $order = $request->input('order', 'desc'); // По умолчанию сортировка по убыванию
         $activeOnly = $request->input('active_only', 1);
 
-        $employees = Employee::where('first_name', 'like', "%$query%")
-            ->orWhere('full_name', 'like', "%$query%")
-            ->orWhere('last_name', 'like', "%$query%")
-            ->orWhere('email', 'like', "%$query%")
-            ->orWhere('status', 'like', "%$query%")
-            ->orWhereHas('territories', function ($q) use ($query) {
-                $q->where('team', 'like', "%$query%")
-                ->orWhere('city', 'like', "%$query%");
+        // Подзапрос для получения последнего события каждого сотрудника
+        $employees = Employee::leftJoinSub(
+                DB::table('employee_events')
+                    ->select('employee_id', DB::raw('MAX(event_date) as latest_event_date'))
+                    ->groupBy('employee_id'),
+                'latest_events',
+                'employees.id',
+                '=',
+                'latest_events.employee_id'
+            )
+            ->select('employees.*', 'latest_events.latest_event_date') // Выбираем сотрудников + дату последнего события
+            ->where(function ($q) use ($query) {
+                $q->where('employees.first_name', 'like', "%$query%")
+                ->orWhere('employees.full_name', 'like', "%$query%")
+                ->orWhere('employees.last_name', 'like', "%$query%")
+                ->orWhere('employees.email', 'like', "%$query%")
+                ->orWhere('employees.status', 'like', "%$query%")
+                ->orWhereHas('territories', function ($q) use ($query) {
+                    $q->where('team', 'like', "%$query%")
+                        ->orWhere('city', 'like', "%$query%");
+                });
+            })
+            ->when($activeOnly == 1, function ($q) {
+                $q->whereIn('employees.status', ['active', 'hired', 'new', 'dismissed', 'maternity_leave', 'changed_position']);
             })
             ->orderBy($sort, $order)
             ->get();
-
-        if ($activeOnly == 1) {
-            $employees = $employees->whereIn('status', ['active', 'new']);
-        }
 
         return view('home', [
             'employees' => $employees,
@@ -321,6 +205,7 @@ class EmployeeController extends Controller
             'activeOnly' => $activeOnly,
         ]);
     }
+
 
     public function deleteEmployee(Employee $employee)
 {
@@ -398,12 +283,20 @@ class EmployeeController extends Controller
     }
 
     public function showEmployee($id){
-        $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials'])->findOrFail($id);
+        $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials', 'events'])->findOrFail($id);
         // $oldEmployee = Employee::with('tablets')->findOrFail($oldEmployeeId);
         $bricks = Brick::all();
         // $territories = $employee->territories();
         $selectedBricks = $employee->territories->first()->bricks ?? collect();
-        $availableTablets = Tablet::whereNull('employee_id')->with('oldEmployee')->get();
+        // $availableTablets = Tablet::whereNull('employee_id')->with('oldEmployee')->get();
+        $availableTablets = Tablet::whereHas('employees', function ($query) {
+            $query->whereNotNull('returned_at')
+                  ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_tablet WHERE employee_tablet.tablet_id = tablets.id)');
+        })
+        ->with('oldEmployee')
+        ->get();
+
+
         $availableTerritories = Territory::whereNull('employee_id')->with('oldEmployee')->get();
         // $territoriesHistory = EmployeeTerritory::where('employee_id', $employee->id)
         // // ->whereNotNull('unassigned_at')
@@ -463,8 +356,10 @@ class EmployeeController extends Controller
 
         // dd($tablets);
 
+        $latestEvent = $employee->events()->latest('event_date')->first();
+        $currentStatus = $latestEvent ? $latestEvent->event_type : null;
 
-        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories', 'lastTerritory', 'lastTablet'));
+        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories', 'lastTerritory', 'lastTablet', 'currentStatus'));
 
 
         // return view('employee.show', compact('employee', 'availableTablets'));

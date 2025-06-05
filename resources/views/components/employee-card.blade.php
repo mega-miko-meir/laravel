@@ -14,19 +14,11 @@
                 </th>
                 <th class="px-4 py-3 text-left">Status</th>
                 <th class="px-4 py-3 text-left">
-                    <a href="{{ route('employees.search', ['sort' => 'hiring_date', 'order' => request('order') === 'asc' ? 'desc' : 'asc']) }}">
-                        Hiring Date
-                        @if($sort === 'hiring_date')
+                    <a href="{{ route('employees.search', ['sort' => 'event_date', 'order' => request('order') === 'asc' ? 'desc' : 'asc']) }}">
+                        Event
+                        {{-- @if($sort === 'event_date')
                             {!! $order === 'asc' ? '↑' : '↓' !!}
-                        @endif
-                    </a>
-                </th>
-                <th class="px-4 py-3 text-left">
-                    <a href="{{ route('employees.search', ['sort' => 'firing_date', 'order' => request('order') === 'asc' ? 'desc' : 'asc']) }}">
-                        Dismissal Date
-                        @if($sort === 'firing_date')
-                            {!! $order === 'asc' ? '↑' : '↓' !!}
-                        @endif
+                        @endif --}}
                     </a>
                 </th>
                 <th class="px-4 py-3 text-left">Team</th>
@@ -43,20 +35,18 @@
                         </a>
                     </td>
                     <td class="px-4 py-3 text-gray-700">
-                        <x-status-badge :status="$employee->status" />
+                        <x-status-badge :status="$employee->events()->latest('event_date')->first()?->event_type" />
                     </td>
                     <td class="px-4 py-3 text-gray-700">
-                        {{ $employee->hiring_date ? \Carbon\Carbon::parse($employee->hiring_date)->format('d.m.Y') : '-'}}
+                        {{ $employee->events()->latest('event_date')->first()?->event_date ? \Carbon\Carbon::parse($employee->events()->latest('event_date')->first()?->event_date)->format('d.m.Y') : '-'}}
                     </td>
+
                     {{-- <td class="px-4 py-3 text-gray-700">
-                        {{ $employee->firing_date ? \Carbon\Carbon::parse($employee->firing_date)->format('d.m.Y') : '-'}}
-                    </td> --}}
-                    <td class="px-4 py-3 text-gray-700">
                         @php
                             $lastEvent = optional($employee->events->whereIn('event_type', ['maternity_leave', 'dismissed', 'changed_position'])->last());
                         @endphp
                         {{ $lastEvent->event_date ? \Carbon\Carbon::parse($lastEvent->event_date)->format('d.m.Y') : '-' }}
-                    </td>
+                    </td> --}}
 
                     <td class="px-4 py-3 text-gray-700">
                         {{ $employee->territories->first()->team ?? '-' }}

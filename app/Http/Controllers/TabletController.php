@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EmployeeTablet;
 use App\Models\Tablet;
+use App\Models\Employee;
 use Illuminate\Http\Request;
+use App\Models\EmployeeTablet;
 use Illuminate\Support\Facades\DB;
 
 class TabletController extends Controller
@@ -57,8 +58,23 @@ class TabletController extends Controller
         ->orderByDesc('assigned_at') // Берём последнюю по дате назначения
         ->first();
 
+        // dd($previousUsers->first());
 
-        return view('show-tablet', compact('tablet', 'previousUsers', 'lastTablet'));
+        $availableEmployees = Employee::whereHas('events', function ($query) {
+            $query->whereIn('event_type', ['new', 'hired'])
+                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
+        })
+        ->where(function ($query) {
+            $query->whereDoesntHave('employee_tablet') // Нет записей в employee_territory
+                  ->orWhereHas('employee_tablet', function ($subQuery) {
+                      $subQuery->whereNotNull('returned_at')
+                               ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
+                  });
+        })
+        ->get();
+
+
+        return view('show-tablet', compact('tablet', 'previousUsers', 'lastTablet', 'availableEmployees'));
     }
 
 

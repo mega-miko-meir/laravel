@@ -109,7 +109,7 @@
 </div>
 <div x-data="{open:false}" class="bg-white shadow-md rounded-lg p-4 mt-6">
     <button
-    {{-- onclick="toggleTerritoryHistory()" --}}
+    {{-- onclick="toggleTerritoryHistory()" --}}s
     x-on:click="open = !open"
     class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
         История территорий

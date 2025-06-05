@@ -42,7 +42,7 @@
             </div>
         </div>
 
-        <p><strong>Менеджер:</strong> {{ $territory->parent && $territory->parent->employee ? $territory->parent->employee->first_name . ' ' .$territory->parent->employee->last_name : '' }}</p>
+        <p><strong>Менеджер:</strong> <a href="{{route('employees.show', $territory->parent->employee->id)}}" class="text-blue-500 hover:underline">{{ $territory->parent && $territory->parent->employee ? $territory->parent->employee->first_name . ' ' .$territory->parent->employee->last_name : '' }}</a></p>
 
         <x-edit-territory-button :territory="$territory"/>
         <br>

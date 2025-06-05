@@ -112,13 +112,101 @@
 @extends('layout')
 
 @section('content')
-    <h1>{{ $message }}</h1>
-    <ul>
-        @foreach ($bricks as $brick)
-            <li>{{ $brick }}</li>
-        @endforeach
-    </ul>
-    <a href="/">Go back</a>
+<div class="w-full max-w-md bg-white shadow-lg rounded-lg flex flex-col overflow-hidden mt-20">
 
+    <div id="chat-box" class="flex-1 p-4 space-y-4 overflow-y-auto h-96">
+      <!-- Сообщения будут сюда добавляться -->
+    </div>
+
+    <div class="border-t border-gray-200 p-4 flex items-center">
+      <input
+        id="user-input"
+        type="text"
+        placeholder="Введите сообщение..."
+        class="flex-1 border rounded-full px-4 py-2 mr-2 focus:outline-none focus:ring focus:border-blue-400"
+      >
+      <button
+        id="send-button"
+        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full"
+      >
+        Отправить
+      </button>
+    </div>
+
+  </div>
+
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+    });
+
+    // function sendMessage() {
+    // const message = userInput.value.trim();
+    // if (message === '') return;
+
+    // addMessage('user', message);
+    // userInput.value = '';
+
+    // // Имитируем ответ от бота (пока без сервера)
+    // setTimeout(() => {
+    //     addMessage('bot', 'Принял сообщение: ' + message);
+    // }, 500);
+    // }
+
+    function sendMessage() {
+        const message = userInput.value.trim();
+        if (message === '') return;
+
+        addMessage('user', message);
+        userInput.value = '';
+
+        // Отправляем сообщение на сервер
+        fetch('/chatbot', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message }),
+        })
+        .then(response => {
+            return response.json();
+        })
+        .then(data => {
+            console.log('Ответ от сервера:', data); // логирование ответа
+            addMessage('bot', data.reply);
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            addMessage('bot', 'Ошибка сервера. Попробуйте позже.');
+        });
+
+
+    }
+
+
+    function addMessage(sender, text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('flex', sender === 'user' ? 'justify-end' : 'justify-start');
+
+    const bubble = document.createElement('div');
+    bubble.className = `px-4 py-2 rounded-lg max-w-xs ${
+        sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'
+    }`;
+    bubble.textContent = text;
+
+    messageDiv.appendChild(bubble);
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+  </script>
 
 @endsection

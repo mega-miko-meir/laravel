@@ -1,12 +1,13 @@
-@props(['employee'])
+@props(['employee', 'currentStatus'])
 
 <div class="mt-6 bg-white p-4 rounded-lg shadow-md relative">
     <!-- Заголовок и статус -->
     <div class="flex justify-between items-center mb-4">
         <h1 class="text-xl font-semibold text-gray-800">Информация о сотруднике</h1>
         <div class="flex items-center gap-2">
-            <x-status-badge :status="$employee->status" />
-            <button onclick="toggleEditForm()" class="text-blue-600 text-sm hover:underline">Редактировать</button>
+            {{ \Carbon\Carbon::parse($employee->events()->latest('event_date')->first()?->event_date)->format('d.m.Y') }} -
+            <x-status-badge :status="$employee->events()->latest('event_date')->first()?->event_type" />
+            <button onclick="toggleEditForm()" class="text-blue-600 text-sm hover:underline">Edit</button>
         </div>
     </div>
 
@@ -21,55 +22,42 @@
             <p><span class="font-medium">Роль:</span> {{ $employee->territories->first()->role }}</p>
             <p><span class="font-medium">Менеджер:</span> {{ $employee->territories->first()->parent->employee->full_name ?? '' }}</p>
         @endif
-        <p>
-            <span class="font-medium">Дата найма/увольнения:</span>
-            {{ $employee->hiring_date && optional($employee->events()->latest()->first())->event_date
-                ? \Carbon\Carbon::parse($employee->events()->latest()->first()->event_date)->format('d.m.Y')
-                : '-'
-            }} -
-            {{ $employee->firing_date ? \Carbon\Carbon::parse($employee->firing_date)->format('d.m.Y') : '-' }}
-        </p>
     </div>
 
-
-    {{-- @if ($employee->status === 'dismissed' && $employee->firing_date)
-        <p class="text-sm text-gray-700 mb-4">
-            <span class="font-medium">Дата увольнения:</span>
-            {{ $employee->firing_date ? \Carbon\Carbon::parse($employee->firing_date)->format('d.m.Y') : '-'}}
-        </p>
-    @endif --}}
     <x-edit-employee-button :employee="$employee"/>
 
-    <!-- Форма обновления статуса (изначально скрыта) -->
-    <form action="{{ route('employees.updateStatusAndEvent', $employee->id) }}" method="POST" id="editForm" class="bg-gray-50 p-4 rounded-lg shadow-sm hidden"
-        onsubmit="return confirm('Are you sure you want to add an event and change the status?');">
-        @csrf
-        @method('PUT')
-        <label for="status" class="block text-sm font-medium mb-1">Выберите статус:</label>
-        <select name="status" id="status" class="w-full p-2 border rounded text-sm">
-            <option value="active" {{ $employee->status === 'active' ? 'selected' : '' }}>Hired</option>
-            <option value="dismissed" {{ $employee->status === 'dismissed' ? 'selected' : '' }}>Dismissed</option>
-            <option value="maternity_leave" {{ $employee->status === 'maternity_leave' ? 'selected' : '' }}>Maternity leave</option>
-            <option value="change_position" {{ $employee->status === 'changed_position' ? 'selected' : '' }}>Changed position</option>
-            <option value="long_vacation" {{ $employee->status === 'long_vacation' ? 'selected' : '' }}>Long vacation</option>
-        </select>
-        <label for="event_date" class="block text-sm font-medium mt-2">Event date:</label>
-        <input type="date" name="event_date" id="event_date" class="w-full p-2 border rounded text-sm"
-            value="{{ now()->format('Y-m-d') }}">
-
-        <div class="flex justify-end mt-3">
-            <button type="button" onclick="toggleEditForm()" class="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-100 mr-2">Отмена</button>
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                Обновить
-            </button>
-        </div>
-    </form>
+    <x-event-adding-form :employee="$employee" />
 
     <x-kmp-request :employee="$employee" />
 
     <!-- Заполнение паролей и отображение паролей -->
     <x-credentials :employee="$employee" />
 
+</div>
+
+<div x-data="{open:false}" class="bg-white shadow-md rounded-lg p-4 mt-6">
+    <button
+    {{-- onclick="toggleTerritoryHistory()" --}}
+    x-on:click="open = !open"
+    class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
+        История событий
+        <svg :class="{'rotate-180': open}" id="territoryArrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+
+    <ul x-show="open" id="eventHistoryList" class="text-sm text-gray-600 space-y-2" style="display:none">
+        @foreach($employee->events()->orderBy('event_date', 'desc')->get() as $event)
+            <li class="flex justify-between items-center border-b py-2">
+                <div>
+                    <span class="text-sm text-gray-500 ml-2">
+                        {{ \Carbon\Carbon::parse($event->event_date)->format('d.m.Y') }} -
+                        <x-status-badge :status="$event->event_type" />
+                    </span>
+                </div>
+            </li>
+        @endforeach
+    </ul>
 </div>
 
 <script>

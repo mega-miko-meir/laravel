@@ -6,6 +6,7 @@ use App\Models\Brick;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Http\Request;
+use App\Models\EmployeeEvent;
 use App\Models\EmployeeTerritory;
 use Illuminate\Support\Facades\DB;
 use App\View\Components\territory as ComponentsTerritory;
@@ -129,18 +130,23 @@ class TerritoryController extends Controller
         ->first();
 
 
-        // $lastTerritory = $lastTerritory ?? 'Нет данных';
-
-        // $availableEmployees = Employee::whereNull('firing_date')->get();
-        $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
+        $availableEmployees = Employee::whereHas('events', function ($query) {
+            $query->whereIn('event_type', ['new', 'hired'])
+                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
+        })
         ->where(function ($query) {
-            $query->whereHas('employee_territory', function ($subQuery) {
-                $subQuery->whereNotNull('unassigned_at') // unassigned_at не null
-                    ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
-            })
-            ->orWhereDoesntHave('employee_territory'); // Нет записей в employee_territory
+            $query->whereDoesntHave('employee_territory') // Нет записей в employee_territory
+                  ->orWhereHas('employee_territory', function ($subQuery) {
+                      $subQuery->whereNotNull('unassigned_at')
+                               ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
+                  });
         })
         ->get();
+
+
+
+
+
 
 
         $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"

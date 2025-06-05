@@ -2,9 +2,13 @@
 
 <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
     <h2 class="text-xl font-semibold text-gray-800">Tablet Assignment</h2>
-
+@php
+    // dd($lastTablet, $tabletHistories->last())
+    $tablet = $tabletHistories->first();
+@endphp
     {{-- @if($employee->tablets->isNotEmpty()) --}}
-    @if ($lastTablet && is_null(optional($lastTablet->pivot)->unassigned_at))
+    {{-- @if ($lastTablet && is_null(optional($lastTablet->pivot)->returned_at)) --}}
+    @if ($tablet && is_null($tablet->returned_at))
         <div class="mt-4">
             <p class="text-lg text-gray-600">
                 <span class="font-medium text-gray-800">Tablets:</span>
@@ -12,25 +16,24 @@
                     {{-- @foreach($employee->tablets as $tablet) --}}
                         <li class="flex items-center justify-between text-sm text-gray-600 py-2 border-b border-gray-200">
                             <a href="{{route('tablets.show', $lastTablet->id)}}" class="text-blue-500 hover:underline">
-                                {{ $lastTablet->invent_number }} - {{ $lastTablet->serial_number }}
+                                {{ $tablet->tablet->invent_number }} - {{ $tablet->tablet->serial_number }}
                             </a>
                             <div class="flex items-center space-x-2 text-sm">
                                 <!-- Кнопка печати -->
-                                <form action="/print-act/{{$employee->id}}/{{$lastTablet->id}}" method="POST">
+                                <form action="/print-act/{{$employee->id}}/{{$tablet->tablet_id}}" method="POST">
                                     @csrf
                                     <button class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
                                         🖨️ Print
                                     </button>
                                 </form>
 
-                                <x-pdf-upload-form :employee="$employee" :tablet="$lastTablet"/>
+                                <x-pdf-upload-form :employee="$employee" :tablet="$tablet->tablet"/>
 
                                 <!-- Дополнительная форма -->
-                                <x-unassign-tablet-button :employee="$employee" :tablet="$lastTablet"/>
-                                <x-unassign-with-pdf-button :employee="$employee" :tablet="$lastTablet"/>
+                                <x-unassign-tablet-button :employee="$employee" :tablet="$tablet->tablet"/>
 
-                                @if (!$lastTablet->pivot->confirmed)
-                                    <form action="{{ route('confirm.tablet', [$employee->id, $lastTablet->id]) }}" method="POST" style="display:inline;">
+                                @if (!$tablet->confirmed)
+                                    <form action="{{ route('confirm.tablet', [$employee->id, $tablet->tablet_id]) }}" method="POST" style="display:inline;">
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="bg-green-400 hover:bg-green-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
@@ -56,10 +59,10 @@
             <select id="tablet" name="tablet_id" class="w-full p-3 border rounded-lg mt-2">
                 <option value="">No Tablet</option>
                 @foreach ($availableTablets as $tablet)
-                    <option value="{{ $tablet->id }}">{{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->employees->last()->full_name ?? '' }}</option>
+                    <option value="{{ $tablet->id }}">{{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->employees->first()->full_name ?? '' }}</option>
                 @endforeach
             </select>
-            <input type="date" name="unassigned_at" id="unassigned_at" value="{{ now()->format('Y-m-d') }}">
+            <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d') }}">
             <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
         </form>
     @endif

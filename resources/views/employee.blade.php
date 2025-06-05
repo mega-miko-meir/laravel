@@ -7,7 +7,7 @@
     <x-back-button />
 
     <!-- Employee Information Section -->
-    <x-employee-info :employee="$employee" />
+    <x-employee-info :employee="$employee" :currentStatus="$currentStatus" />
 
     <!-- Territory Assignment Section -->
      <!-- Передаем переменные в компонент territory-assignment -->

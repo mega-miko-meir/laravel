@@ -4,15 +4,20 @@ use App\Models\Listing;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\TaskController;
 
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrickController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use App\Http\Controllers\TabletController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\TerritoryController;
+use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTabletController;
 use App\Http\Controllers\ExcelDataUploadController;
+use App\Http\Controllers\EmployeeTerritoryController;
+use App\Http\Controllers\EmployeeCredentialsController;
 
 // Route::get('/', function(){
 //     $employees = Employee::all();
@@ -62,12 +67,19 @@ Route::patch('/confirm-territory/{employee}/{territory}', [TerritoryController::
 Route::patch('/confirm-tablet/{employee}/{tablet}', [EmployeeTabletController::class, 'confirmTablet'])->name('confirm.tablet');
 
 
-Route::get('/test', function(){
-    return view('test');
+Route::get('/chatbot', function(){
+    return view('chatbot');
 });
+
+Route::post('/chatbot', [ChatbotController::class, 'handle']);
 
 Route::get('/print', function(){
     return view('print');
+});
+
+// Task route
+Route::middleware('auth')->group(function () {
+    Route::resource('tasks', TaskController::class);
 });
 
 Route::post('/form-template/{employee}', [BrickController::class, 'formTemplate']);
@@ -92,12 +104,12 @@ Route::post('/upload-tablets-assignment', [ExcelDataUploadController::class, 'up
 Route::get('/export-excel', [EmployeeController::class, 'exportToExcel']);
 
 // Route::get('/upload-pdf', [EmployeeTabletController::class, 'showForm']);
-Route::post('/upload-assign-pdf/{employee}/{tablet}', [EmployeeTabletController::class, 'uploadAssignPdf']);
+Route::post('/upload-assign-pdf/{employee}/{tablet}', [EmployeeTabletController::class, 'assignTabletWithPdf']);
 
 Route::get('/upload-assign-pdf/{id}', [EmployeeTabletController::class, 'download']);
 
-Route::post('/upload-unassign-pdf/{employee}/{tablet}', [EmployeeTabletController::class, 'uploadUnassignPdf'])
-->name('upload-unassign-pdf');
+Route::post('/tablet-unassign/{employee}/{tablet}', [EmployeeTabletController::class, 'tabletUnassign'])
+->name('tablet-unassign');
 
 // Route::post('/unassign-tablet/{employee}/{tablet}', [EmployeeTabletController::class, 'unassignTablet'])
 //     ->name('unassign-tablet');
@@ -108,21 +120,24 @@ Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('
 Route::get('/territories', [TerritoryController::class, 'searchTerritory'])->name('territories.search');
 Route::get('/territories/{territory}', [TerritoryController::class, 'showTerritory'])->name('territories.show');
 
-Route::put('/employees/{employee}/dismiss', [EmployeeController::class, 'updateStatus'])->name('employees.updateStatus');
+Route::put('/employees/{employee}/dismiss', [EmployeeEventController::class, 'updateStatus'])->name('employees.updateStatus');
 
-Route::put('/employees/{employee}/update-status-event', [EmployeeController::class, 'updateStatusAndEvent'])
+Route::put('/employees/{employee}/update-status-event', [EmployeeEventController::class, 'addingEvent'])
     ->name('employees.updateStatusAndEvent');
 
 
-Route::put('/employees/{id}/update-credentials', [EmployeeController::class, 'updateCredentials'])
+Route::put('/employees/{id}/update-credentials', [EmployeeCredentialsController::class, 'updateCredentials'])
     ->name('employees.updateCredentials');
 
 Route::delete('/employees/credentials/{id}', [EmployeeController::class, 'deleteCredential']);
 
 
-Route::post('/assign-employee/{territory}', [EmployeeController::class, 'assignEmployee'])->name('assign.employee');
+// Добавление территории к сотруднику
+Route::post('/assign-employee/{territory}', [EmployeeTerritoryController::class, 'assignEmployee'])->name('assign.employee');
+// Добавление планшета к сотруднику
+Route::post('/assign-employee2/{tablet}', [EmployeeTabletController::class, 'assignEmployee2'])->name('assign.employee2');
 
-Route::patch('/employee-territory/{id}/update', [EmployeeController::class, 'updateDate'])->name('employee-territory.updateDate');
+Route::patch('/employee-territory/{id}/update', [EmployeeTerritoryController::class, 'updateDate'])->name('employee-territory.updateDate');
 Route::patch('/employee-tablet/{id}/update', [TabletController::class, 'updateDate'])->name('employee-tablet.updateDate');
 
 
