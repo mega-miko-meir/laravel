@@ -19,10 +19,7 @@ use App\Http\Controllers\ExcelDataUploadController;
 use App\Http\Controllers\EmployeeTerritoryController;
 use App\Http\Controllers\EmployeeCredentialsController;
 
-// Route::get('/', function(){
-//     $employees = Employee::all();
-//     return view('home', ['employees' => $employees]);
-// });
+// Route::get('/rennes', []);
 
 Route::post('/register', [UserController::class, 'register']);
 Route::post('/logout', [UserController::class, 'logout']);
