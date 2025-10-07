@@ -14,17 +14,42 @@ class UserController extends Controller
     }
 
     public function login(Request $request){
-        $incomingFields = $request->validate(
-            [
-                'loginname' => 'required|email',
-                'loginpassword' => 'required'
-            ]
-        );
 
-        if(Auth::attempt(['email' => $incomingFields['loginname'], 'password' => $incomingFields['loginpassword']])){
-            $request->session()->regenerate();
-        }
-        return redirect('/');
+        $credentials = $request->validate([
+        'loginname' => ['required', 'email'],
+        'loginpassword' => ['required'],
+    ]);
+
+    if (Auth::attempt(['email' => $credentials['loginname'], 'password' => $credentials['loginpassword']])) {
+        $request->session()->regenerate();
+        $user = Auth::user();
+        $token = $user->createToken('main')->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'The provided credentials are incorrect.',
+    ], 422);
+
+        // $incomingFields = $request->validate(
+        //     [
+        //         'loginname' => 'required|email',
+        //         'loginpassword' => 'required'
+        //     ]
+        // );
+
+        // if(Auth::attempt(['email' => $incomingFields['loginname'], 'password' => $incomingFields['loginpassword']])){
+        //     $request->session()->regenerate();
+        // }
+        // $user = Auth::user();
+        // $token = $user->createToken('main')->plainTextToken;
+        // return response(compact('user', 'token'));
+
+        // return redirect('/');
 
     }
 

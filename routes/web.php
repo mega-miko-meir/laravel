@@ -40,9 +40,7 @@ Route::get('/employees', [EmployeeController::class, 'index']);
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
 // Route::get('/employees/search', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
 
-
-
-// Creatind and editing territory
+// Creating and editing territory
 Route::get('/create-territory', [TerritoryController::class, 'createTerritoryForm'])->name('territory.create');
 Route::post('/create-territory', [TerritoryController::class, 'createTerritory'])->name('territory.create');
 Route::get('/edit-territory/{territory}', [TerritoryController::class, 'editTerritoryForm'])->name('territory.edit');
@@ -141,4 +139,3 @@ Route::patch('/employee-tablet/{id}/update', [TabletController::class, 'updateDa
 Route::get('/alpine', function(){
     return view('alpine-for-practice');
 });
-

@@ -1,4 +1,4 @@
-{{-- <div>
+<div>
     <div class="p-6 bg-gray-100 rounded-lg shadow-md mb-6">
         <h2 class="text-xl font-semibold mb-4">Register</h2>
         <form action="/register" method="POST" class="space-y-4">
@@ -13,4 +13,4 @@
             <button class="btn-primary bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Submit</button>
         </form>
     </div>
-</div> --}}
+</div>
