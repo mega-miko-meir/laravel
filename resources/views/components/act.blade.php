@@ -1,5 +1,6 @@
 @props(['employee', 'tablet', 'hasPdf', 'pdfAssignment'])
 <div class="bg-red-500 text-white p-5">Тестовое сообщение</div>
+<div class="bg-red-500 text-white p-5">Тестовое сообщение</div>
 
 {{-- @dd($employee, $tablet, $hasPdf, $pdfAssignment, $tabletConf); --}}
 
