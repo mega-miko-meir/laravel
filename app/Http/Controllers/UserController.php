@@ -22,14 +22,17 @@ class UserController extends Controller
 
     if (Auth::attempt(['email' => $credentials['loginname'], 'password' => $credentials['loginpassword']])) {
         $request->session()->regenerate();
-        $user = Auth::user();
-        $token = $user->createToken('main')->plainTextToken;
+        // $user = Auth::user();
+        // $token = $user->createToken('main')->plainTextToken;
 
-        return response()->json([
-            'user' => $user,
-            'token' => $token,
-        ]);
+        return redirect('/');
     }
+
+    // if (Auth::attempt(['email' => $credentials['loginname'], 'password' => $credentials['loginpassword']])) {
+    //     $request->session()->regenerate();
+    //     return redirect()->intended('/dashboard'); // или куда нужно
+    // }
+
 
     return response()->json([
         'message' => 'The provided credentials are incorrect.',

@@ -52,6 +52,7 @@ Route::put('/edit-territory/{territory}', [TerritoryController::class, 'editTerr
 Route::post('/assign-tablet/{employee}', [EmployeeTabletController::class, 'assignTablet']);
 Route::post('/unassign-tablet/{employee}/{tablet}', [EmployeeTabletController::class, 'unassignTablet'])->name('unassign-tablet');
 Route::post('/print-act/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct']);
+Route::post('/print-act2/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct2']);
 
 // Territory assignment
 Route::post('/assign-territory/{employee}', [TerritoryController::class, 'assignTerritory']);

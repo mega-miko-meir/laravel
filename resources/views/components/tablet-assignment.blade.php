@@ -4,7 +4,7 @@
     <h2 class="text-xl font-semibold text-gray-800">Tablet Assignment</h2>
 @php
     // dd($lastTablet, $tabletHistories->last())
-    $tablet = $tabletHistories->first();
+    $tablet = $tabletHistories->last();
 @endphp
     {{-- @if($employee->tablets->isNotEmpty()) --}}
     {{-- @if ($lastTablet && is_null(optional($lastTablet->pivot)->returned_at)) --}}
@@ -24,6 +24,12 @@
                                     @csrf
                                     <button class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
                                         🖨️ Print
+                                    </button>
+                                </form>
+                                <form action="/print-act2/{{$employee->id}}/{{$tablet->tablet_id}}" method="POST">
+                                    @csrf
+                                    <button class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
+                                        🖨️ Print2
                                     </button>
                                 </form>
 

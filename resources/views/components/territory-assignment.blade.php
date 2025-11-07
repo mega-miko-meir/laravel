@@ -4,6 +4,7 @@
 <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
     <h2 class="text-xl font-semibold text-gray-800">Territory Assignment</h2>
     {{-- @if ($employee->territories->isNotEmpty()) --}}
+
     @if ($lastTerritory && is_null(optional($lastTerritory->pivot)->unassigned_at))
         <div class="mt-4">
             <span class="font-medium text-gray-800">Territory:</span>

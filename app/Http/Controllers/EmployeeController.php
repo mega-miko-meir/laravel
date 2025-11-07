@@ -307,12 +307,12 @@ class EmployeeController extends Controller
 
         $lastTerritory = $employee->employee_territory()
         ->withPivot('assigned_at', 'unassigned_at')
-        ->orderByDesc('assigned_at')
+        ->orderByDesc('id')
         ->first();
 
         $lastTablet = $employee->employee_tablet()
         ->withPivot('assigned_at', 'returned_at')
-        ->orderByDesc('assigned_at')
+        ->orderByDesc('id')
         ->first();
 
 

@@ -17,7 +17,7 @@
             method="POST" enctype="multipart/form-data">
             @csrf
             <input type="file" name="unassign_pdf" accept="application/pdf" class="border rounded p-1 w-full mb-4">
-            <input type="date" name="returned_at" required class="border rounded p-1 w-full mb-4"  value="{{now()->format("Y-d-m")}}">
+            <input type="date" name="returned_at" required class="border rounded p-1 w-full mb-4"  value="{{now()->format("Y-m-d")}}">
 
             <div class="flex justify-between">
                 <button type="button" id="closeModalBtn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">

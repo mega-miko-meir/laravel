@@ -109,5 +109,31 @@ class EmployeeTabletController extends Controller
         ]);
     }
 
+    public function printAct2(Employee $employee, Tablet $tablet)
+    {
+        // Получаем PDF для планшета
+        $pdfAssignment = DB::table('employee_tablet')
+            ->where('employee_id', $employee->id)
+            ->where('tablet_id', $tablet->id)
+            ->select('id', 'pdf_path', 'confirmed')
+            ->orderByDesc('id')
+            ->first();
+
+        // Проверка наличия pdfAssignment
+        $hasPdf = $pdfAssignment && $pdfAssignment->pdf_path;
+        $tabletConf = $pdfAssignment && $pdfAssignment->confirmed;
+
+        // Данные, которые будут переданы в представление
+        return view('print-act2', [
+            'employee' => $employee,
+            'tablet' => $tablet,
+            'hasPdf' => $hasPdf, // Флаг для наличия pdf
+            'pdfAssignment' => $pdfAssignment, // Для использования в компоненте
+            'tabletConf' => $tabletConf,
+            'showHeader' => false,
+            'printPadding' => 1
+        ]);
+    }
+
 
 }
