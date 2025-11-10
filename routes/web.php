@@ -46,6 +46,15 @@ Route::post('/create-territory', [TerritoryController::class, 'createTerritory']
 Route::get('/edit-territory/{territory}', [TerritoryController::class, 'editTerritoryForm'])->name('territory.edit');
 Route::put('/edit-territory/{territory}', [TerritoryController::class, 'editTerritory'])->name('territory.edit');
 
+Route::get('/create-tablet', [TabletController::class, 'createTabletForm'])->name('tablet.create');
+Route::post('/create-tablet', [TabletController::class, 'createTablet'])->name('tablet.store');
+
+
+// Route::get('/tablets/create', [TabletController::class, 'createTabletForm'])->name('tablet.create');
+// Route::post('/tablets', [TabletController::class, 'createTablet'])->name('tablet.store');
+
+// Route::get('/tablets/{tablet}/edit', [TabletController::class, 'editTabletForm'])->name('tablet.edit');
+// Route::put('/tablets/{tablet}', [TabletController::class, 'updateTablet'])->name('tablet.update');
 
 
 // Tablet assignment

@@ -78,7 +78,7 @@
         <tr>
             <td class="py-2">Передал в указанном количестве и комплектации</td>
             <td class="py-2 font-bold">
-                Бахтыбаева Назерке, CRM-менеджер
+                {{ Auth::user()->full_name }}, {{Auth::user()->position}}
             </td>
         </tr>
         <tr>

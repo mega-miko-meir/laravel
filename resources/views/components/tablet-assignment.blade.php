@@ -4,7 +4,7 @@
     <h2 class="text-xl font-semibold text-gray-800">Tablet Assignment</h2>
 @php
     // dd($lastTablet, $tabletHistories->last())
-    $tablet = $tabletHistories->last();
+    $tablet = $tabletHistories->first();
 @endphp
     {{-- @if($employee->tablets->isNotEmpty()) --}}
     {{-- @if ($lastTablet && is_null(optional($lastTablet->pivot)->returned_at)) --}}

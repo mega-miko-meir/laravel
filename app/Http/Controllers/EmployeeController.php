@@ -289,12 +289,24 @@ class EmployeeController extends Controller
         // $territories = $employee->territories();
         $selectedBricks = $employee->territories->first()->bricks ?? collect();
         // $availableTablets = Tablet::whereNull('employee_id')->with('oldEmployee')->get();
+        // $availableTablets = Tablet::whereHas('employees', function ($query) {
+        //     $query->whereNotNull('returned_at')
+        //           ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_tablet WHERE employee_tablet.tablet_id = tablets.id)');
+        // })
+        // ->with('oldEmployee')
+        // ->get();
         $availableTablets = Tablet::whereHas('employees', function ($query) {
-            $query->whereNotNull('returned_at')
-                  ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_tablet WHERE employee_tablet.tablet_id = tablets.id)');
+        $query->whereNotNull('returned_at')
+                ->whereRaw('assigned_at = (
+                        SELECT MAX(assigned_at)
+                        FROM employee_tablet
+                        WHERE employee_tablet.tablet_id = tablets.id
+                )');
         })
+        ->orWhereDoesntHave('employees') // 👉 планшеты, у которых вообще нет записей
         ->with('oldEmployee')
         ->get();
+
 
 
         $availableTerritories = Territory::whereNull('employee_id')->with('oldEmployee')->get();
@@ -319,13 +331,13 @@ class EmployeeController extends Controller
 
         $territoriesHistory = $employee->employee_territory()
         ->withPivot('assigned_at', 'unassigned_at', 'id')
-        ->orderByDesc('assigned_at')
+        ->orderByDesc('id')
         ->get();
 
         $tabletHistories = EmployeeTablet::where('employee_id', $employee->id)
         ->with(['tablet'])
         // ->whereNotNull('returned_at') // Только подтвержденные записи
-        ->orderByDesc('assigned_at')
+        ->orderByDesc('id')
         ->get();
 
         $territories = $employee->territories->map(function ($territory) use ($employee) {

@@ -62,7 +62,7 @@ class TabletController extends Controller
 
         $availableEmployees = Employee::whereHas('events', function ($query) {
             $query->whereIn('event_type', ['new', 'hired'])
-                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
+                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id) ');
         })
         ->where(function ($query) {
             $query->whereDoesntHave('employee_tablet') // Нет записей в employee_territory
@@ -71,11 +71,53 @@ class TabletController extends Controller
                                ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
                   });
         })
+        ->orderBy('full_name', 'asc')
         ->get();
 
 
         return view('show-tablet', compact('tablet', 'previousUsers', 'lastTablet', 'availableEmployees'));
     }
+
+
+    public function createTabletForm(){
+        return view('create-edit-tablet');
+    }
+
+
+    public function createTablet(Request $request){
+        $incomingFields = $request->validate([
+                'model' => 'required',
+                'invent_number' => 'required',
+                'serial_number' => 'required',
+                'imei' => 'required'
+            ]);
+
+        $incomingTablet = Tablet::where('serial_number', $incomingFields['serial_number'])->first();
+
+        if($incomingTablet) {
+            return redirect()->back()->with('error', 'Такой iPad уже существует');
+        }
+
+        Tablet::create($incomingFields);
+
+        return redirect()->back()->with('success', 'iPad created successfully!');
+    }
+
+
+    public function editTablet(Request $request, Tablet $tablet){
+        $incomingFields = $request->validate([
+            'model' => 'required',
+            'invent_number' => 'required|unique:tablets,invent_number' . $tablet->id,
+            'serial_number' => 'required|unique:tablets,serial_number' . $tablet->id,
+            'imei' => 'required|unique:tablets,imei',
+            'beeline_number',
+        ]);
+
+        $tablet->update($incomingFields);
+
+        return back()->with('success', 'Данные успешно обновлены!');
+    }
+
 
 
 }

@@ -16,7 +16,7 @@
 
                 <!-- Кнопка для создания сотрудника -->
                 <div class="absolute top-0 right-0 mt-4 mr-4">
-                    <x-create-employee-button />
+                    <x-create-tablet-button />
                 </div>
 
                 <!-- Компонент поиска -->
