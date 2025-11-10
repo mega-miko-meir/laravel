@@ -42,7 +42,20 @@
             </div>
         </div>
 
-        <p><strong>Менеджер:</strong> <a href="{{route('employees.show', $territory->parent->employee->id)}}" class="text-blue-500 hover:underline">{{ $territory->parent && $territory->parent->employee ? $territory->parent->employee->first_name . ' ' .$territory->parent->employee->last_name : '' }}</a></p>
+        {{-- <p><strong>Менеджер:</strong> <a href="{{route('employees.show', $territory->parent->employee->id)}}" class="text-blue-500 hover:underline">{{ $territory->parent && $territory->parent->employee ? $territory->parent->employee->first_name . ' ' .$territory->parent->employee->last_name : '' }}</a></p> --}}
+
+        <p>
+            <strong>Менеджер:</strong>
+            @if($territory->parent?->employee)
+                <a href="{{ route('employees.show', $territory->parent->employee->id) }}"
+                class="text-blue-500 hover:underline">
+                    {{ $territory->parent->employee->first_name . ' ' . $territory->parent->employee->last_name }}
+                </a>
+            @else
+                <span class="text-gray-500">Нет менеджера</span>
+            @endif
+        </p>
+
 
         <x-edit-territory-button :territory="$territory"/>
         <br>
