@@ -10,15 +10,15 @@
                     <h1 class="text-2xl font-bold mb-6 text-gray-700">
                         Добавить планшет
                     </h1>
-                    {{-- <x-tablet-form
+                    <x-tablet-form
                         :tablet="$tablet ?? null"
                         action="{{ isset($tablet) ? route('tablet.edit', $tablet->id) : route('tablet.create') }}"
                         method="{{ isset($tablet) ? 'PUT' : 'POST' }}"
-                    /> --}}
-                    <x-tablet-form
-                        action="{{ route('tablet.store') }}"
-                        method="POST"
                     />
+                    {{-- <x-tablet-form
+                        action="{{ route('tablet.edit') }}"
+                        method="POST"
+                    /> --}}
                 {{-- @endforeach --}}
             {{-- @else
                 <p class="text-gray-600">Нет территорий для отображения.</p>

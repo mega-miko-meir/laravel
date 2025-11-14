@@ -55,6 +55,19 @@
 
     {{-- Билайн номер --}}
     <div>
+        <label for="imei" class="block text-sm font-medium text-gray-600">Imei</label>
+        <input
+            type="text"
+            name="imei"
+            id="iemi"
+            placeholder="Enter serial number"
+            value="{{ old('emei', $tablet->imei ?? '') }}"
+            class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+    </div>
+
+    {{-- Билайн номер --}}
+    <div>
         <label for="beeline_number" class="block text-sm font-medium text-gray-600">Beeline Number</label>
         <input
             type="text"

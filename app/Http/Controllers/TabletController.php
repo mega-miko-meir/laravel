@@ -83,13 +83,18 @@ class TabletController extends Controller
         return view('create-edit-tablet');
     }
 
+    public function editTabletForm(Tablet $tablet){
+        return view('create-edit-tablet', ['tablet' => $tablet]);
+    }
+
 
     public function createTablet(Request $request){
         $incomingFields = $request->validate([
                 'model' => 'required',
                 'invent_number' => 'required',
                 'serial_number' => 'required',
-                'imei' => 'required'
+                'imei' => 'required',
+                'beeline_number' => 'required'
             ]);
 
         $incomingTablet = Tablet::where('serial_number', $incomingFields['serial_number'])->first();
@@ -103,22 +108,20 @@ class TabletController extends Controller
         return redirect()->back()->with('success', 'iPad created successfully!');
     }
 
-
-    public function editTablet(Request $request, Tablet $tablet){
+    public function editTablet(Request $request, Tablet $tablet)
+    {
         $incomingFields = $request->validate([
             'model' => 'required',
-            'invent_number' => 'required|unique:tablets,invent_number' . $tablet->id,
-            'serial_number' => 'required|unique:tablets,serial_number' . $tablet->id,
-            'imei' => 'required|unique:tablets,imei',
-            'beeline_number',
+            'invent_number' => 'required',
+            'serial_number' => 'required',
+            'imei' => 'required',
+            'beeline_number' => 'required'
         ]);
 
         $tablet->update($incomingFields);
 
         return back()->with('success', 'Данные успешно обновлены!');
     }
-
-
 
 }
 

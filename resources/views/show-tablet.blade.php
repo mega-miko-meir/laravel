@@ -7,7 +7,7 @@
         <h2 class="text-2xl font-bold mb-4">Детали планшета</h2>
 
         <p><strong>Модель:</strong> {{ $tablet->model }}</p>
-        <p><strong>Серийный номер:</strong> {{ $tablet->invent_number }}</p>
+        <p><strong>Инвентарный номер:</strong> {{ $tablet->invent_number }}</p>
         <p><strong>Серийный номер:</strong> {{ $tablet->serial_number }}</p>
         <p><strong>IMEI номер:</strong> {{ $tablet->imei }}</p>
         <p><strong>Билайн номер:</strong> {{ $tablet->beeline_number }}</p>
@@ -34,6 +34,7 @@
                 </form>
             </div>
         </div>
+        <x-edit-tablet-button :tablet="$tablet" />
         <h3 class="text-xl font-semibold mt-6">История пользователей</h3>
         <table class="w-full border-collapse border border-gray-300">
             <thead>
