@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.btn-secondary {
+    @apply bg-blue-500 text-white font-semibold py-2 px-4 rounded hover:bg-blue-600;
+}
+
+.btn-primary {
+    @apply mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded;
+}
+
+.btn-third {
+    @apply bg-[#e74c3c] text-white p-2 px-4 rounded-md text-lg hover:bg-[#c0392b];
+}
