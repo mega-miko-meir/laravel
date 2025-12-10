@@ -44,7 +44,7 @@
             </button>
         </div>
 
-        <script>
+        {{-- <script>
             const toggleAuth = () => {
                 const title = document.getElementById('auth-title');
                 const content = document.getElementById('auth-content');
@@ -60,7 +60,7 @@
                     button.innerText = 'Registration';
                 }
             };
-        </script>
+        </script> --}}
         <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
     @endauth
 

@@ -130,36 +130,36 @@ class TerritoryController extends Controller
         ->first();
 
 
-        // $availableEmployees = Employee::whereHas('events', function ($query) {
-        //     $query->whereIn('event_type', ['new', 'hired'])
-        //           ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
-        // })
-        // ->where(function ($query) {
-        //     $query->whereDoesntHave('employee_territory') // Нет записей в employee_territory
-        //           ->orWhereHas('employee_territory', function ($subQuery) {
-        //               $subQuery->whereNotNull('unassigned_at')
-        //                        ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
-        //           });
-        // })
-        // ->orderBy('full_name', 'asc')
-        // ->get();
-
-
-
-
-
-
-
-        $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
+        $availableEmployees = Employee::whereHas('events', function ($query) {
+            $query->whereIn('event_type', ['new', 'hired'])
+                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
+        })
         ->where(function ($query) {
-            $query->whereDoesntHave('employee_territory') // Сотрудники, у которых нет записей в employee_territory
+            $query->whereDoesntHave('employee_territory') // Нет записей в employee_territory
                   ->orWhereHas('employee_territory', function ($subQuery) {
-                      $subQuery->whereNotNull('unassigned_at') // Последняя запись с unassigned_at != null
-                          ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
+                      $subQuery->whereNotNull('unassigned_at')
+                               ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
                   });
         })
         ->orderBy('full_name', 'asc')
         ->get();
+
+
+
+
+
+
+
+        // $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
+        // ->where(function ($query) {
+        //     $query->whereDoesntHave('employee_territory') // Сотрудники, у которых нет записей в employee_territory
+        //           ->orWhereHas('employee_territory', function ($subQuery) {
+        //               $subQuery->whereNotNull('unassigned_at') // Последняя запись с unassigned_at != null
+        //                   ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
+        //           });
+        // })
+        // ->orderBy('full_name', 'asc')
+        // ->get();
 
 
         // $availableEmployees = Employee::whereNull('firing_date') // Сотрудники без даты увольнения

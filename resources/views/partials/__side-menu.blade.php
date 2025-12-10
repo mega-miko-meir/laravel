@@ -2,6 +2,12 @@
     <h2 class="text-2xl font-bold mb-6">Меню</h2>
     <ul>
         <li class="mb-4">
+            <a href="/dashboard" class="transition duration-200
+            {{request()->is('dashboard') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
+                Дашборд
+            </a>
+        </li>
+        <li class="mb-4">
             <a href="/" class=" transition duration-200
                 {{request()->is('/') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
                 Сотрудники
@@ -17,12 +23,6 @@
             <a href="/tablets" class="transition duration-200
             {{request()->is('tablets') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
                 Планшеты
-            </a>
-        </li>
-        <li class="mb-4">
-            <a href="/" class="transition duration-200
-            {{request()->is('dashboard') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
-                Дашборд
             </a>
         </li>
     </ul>

@@ -12,6 +12,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use App\Http\Controllers\TabletController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TerritoryController;
 use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTabletController;
@@ -36,6 +37,9 @@ Route::get('/employee/{id}', [EmployeeController::class,'showEmployee'])->name('
 
 Route::get('/employees', [EmployeeController::class, 'index']);
 
+Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
+
+Route::get('employees/list/{type}', [DashboardController::class, 'filteredList'])->name('employees.filtered');
 
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
 // Route::get('/employees/search', [EmployeeController::class, 'searchEmployee'])->name('employees.search');

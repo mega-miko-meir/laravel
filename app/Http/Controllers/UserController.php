@@ -25,7 +25,7 @@ class UserController extends Controller
         // $user = Auth::user();
         // $token = $user->createToken('main')->plainTextToken;
 
-        return redirect('/');
+        return redirect('/dashboard');
     }
 
     // if (Auth::attempt(['email' => $credentials['loginname'], 'password' => $credentials['loginpassword']])) {

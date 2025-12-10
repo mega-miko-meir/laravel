@@ -8,7 +8,7 @@
     <div class="user-info flex items-center space-x-6 text-white">
         @if (Auth::user())
             <span class="text-lg font-semibold">
-                {{ Auth::user()->full_name ?? "Guest" }}
+                Welcome, {{ Auth::user()->first_name . ' ' . Auth::user()->last_name ?? "Guest" }}!
             </span>
             <x-logout-button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300"/>
         @else

@@ -279,7 +279,11 @@ class EmployeeController extends Controller
             'event_date' => $employee->hiring_date ?? now(), // Используем дату найма
         ]);
 
-        return redirect('/')->with('success', 'Employee added successfully!');
+        return redirect()->route('employees.show', ['id' => $employee->id])
+                 ->with('success', 'Employee added successfully!');
+
+
+        // return redirect('/')->with('success', 'Employee added successfully!');
     }
 
     public function showEmployee($id){
