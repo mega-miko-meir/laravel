@@ -37,9 +37,8 @@
                     <td class="px-4 py-3 text-gray-700">
                         <x-status-badge :status="$employee->events()->latest('event_date')->first()?->event_type" />
                     </td>
-
                     <td class="px-4 py-3 text-gray-700">
-                        {{ \Carbon\Carbon::parse($employee->events()->latest('event_date')->first()?->event_date)->format('d.m.Y') ?? '-'}}
+                        {{ $employee->events()->latest('event_date')->first()?->event_date ? \Carbon\Carbon::parse($employee->events()->latest('event_date')->first()?->event_date)->format('d.m.Y') : '-'}}
                     </td>
 
                     {{-- <td class="px-4 py-3 text-gray-700">
@@ -50,34 +49,22 @@
                     </td> --}}
 
                     <td class="px-4 py-3 text-gray-700">
-                        {{ $employee->employee_territory()->latest('assigned_at')->first()->team ?? '-' }}
+                        {{ $employee->territories->first()->team ?? '-' }}
                     </td>
                     <td class="px-4 py-3 text-gray-700">
-                        {{ $employee->employee_territory()->latest('assigned_at')->first()->city ?? '-' }}
+                        {{ $employee->territories->first()->city ?? '-' }}
                     </td>
-                    <td class="px-4 py-3 flex items-center gap-3">
+                    <td class="px-4 py-3 text-center">
                         <x-edit-employee-button :employee="$employee"/>
                         <form action="/delete-employee/{{ $employee->id }}" method="POST"
                               onsubmit="return confirm('Are you sure?');" class="inline">
                             @csrf
                             @method('DELETE')
                             <button type="submit"
-                                class="text-red-500 hover:text-red-700 transition text-sm">
-                                ✕
+                                    class="bg-red-500 hover:bg-red-600 text-white text-xs font-medium py-1 px-3 rounded transition">
+                                Delete
                             </button>
                         </form>
-
-                        {{-- <form action="{{route('users.destroy', $user->id)}}" method="POST"
-                            onsubmit="return confirm('Удалить пользователя?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                            class="text-red-500 hover:text-red-700 transition text-sm">
-                            ✕
-                            </button>
-                        </form> --}}
-
-
                     </td>
                 </tr>
             @endforeach

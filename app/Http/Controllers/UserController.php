@@ -56,10 +56,6 @@ class UserController extends Controller
 
     }
 
-    public function showRegister($user = null){
-        return view('Components/registration', compact('user'));
-    }
-
     public function register(Request $request){
         $incomingFields = $request->validate(
             [
@@ -80,49 +76,10 @@ class UserController extends Controller
 
         $incomingFields['password'] = bcrypt($incomingFields['password']);
         $user = User::create($incomingFields);
-        // Auth::login($user);
+        Auth::login($user);
 
-        // return redirect('/')->with('success', 'Congrats! You are logged in!');
-        return redirect('/users')->with('success', 'Congrats! You created a new user!');
+        return redirect('/')->with('success', 'Congrats! You are logged in!');
     }
 
-    public function index(){
-
-        $users = User::all();
-        return view('users', compact('users'));
-        // return UserResource::collection(User::with('role')->paginate(100));
-    }
-
-    public function show($id){
-        $user = User::findOrFail($id);
-
-        return view('show-user', compact('user'));
-    }
-
-    public function destroy($id){
-        $user = User::findOrFail($id);
-        $user->delete();
-
-        return redirect('/users')->with('success', 'The user deleted successfully!');
-    }
-
-    public function showEdit(User $user){
-        return view('Components/user-edit-form', [
-            // 'action' => url("/edit/$user->id"),
-            // 'method' => 'PUT',
-            'user' => $user
-        ]);
-    }
-
-    public function update(Request $request, $user){
-        $incomingFields = $request->only('full_name', 'first_name', 'last_name', 'position', 'email', 'password');
-
-        // $user = User::findOrFail($user->id);
-
-        $user->update($incomingFields);
-
-        return redirect('/users')->with('success', 'The user updated successfully!');
-
-    }
 
 }

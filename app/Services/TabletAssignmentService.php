@@ -37,48 +37,46 @@ class TabletAssignmentService
         return ['success' => 'Tablet successfully assigned to the employee.'];
     }
 
-    public function unassignTablet(Employee $employee, Tablet $tablet, $returned_at, ?Request $request = null)
-    {
+    public function unassignTablet(Employee $employee, Tablet $tablet, Request $request){
+        // $request->validate([
+        //     'unassign_pdf' => 'required|mimes:pdf|max:2048',
+        //     'returned_at' => 'required|max:2048',
+        // ]);
 
-        // $returned_at = $request?->input('returned_at');
-        $path = $request && $request->hasFile('unassign_pdf')
-            ? $request->file('unassign_pdf')->store('uploads/unassign', 'public')
-            : null;
+        $path = $request->hasFile('unassign_pdf') ? $request->file('unassign_pdf')->store('uploads/unassign', 'public') : null;
+        $returned_at = $request->input('returned_at');
 
-        // ищем последнюю запись
-        $pivot = DB::table('employee_tablet')
+
+        $pdfAssignment = DB::table('employee_tablet')
             ->where('employee_id', $employee->id)
             ->where('tablet_id', $tablet->id)
-            ->orderByDesc('id')
+            ->where('confirmed', 0)
+            ->orderByDesc('id') // Берем только поле pdf_path
             ->first();
 
-        // отвязываем в таблице tablets
+        // $tablet->currentAssignment()->delete();
+        // $tablet->refresh();
+
+
         $tablet->employee()->dissociate();
-        $tablet->old_employee_id = $employee->full_name;
         $tablet->save();
 
-        // если запись не найдена — всё равно отвязывание должно произойти
-        if (!$pivot) {
-            return ['success' => 'Tablet unassigned (no pivot found).'];
-        }
+        if($pdfAssignment) {
+            DB::table('employee_tablet')
+            ->where('id', $pdfAssignment->id) // Указываем ID найденной записи
+            ->delete();
 
-        // если запись не подтверждена — удаляем полностью
-        if ($pivot->confirmed == 0) {
-            DB::table('employee_tablet')->where('id', $pivot->id)->delete();
-            return ['success' => 'Tablet unassigned and unconfirmed pivot removed'];
-        }
-
-        // если подтверждена — обновляем дату возврата
-        DB::table('employee_tablet')
-            ->where('id', $pivot->id)
-            ->update([
+            return ['success', 'Tablet unassigned and removed due to unconfirmed status.'];
+        } else {
+            $tablet->old_employee_id = $employee->full_name;
+            $tablet->save();
+            $employee->employee_tablet()->updateExistingPivot($tablet->id, [
                 'returned_at' => $returned_at,
                 'unassign_pdf' => $path
             ]);
-
-        return ['success' => 'Tablet unassigned and pivot updated'];
+            return ['success' => 'Tablet successfully unassigned from the employee.'];
+        }
     }
-
 
     public function confirmTablet(Employee $employee, Tablet $tablet){
         $assignment = $employee->employee_tablet()->where('tablet_id', $tablet->id)->first();

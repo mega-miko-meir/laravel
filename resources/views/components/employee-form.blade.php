@@ -35,9 +35,7 @@
     </div>
     <div>
         <label for="hiring_date" class="block text-sm font-medium text-gray-600">Hiring Date</label>
-        <input name="hiring_date" type="date"
-        {{-- value="{{ old('hiring_date', $employee->hiring_date ?? '') }}" --}}
-        value="{{now()->format("Y-m-d")}}"
+        <input name="hiring_date" type="date" value="{{ old('hiring_date', $employee->hiring_date ?? '') }}"
                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
     <div>

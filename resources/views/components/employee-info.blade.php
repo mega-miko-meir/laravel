@@ -28,7 +28,6 @@
 
     <x-event-adding-form :employee="$employee" />
 
-    <br>
     <x-kmp-request :employee="$employee" />
 
     <!-- Заполнение паролей и отображение паролей -->
@@ -56,19 +55,9 @@
                         <x-status-badge :status="$event->event_type" />
                     </span>
                 </div>
-
-                <!-- Кнопка удаления -->
-                <form action="{{ route('events.destroy', $event->id) }}" method="POST" onsubmit="return confirm('Удалить событие?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-red-500 hover:text-red-700 text-lg font-bold">
-                        ×
-                    </button>
-                </form>
             </li>
         @endforeach
     </ul>
-
 </div>
 
 <script>

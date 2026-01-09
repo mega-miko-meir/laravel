@@ -123,28 +123,29 @@ class EmployeeController extends Controller
 
     public function index(Request $request)
     {
-        $activeOnly = $request->query('active_only', 0); // по умолчанию показываем всех
-        $sort = $request->input('sort', 'event_date');
+        $activeOnly = $request->query('active_only', 1);
+        $sort = $request->input('sort', 'latest_event_date'); // Сортируем по последнему событию
         $order = $request->input('order', 'desc');
 
-        // Основной запрос — берём сотрудников + последнее событие
-        $employees = DB::table('employees as e')
-            ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
-            ->whereRaw('ev.id = (
-                SELECT ee.id FROM employee_events ee
-                WHERE ee.employee_id = e.id
-                ORDER BY ee.event_date DESC
-                LIMIT 1
-            )')
+        // Подзапрос для получения последнего события каждого сотрудника
+        $employees = Employee::leftJoinSub(
+                DB::table('employee_events')
+                    ->select('employee_id', DB::raw('MAX(event_date) as latest_event_date'))
+                    ->groupBy('employee_id'),
+                'latest_events',
+                'employees.id',
+                '=',
+                'latest_events.employee_id'
+            )
+            ->select('employees.*', 'latest_events.latest_event_date') // Используем latest_event_date
             ->when($activeOnly == 1, function ($query) {
-                // Показываем только тех, у кого последнее событие — hired
-                return $query->where('ev.event_type', 'hired');
+                return $query->whereIn('employees.status', ['active', 'new']);
             })
-            ->select('e.*', 'ev.event_type', 'ev.event_date')
-            ->orderBy($sort === 'event_date' ? 'ev.event_date' : 'e.'.$sort, $order)
+            ->orderBy($sort === 'latest_event_date' ? 'latest_events.latest_event_date' : 'employees.'.$sort, $order)
+            ->orderBy('employees.full_name')
             ->get();
 
-        // AJAX — отдаём только список сотрудников
+        // Если это AJAX-запрос, рендерим только компонент `x-employee-card`
         if ($request->ajax()) {
             return view('components.employee-card', [
                 'employees' => $employees,
@@ -153,10 +154,9 @@ class EmployeeController extends Controller
             ])->render();
         }
 
-        // Обычная страница
+        // Если обычный запрос, возвращаем полную страницу
         return view('home', compact('employees', 'sort', 'order', 'activeOnly'));
     }
-
 
 
 
@@ -238,8 +238,7 @@ class EmployeeController extends Controller
         $employee->update($incomingFields);
 
         // return redirect('/')->with('success', 'Employee updated successfully!');
-        return redirect()->route('employees.show', ['id' => $employee->id])
-                 ->with('success', 'Employee edited successfully!');
+        return back()->with('success', 'Данные успешно обновлены!');
     }
 
 
