@@ -33,7 +33,8 @@ class EmployeeTabletController extends Controller
     }
 
     public function unassignTablet(Employee $employee, Tablet $tablet, Request $request){
-        $result = $this->tabletAssignmentService->unassignTablet($employee, $tablet, $request);
+        $returned_at = $request->input('returned_at');
+        $result = $this->tabletAssignmentService->unassignTablet($employee, $tablet, $returned_at, $request);
         return redirect()->back()->with('success', $result['success']);
     }
 

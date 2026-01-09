@@ -1,6 +1,12 @@
 <div class="w-64 bg-blue-900 text-white h-screen p-5 fixed left-0 top-14 shadow-lg">
     <h2 class="text-2xl font-bold mb-6">Меню</h2>
     <ul>
+        {{-- <li class="mb-4">
+            <a href="/users" class="transition duration-200
+            {{request()->is('users') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
+                Пользователи
+            </a>
+        </li> --}}
         <li class="mb-4">
             <a href="/dashboard" class="transition duration-200
             {{request()->is('dashboard') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">

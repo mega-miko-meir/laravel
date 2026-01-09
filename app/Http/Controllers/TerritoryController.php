@@ -9,48 +9,66 @@ use Illuminate\Http\Request;
 use App\Models\EmployeeEvent;
 use App\Models\EmployeeTerritory;
 use Illuminate\Support\Facades\DB;
+use App\Services\TerritoryAssignmentService;
 use App\View\Components\territory as ComponentsTerritory;
 
 class TerritoryController extends Controller
 {
-    public function unassignTerritory(Employee $employee, Territory $territory, Request $request)
+    public function unassignTerritory(Employee $employee, Territory $territory, Request $request, TerritoryAssignmentService $service)
     {
-        $assignmentToRemove = DB::table('employee_territory')
-            ->where('employee_id', $employee->id)
-            ->where('territory_id', $territory->id)
-            ->where('confirmed', 0)
-            ->orderByDesc('id') // Сортируем по убыванию ID
-            ->first();
+        $result = $service->unassign(
+            $employee,
+            $territory,
+            $request->input('unassigned_at')
+        );
 
-        // dd($assignmentToRemove2);
-        $territory->employee()->dissociate();
-        $territory->save();
+        if ($result === 'removed') {
+            return back()->with('success', 'Territory removed due to unconfirmed status.');
+        }
 
-        // if ($assignment) {
-            // Отвязываем территорию от сотрудника
-
-            // Если запись существует и confirmed = false, удаляем только эту строку
-            if ($assignmentToRemove) {
-                DB::table('employee_territory')
-                    ->where('id', $assignmentToRemove->id) // Указываем ID найденной записи
-                    ->delete();
-
-
-
-                return redirect()->back()->with('success', 'Territory unassigned and removed due to unconfirmed status.');
-            } else {
-                // Обновляем колонку unassigned_at только для этой строки
-                $employee->employee_territory()->updateExistingPivot($territory->id, ['unassigned_at' => $request->input('unassigned_at')]);
-                // Обновляем old_employee_id на территории
-                $territory->old_employee_id = $employee->full_name;
-                $territory->save();
-                return redirect()->back()->with('success', 'Territory successfully unassigned from the employee.');
-            }
-        // } else {
-        //     // Если привязки не существует
-        //     return redirect()->back()->with('error', 'Assignment not found.');
-        // }
+        return back()->with('success', 'Territory unassigned.');
     }
+
+
+
+    // public function unassignTerritory(Employee $employee, Territory $territory, Request $request)
+    // {
+    //     $assignmentToRemove = DB::table('employee_territory')
+    //         ->where('employee_id', $employee->id)
+    //         ->where('territory_id', $territory->id)
+    //         ->where('confirmed', 0)
+    //         ->orderByDesc('id') // Сортируем по убыванию ID
+    //         ->first();
+
+    //     // dd($assignmentToRemove2);
+    //     $territory->employee()->dissociate();
+    //     $territory->save();
+
+    //     // if ($assignment) {
+    //         // Отвязываем территорию от сотрудника
+
+    //         // Если запись существует и confirmed = false, удаляем только эту строку
+    //         if ($assignmentToRemove) {
+    //             DB::table('employee_territory')
+    //                 ->where('id', $assignmentToRemove->id) // Указываем ID найденной записи
+    //                 ->delete();
+
+
+
+    //             return redirect()->back()->with('success', 'Territory unassigned and removed due to unconfirmed status.');
+    //         } else {
+    //             // Обновляем колонку unassigned_at только для этой строки
+    //             $employee->employee_territory()->updateExistingPivot($territory->id, ['unassigned_at' => $request->input('unassigned_at')]);
+    //             // Обновляем old_employee_id на территории
+    //             $territory->old_employee_id = $employee->full_name;
+    //             $territory->save();
+    //             return redirect()->back()->with('success', 'Territory successfully unassigned from the employee.');
+    //         }
+    //     // } else {
+    //     //     // Если привязки не существует
+    //     //     return redirect()->back()->with('error', 'Assignment not found.');
+    //     // }
+    // }
 
 
     public function assignTerritory(Request $request, Employee $employee){
