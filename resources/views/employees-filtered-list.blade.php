@@ -16,8 +16,14 @@
         <tbody>
             @foreach ($employees as $emp)
                 <tr class="border-b">
-                    <td class="px-4 py-2">{{ $emp->full_name }}</td>
-                    <td class="px-4 py-2">{{ $emp->first_name }}</td>
+                    <td class="px-4 py-2">
+                        <a href="/employee/{{ $emp->id }}" class="text-blue-500 hover:underline">
+                        {{ $emp->full_name }}
+                    </a>
+                    </td>
+                    {{-- <td class="px-4 py-2">{{ $emp->first_name }}</td> --}}
+
+                    <td class="px-4 py-2">{{ $emp->employee_territory()->latest('assigned_at')->first()->team ?? '-' }}</td>
                     <td class="px-4 py-2">{{ $emp->last_name }}</td>
                     <td class="px-4 py-2">{{ $emp->event_type }}</td>
                     <td class="px-4 py-2">{{ \Carbon\Carbon::parse($emp->event_date)->format('d.m.Y') }}</td>

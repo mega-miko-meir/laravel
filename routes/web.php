@@ -4,8 +4,9 @@ use App\Models\Listing;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\TaskController;
+use App\Http\Controllers\RoleController;
 
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrickController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -14,6 +15,7 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TerritoryController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTabletController;
 use App\Http\Controllers\ExcelDataUploadController;
@@ -164,3 +166,7 @@ Route::patch('/employee-tablet/{id}/update', [TabletController::class, 'updateDa
 Route::get('/alpine', function(){
     return view('alpine-for-practice');
 });
+
+
+Route::get('permissions', [PermissionController::class, 'index']);
+Route::get('permissions', [RoleController::class, 'index']);

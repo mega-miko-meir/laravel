@@ -1,9 +1,9 @@
 @props(['employees', 'sort', 'order'])
 
-<div class="overflow-x-auto bg-white shadow-md rounded-lg">
-    <table class="w-full border-collapse">
+<div class="overflow-x-auto bg-white shadow rounded-lg mt-6 p-4">
+    <table class="w-full border-collapse text-sm text-gray-700">
         <thead>
-            <tr class="bg-gray-100 text-gray-700 text-sm">
+            <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
                 <th class="px-4 py-3 text-left">
                     <a href="{{ route('employees.search', ['sort' => 'full_name', 'order' => request('order') === 'asc' ? 'desc' : 'asc']) }}">
                         Full Name

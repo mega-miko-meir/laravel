@@ -4,7 +4,7 @@
     @auth
         <x-container class="container mx-auto py-6">
 
-            <div class="col-span-10 p-8 bg-white relative">
+            <div class="col-span-10 relative">
 
                 <x-header class="mb-6" />
                 <x-flash-message />

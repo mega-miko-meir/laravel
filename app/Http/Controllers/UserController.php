@@ -69,42 +69,43 @@ class UserController extends Controller
                 'position' => 'nullable',
                 'email' => 'required|email|unique:users,email|max:255',
                 'password' => 'required|min:8|confirmed',
-            ]
-        );
+                'role_id' => 'required'
+                ]
+            );
 
-        if ($request->password !== $request->password_confirmation) {
-            return redirect()->back()
+            if ($request->password !== $request->password_confirmation) {
+                return redirect()->back()
                 ->withInput() // Возвращаем введённые данные
                 ->with('error', 'Пароли не совпадают.');
+            }
+
+            $incomingFields['password'] = bcrypt($incomingFields['password']);
+            $user = User::create($incomingFields);
+            // Auth::login($user);
+
+            // return redirect('/')->with('success', 'Congrats! You are logged in!');
+            return redirect('/users')->with('success', 'Congrats! You created a new user!');
         }
 
-        $incomingFields['password'] = bcrypt($incomingFields['password']);
-        $user = User::create($incomingFields);
-        // Auth::login($user);
+        public function index(){
 
-        // return redirect('/')->with('success', 'Congrats! You are logged in!');
-        return redirect('/users')->with('success', 'Congrats! You created a new user!');
-    }
+            $users = User::all();
+            return view('users', compact('users'));
+            // return UserResource::collection(User::with('role')->paginate(100));
+        }
 
-    public function index(){
+        public function show($id){
+            $user = User::with('role')->findOrFail($id);
 
-        $users = User::all();
-        return view('users', compact('users'));
-        // return UserResource::collection(User::with('role')->paginate(100));
-    }
+            return view('show-user', compact('user'));
+        }
 
-    public function show($id){
-        $user = User::findOrFail($id);
+        public function destroy($id){
+            $user = User::findOrFail($id);
+            $user->delete();
 
-        return view('show-user', compact('user'));
-    }
-
-    public function destroy($id){
-        $user = User::findOrFail($id);
-        $user->delete();
-
-        return redirect('/users')->with('success', 'The user deleted successfully!');
-    }
+            return redirect('/users')->with('success', 'The user deleted successfully!');
+        }
 
     public function showEdit(User $user){
         return view('Components/user-edit-form', [
@@ -115,7 +116,7 @@ class UserController extends Controller
     }
 
     public function update(Request $request, $user){
-        $incomingFields = $request->only('full_name', 'first_name', 'last_name', 'position', 'email', 'password');
+        $incomingFields = $request->only('full_name', 'first_name', 'last_name', 'position', 'email', 'password', 'role_id');
 
         // $user = User::findOrFail($user->id);
 
