@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-    <h1 class="text-2xl font-bold mb-4">{{ $title }}</h1>
+    <h1 class="text-2xl font-bold mb-4 mt-10">{{ $title }}</h1>
 
     <table class="min-w-full bg-white shadow rounded">
         <thead>
@@ -20,7 +20,7 @@
                     <td class="px-4 py-2">{{ $emp->first_name }}</td>
                     <td class="px-4 py-2">{{ $emp->last_name }}</td>
                     <td class="px-4 py-2">{{ $emp->event_type }}</td>
-                    <td class="px-4 py-2">{{ $emp->event_date }}</td>
+                    <td class="px-4 py-2">{{ \Carbon\Carbon::parse($emp->event_date)->format('d.m.Y') }}</td>
                 </tr>
             @endforeach
         </tbody>

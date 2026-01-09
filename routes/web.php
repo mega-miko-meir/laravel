@@ -22,7 +22,7 @@ use App\Http\Controllers\EmployeeCredentialsController;
 
 // Route::get('/rennes', []);
 
-Route::post('/register', [UserController::class, 'register']);
+
 Route::post('/logout', [UserController::class, 'logout']);
 Route::post('/login', [UserController::class, 'login']);
 
@@ -36,6 +36,19 @@ Route::delete('/delete-employee/{employee}', [EmployeeController::class, 'delete
 Route::get('/employee/{id}', [EmployeeController::class,'showEmployee'])->name('employees.show');
 
 Route::get('/employees', [EmployeeController::class, 'index']);
+
+
+# users' routes
+Route::get('/register', [UserController::class, 'showRegister']);
+Route::post('/register', [UserController::class, 'register']);
+Route::get('/users/{user}/edit', [UserController::class, 'showEdit'])->name('users.edit');
+Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
+Route::get('/users', [UserController::class, 'index'])->name('users.index');
+Route::get('/users/{id}', [UserController::class, 'show'])->name('users.show');
+Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+Route::put('/users/{id}', [UserController::class, 'edit'])->name('users.update');
+
+
 
 Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
 
@@ -125,6 +138,8 @@ Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('
 Route::get('/territories', [TerritoryController::class, 'searchTerritory'])->name('territories.search');
 Route::get('/territories/{territory}', [TerritoryController::class, 'showTerritory'])->name('territories.show');
 
+
+Route::delete('/events/{id}', [EmployeeEventController::class, 'destroy'])->name('events.destroy');
 Route::put('/employees/{employee}/dismiss', [EmployeeEventController::class, 'updateStatus'])->name('employees.updateStatus');
 
 Route::put('/employees/{employee}/update-status-event', [EmployeeEventController::class, 'addingEvent'])
