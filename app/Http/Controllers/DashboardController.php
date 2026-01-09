@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,6 +107,9 @@ class DashboardController extends Controller
 
     public function filteredList($type)
     {
+
+        // $employees = Employee::with('territories')->get();
+
         switch ($type) {
             case 'hired_total':
                 $employees = DB::table('employees as e')
@@ -191,7 +195,7 @@ class DashboardController extends Controller
                 $employees = DB::table('employees as e')
                     ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
                     ->where('ev.event_type', 'dismissed')
-                    ->whereYear('ev.event_date', now()->subMonth()->year)
+                    ->whereYear('ev.event_date', now()->year)
                     ->select('e.*', 'ev.event_type', 'ev.event_date')
                     ->orderBy('ev.event_date', 'DESC')
                     ->get();
