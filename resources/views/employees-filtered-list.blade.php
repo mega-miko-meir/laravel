@@ -7,8 +7,8 @@
         <thead>
             <tr>
                 <th class="px-4 py-2">ФИО</th>
-                <th class="px-4 py-2">Имя</th>
-                <th class="px-4 py-2">Фамилия</th>
+                {{-- <th class="px-4 py-2">Имя</th> --}}
+                {{-- <th class="px-4 py-2">Фамилия</th> --}}
                 <th class="px-4 py-2">Тип события</th>
                 <th class="px-4 py-2">Дата</th>
             </tr>
@@ -23,8 +23,8 @@
                     </td>
                     {{-- <td class="px-4 py-2">{{ $emp->first_name }}</td> --}}
 
-                    <td class="px-4 py-2">{{ $emp->employee_territory()->latest('assigned_at')->first()->team ?? '-' }}</td>
-                    <td class="px-4 py-2">{{ $emp->last_name }}</td>
+                    {{-- <td class="px-4 py-2">{{ $emp->employee_territory()->latest('assigned_at')->first()->team ?? '-' }}</td> --}}
+                    {{-- <td class="px-4 py-2">{{ $emp->last_name }}</td> --}}
                     <td class="px-4 py-2">{{ $emp->event_type }}</td>
                     <td class="px-4 py-2">{{ \Carbon\Carbon::parse($emp->event_date)->format('d.m.Y') }}</td>
                 </tr>
