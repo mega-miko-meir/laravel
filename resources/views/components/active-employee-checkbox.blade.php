@@ -3,7 +3,7 @@
     @php
         $activeOnly = request('active_only', 1); // По умолчанию 1 включено
     @endphp
-    <input type="checkbox" id="ticker" value="1" style="display: none;" {{ $activeOnly == 1 ? 'checked' : '' }}>
+    <input type="checkbox" id="ticker" name="" value="1" style="display: none;" {{ $activeOnly == 1 ? 'checked' : '' }}>
     <label for="ticker" style="width: 40px; height: 20px; background: {{ $activeOnly == 1 ? '#4CAF50' : '#ccc' }};
            border-radius: 10px; display: flex; align-items: center; padding: 2px; cursor: pointer; position: relative;">
         <span style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; left: {{ $activeOnly == 1 ? '22px' : '2px' }};

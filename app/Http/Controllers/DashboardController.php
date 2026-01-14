@@ -124,7 +124,7 @@ class DashboardController extends Controller
                     ->select('e.*', 'ev.event_type', 'ev.event_date')
                     ->orderBy('ev.event_date', 'DESC')
                     ->get();
-                $title = "Все сотрудники";
+                $title = "Активные сотрудники";
                 break;
 
             case 'fired_this_month':

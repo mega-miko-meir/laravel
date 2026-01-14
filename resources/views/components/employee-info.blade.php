@@ -16,12 +16,19 @@
         <p><span class="font-medium">Имя:</span> {{ $employee->full_name}}</p>
         <p><span class="font-medium">Email:</span> {{ $employee->email }}</p>
         <p><span class="font-medium">Должность:</span> {{ $employee->position }}</p>
-        @if($employee->territories->isNotEmpty())
+        {{-- <p><span class="font-medium">Команда:</span> {{ $employee->employee_territory()->latest('assigned_at')->first()->team ?? '-' }}</p> --}}
+        <p><span class="font-medium">Команда2:</span> {{ $employee->current_team ?? '-' }}</p>
+        {{-- <p><span class="font-medium">Город:</span> {{ $employee->employee_territory()->latest('assigned_at')->first()->city ?? '-' }}</p> --}}
+        <p><span class="font-medium">Город:</span> {{ $employee->current_city ?? '-' }}</p>
+        {{-- <p><span class="font-medium">Менеджер:</span> {{ $employee->employee_territory()->latest('assigned_at')->first()->parent->employee->full_name ?? '-' }}</p> --}}
+        <p><span class="font-medium">Менеджер:</span> {{ $employee->current_manager ?? '-' }}</p>
+        {{-- @if($employee->territories->isNotEmpty())
             <p><span class="font-medium">Команда:</span> {{ $employee->territories->first()->team }}</p>
+
             <p><span class="font-medium">Город:</span> {{ $employee->territories->first()->city }}</p>
             <p><span class="font-medium">Роль:</span> {{ $employee->territories->first()->role }}</p>
             <p><span class="font-medium">Менеджер:</span> {{ $employee->territories->first()->parent->employee->full_name ?? '' }}</p>
-        @endif
+        @endif --}}
     </div>
 
     <x-edit-employee-button :employee="$employee"/>

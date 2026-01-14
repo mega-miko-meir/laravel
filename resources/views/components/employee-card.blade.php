@@ -35,7 +35,8 @@
                         </a>
                     </td>
                     <td class="px-4 py-3 text-gray-700">
-                        <x-status-badge :status="$employee->events()->latest('event_date')->first()?->event_type" />
+                        {{-- <x-status-badge :status="$employee->events()->latest('event_date')->first()?->event_type" /> --}}
+                        <x-status-badge :status="$employee->latestEvent?->event_type" />
                     </td>
 
                     <td class="px-4 py-3 text-gray-700">

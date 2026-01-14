@@ -29,6 +29,29 @@ class Employee extends Model
                     ->withTimestamps();
     }
 
+    public function getCurrentTeamAttribute()
+    {
+        return $this->employee_territory()
+            ->latest('assigned_at')
+            ->value('team');
+    }
+
+    public function getCurrentCityAttribute()
+    {
+        return $this->employee_territory()
+            ->latest('assigned_at')
+            ->value('city');
+    }
+
+    public function getCurrentManagerAttribute()
+    {
+        $assignment =  $this->employee_territory()
+            ->latest('assigned_at')
+            ->first();
+
+        return optional($assignment)->parent?->employee?->full_name;
+    }
+
     public function tablets(){
         return $this->hasMany(Tablet::class, 'employee_id');
     }
@@ -55,6 +78,11 @@ class Employee extends Model
 
     public function events(){
         return $this->hasMany(EmployeeEvent::class);
+    }
+
+    public function latestEvent()
+    {
+        return $this->hasOne(EmployeeEvent::class)->latestOfMany('event_date');
     }
 
     protected static function boot(){

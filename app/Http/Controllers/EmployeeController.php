@@ -120,42 +120,47 @@ class EmployeeController extends Controller
     // }
 
 
+    // $employees = DB::table('employees as e')
+    //     ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
+    //     ->where('ev.event_type', 'hired')
+    //     ->whereRaw('ev.id = (
+    //         SELECT ee.id FROM employee_events ee
+    //         WHERE ee.employee_id = ev.employee_id
+    //         ORDER BY ee.event_date DESC
+    //         LIMIT 1
+    //     )')
+    //     ->select('e.*', 'ev.event_type', 'ev.event_date')
+    //     ->orderBy('ev.event_date', 'DESC')
+    //     ->get();
+
 
     public function index(Request $request)
     {
-        $activeOnly = $request->query('active_only', 0); // по умолчанию показываем всех
+        // $activeOnly = $request->boolean('active_only');
         $sort = $request->input('sort', 'event_date');
         $order = $request->input('order', 'desc');
 
-        // Основной запрос — берём сотрудников + последнее событие
         $employees = DB::table('employees as e')
             ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
+            ->where('ev.event_type', 'hired')
             ->whereRaw('ev.id = (
                 SELECT ee.id FROM employee_events ee
-                WHERE ee.employee_id = e.id
+                WHERE ee.employee_id = ev.employee_id
                 ORDER BY ee.event_date DESC
                 LIMIT 1
             )')
-            ->when($activeOnly == 1, function ($query) {
-                // Показываем только тех, у кого последнее событие — hired
-                return $query->where('ev.event_type', 'hired');
-            })
             ->select('e.*', 'ev.event_type', 'ev.event_date')
-            ->orderBy($sort === 'event_date' ? 'ev.event_date' : 'e.'.$sort, $order)
+            ->orderBy('ev.event_date', 'DESC')
             ->get();
 
-        // AJAX — отдаём только список сотрудников
         if ($request->ajax()) {
-            return view('components.employee-card', [
-                'employees' => $employees,
-                'sort' => $sort,
-                'order' => $order
-            ])->render();
+            return view('components.employee-card', compact('employees', 'sort', 'order'))->render();
         }
 
-        // Обычная страница
         return view('home', compact('employees', 'sort', 'order', 'activeOnly'));
     }
+
+
 
 
 
@@ -170,32 +175,35 @@ class EmployeeController extends Controller
         $activeOnly = $request->input('active_only', 1);
 
         // Подзапрос для получения последнего события каждого сотрудника
-        $employees = Employee::leftJoinSub(
-                DB::table('employee_events')
-                    ->select('employee_id', DB::raw('MAX(event_date) as latest_event_date'))
-                    ->groupBy('employee_id'),
-                'latest_events',
-                'employees.id',
-                '=',
-                'latest_events.employee_id'
-            )
-            ->select('employees.*', 'latest_events.latest_event_date') // Выбираем сотрудников + дату последнего события
+        $employees = Employee::with(['latestEvent', 'territories'])
             ->where(function ($q) use ($query) {
-                $q->where('employees.first_name', 'like', "%$query%")
-                ->orWhere('employees.full_name', 'like', "%$query%")
-                ->orWhere('employees.last_name', 'like', "%$query%")
-                ->orWhere('employees.email', 'like', "%$query%")
-                ->orWhere('employees.status', 'like', "%$query%")
-                ->orWhereHas('territories', function ($q) use ($query) {
-                    $q->where('team', 'like', "%$query%")
+                $q->where('first_name', 'like', "%$query%")
+                ->orWhere('full_name', 'like', "%$query%")
+                ->orWhere('last_name', 'like', "%$query%")
+                ->orWhere('email', 'like', "%$query%")
+                ->orWhereHas('territories', function ($q2) use ($query) {
+                    $q2->where('team', 'like', "%$query%")
                         ->orWhere('city', 'like', "%$query%");
                 });
             })
             ->when($activeOnly == 1, function ($q) {
-                $q->whereIn('employees.status', ['active', 'hired', 'new', 'dismissed', 'maternity_leave', 'changed_position']);
+                // Фильтруем по последнему событию
+                $q->whereHas('latestEvent', function ($q2) {
+                    $q2->where('event_type', 'hired');
+                });
             })
-            ->orderBy($sort, $order)
-            ->get();
+            ->get()
+            ->sortByDesc(function ($employee) use ($sort) {
+                if ($sort === 'event_date') {
+                    return optional($employee->latestEvent)->event_date;
+                }
+                return $employee->{$sort};
+            });
+
+        if ($request->ajax()) {
+            return view('components.employee-card', compact('employees'))->render();
+        }
+
 
         return view('home', [
             'employees' => $employees,
