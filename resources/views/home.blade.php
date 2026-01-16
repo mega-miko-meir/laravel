@@ -42,9 +42,9 @@
         <!-- JS -->
         <script>
             document.addEventListener("DOMContentLoaded", () => {
-                const checkbox   = document.getElementById("ticker");
-                const container  = document.getElementById("employees-container");
-                const counter    = document.getElementById("employee-count");
+                const checkbox = document.getElementById("ticker");
+                const container = document.getElementById("employees-container");
+                const counter = document.getElementById("employee-count");
 
                 if (!checkbox) return;
 
