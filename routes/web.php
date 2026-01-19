@@ -44,12 +44,12 @@ Route::get('/employees', [EmployeeController::class, 'index']);
 
 
 # users' routes
+Route::get('/users', [UserController::class, 'index'])->name('users.index');
 Route::middleware(['can:admin'])->group(function () {
     Route::get('/register', [UserController::class, 'showRegister']);
     Route::post('/register', [UserController::class, 'register']);
     Route::get('/users/{user}/edit', [UserController::class, 'showEdit'])->name('users.edit');
     Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/{id}', [UserController::class, 'show'])->name('users.show');
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     // Route::put('/users/{id}', [UserController::class, 'edit'])->name('users.update');

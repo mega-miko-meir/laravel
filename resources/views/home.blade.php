@@ -24,11 +24,11 @@
                         Export
                     </a>
                 </div>
-                <ul>
+                {{-- <ul>
                     @foreach(App\Models\Role::all() as $role)
                         <li>ID: {{ $role->id }} — Name: {{ $role->name }}</li>
                     @endforeach
-                </ul>
+                </ul> --}}
 
                 <!-- Фильтры -->
                 <x-active-employee-checkbox />
