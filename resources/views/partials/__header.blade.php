@@ -13,6 +13,7 @@
                 <span class="text-xs text-blue-200 uppercase tracking-wider font-medium">Welcome back,</span>
                 <span class="text-sm md:text-base font-bold">
                     {{ Auth::user()->first_name . ' ' . Auth::user()->last_name }}
+                    {{-- {{ Auth::user()->role->name}} --}}
                 </span>
             </div>
 

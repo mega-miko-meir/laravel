@@ -11,8 +11,11 @@
 
                 <!-- Кнопки справа -->
                 <div class="absolute top-4 right-4 flex gap-2">
-                    <a href="/create-employee"
-                       class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
+                    <a
+                        @can('admin')
+                            href="/create-employee"
+                        @endcan
+                        class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
                         + Create
                     </a>
 
@@ -21,6 +24,11 @@
                         Export
                     </a>
                 </div>
+                <ul>
+                    @foreach(App\Models\Role::all() as $role)
+                        <li>ID: {{ $role->id }} — Name: {{ $role->name }}</li>
+                    @endforeach
+                </ul>
 
                 <!-- Фильтры -->
                 <x-active-employee-checkbox />

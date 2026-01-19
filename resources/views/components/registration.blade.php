@@ -13,6 +13,21 @@
                 <input name="last_name" type="text" placeholder="Last name" value="{{old('last_name')}}" class="w-full p-2 border rounded">
                 <input name="position" type="text" placeholder="Position" value="{{old('position')}}" class="w-full p-2 border rounded">
                 <input name="email" type="email" placeholder="Email" value="{{old('email')}}" class="w-full p-2 border rounded">
+                <div class="mt-4">
+                    {{-- <label for="role_id" class="block text-sm font-medium text-gray-700">Выберите роль</label> --}}
+                    <select name="role_id" id="role_id" required
+                            class="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+                        <option value="" disabled {{ old('role_id') ? '' : 'selected' }}>Выберите роль...</option>
+                        @foreach(App\Models\Role::all() as $role)
+                            <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                                {{ ucfirst($role->name) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('role_id')
+                        <span class="text-red-500 text-xs">{{ $message }}</span>
+                    @enderror
+                </div>
                 <input name="password" type="password" placeholder="Password" required class="w-full p-2 border rounded">
                 <input name="password_confirmation" type="password" placeholder="Password confirmation" required class="w-full p-2 border rounded">
                 <button class="btn-primary bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Submit</button>

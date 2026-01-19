@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +34,8 @@ class UserController extends Controller
     //     return redirect()->intended('/dashboard'); // или куда нужно
     // }
 
+    // dd(Role::all());
+
 
     return response()->json([
         'message' => 'The provided credentials are incorrect.',
@@ -57,7 +60,8 @@ class UserController extends Controller
     }
 
     public function showRegister($user = null){
-        return view('Components/registration', compact('user'));
+        $roles = Role::all(); // Получаем все роли (admin, editor, viewer)
+        return view('Components/registration', compact('user', 'roles'));
     }
 
     public function register(Request $request){
@@ -108,6 +112,7 @@ class UserController extends Controller
         }
 
     public function showEdit(User $user){
+        // dd(Role::all());
         return view('Components/user-edit-form', [
             // 'action' => url("/edit/$user->id"),
             // 'method' => 'PUT',
@@ -115,15 +120,33 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(Request $request, $user){
-        $incomingFields = $request->only('full_name', 'first_name', 'last_name', 'position', 'email', 'password', 'role_id');
+    public function update(Request $request, $userId)
+    {
+        $user = User::findOrFail($userId);
+        $incomingFields = $request->validate([
+            'full_name'  => 'required|max:255',
+            'first_name' => 'nullable|max:255',
+            'last_name'  => 'nullable|max:255',
+            'position'   => 'nullable|max:255',
+            'email'      => 'required|email|unique:users,email,' . $user->id,
+            'role_id'    => 'required',
+            'password'   => 'nullable|min:8|confirmed'
+        ]);
 
-        // $user = User::findOrFail($user->id);
+        // Если пароль пустой — не трогаем
+        if (empty($incomingFields['password'])) {
+            unset($incomingFields['password']);
+        } else {
+            $incomingFields['password'] = bcrypt($incomingFields['password']);
+        }
+
+
 
         $user->update($incomingFields);
 
-        return redirect('/users')->with('success', 'The user updated successfully!');
-
+        return redirect('/users')
+            ->with('success', 'Пользователь успешно обновлён!');
     }
+
 
 }

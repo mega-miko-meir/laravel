@@ -19,6 +19,7 @@
                     <th class="px-4 py-3 border-b text-left">ФИО</th>
                     <th class="px-4 py-3 border-b text-left">Email</th>
                     <th class="px-4 py-3 border-b text-left">Позиция</th>
+                    <th class="px-4 py-3 border-b text-left">Роль</th>
                     <th class="px-4 py-3 border-b text-left">Дата создания</th>
                     <th class="px-4 py-3 border-b text-left">Действие</th>
                 </tr>
@@ -45,6 +46,10 @@
 
                         <td class="px-4 py-3 border-b">
                             {{ $user->position }}
+                        </td>
+
+                        <td class="px-4 py-3 border-b">
+                            {{ $user->role->name }}
                         </td>
 
                         <td class="px-4 py-3 border-b">
