@@ -444,16 +444,20 @@ class EmployeeController extends Controller
         ->orderByDesc('assigned_at')
         ->get();
 
-        $territories = $employee->employee_territory()->latest('assigned_at')->map(function ($territory) use ($employee) {
+        $territories = $employee->employee_territory()
+        ->latest('assigned_at')
+        ->get()
+        ->map(function ($territory) use ($employee) {
             $territory->assignmentToRemove = DB::table('employee_territory')
                 ->where('employee_id', $employee->id)
                 ->where('territory_id', $territory->id)
                 ->where('confirmed', 0)
-                ->orderByDesc('id') // Берем последнюю запись
+                ->orderByDesc('id')
                 ->first();
 
             return $territory;
         });
+
 
         $tablets = $employee->tablets->map(function ($tablet) use ($employee) {
             $tablet->pdfAssignment = DB::table('employee_tablet')
