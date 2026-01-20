@@ -113,7 +113,7 @@ class UserController extends Controller
 
     public function showEdit(User $user){
         // dd(Role::all());
-        return view('Components/user-edit-form', [
+        return view('components/user-edit-form', [
             // 'action' => url("/edit/$user->id"),
             // 'method' => 'PUT',
             'user' => $user

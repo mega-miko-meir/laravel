@@ -128,8 +128,7 @@ class TerritoryController extends Controller
 
         // $employee = $territory->employee;
         $bricks = Brick::all();
-        // $selectedBricks = $employee->territories->first()->bricks ?? collect();
-        $selectedBricks = optional($employee?->territories->first())->bricks ?? collect();
+        $selectedBricks = $territory->bricks ?? collect();
 
         $previousUsers = $territory->employees()
         ->withPivot('assigned_at', 'unassigned_at', 'id')
@@ -162,12 +161,6 @@ class TerritoryController extends Controller
         ->orderBy('full_name', 'asc')
         ->get();
 
-
-
-
-
-
-
         // $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
         // ->where(function ($query) {
         //     $query->whereDoesntHave('employee_territory') // Сотрудники, у которых нет записей в employee_territory
@@ -195,7 +188,7 @@ class TerritoryController extends Controller
 
     public function createTerritoryForm(){
         $parentTerritories = Territory::with('employee')
-            ->where('role', 'RM')
+            ->whereIn('role', ['RM', 'FFM'])
             ->get();
 
 
@@ -204,10 +197,20 @@ class TerritoryController extends Controller
 
 
     public function editTerritoryForm(Territory $territory){
-        $parentTerritories = Territory::with('employee')
-        ->where('role', 'RM')
-        ->get();
-        return view('create-edit-territory', ['territory' => $territory, 'parentTerritories' => $parentTerritories]);
+        if($territory->role === "Rep"){
+            $parentTerritories = Territory::with('employee')
+            ->where('role', 'RM')
+            ->get();
+        } elseif($territory->role === "RM"){
+            $parentTerritories = Territory::with('employee')
+            ->where('role', 'FFM')
+            ->get();
+        }
+
+        return view('create-edit-territory', [
+            'territory' => $territory,
+            'parentTerritories' => $parentTerritories
+            ]);
     }
 
 
@@ -218,7 +221,7 @@ class TerritoryController extends Controller
             'territory' => 'required',
             'territory_name' => 'required',
             'department' => 'required',
-            'team' => 'required',
+            'team' => 'nullable',
             'role' => 'required',
             'city' => 'required',
             'manager_id' => 'nullable|integer',
@@ -232,14 +235,14 @@ class TerritoryController extends Controller
             return redirect()->back()->with('error', 'Такая территория уже существует!');
         }
 
-        Territory::create($incomingFields);
+        $territory = Territory::create($incomingFields);
 
         // return view('territory.create', [
         //     'territory' => null, // Для формы создания новой территории
         //     'territories' => Territory::all(), // Передаем все территории
         // ]);
 
-        return redirect()->back()->with('success', 'Territory added successfully!');
+        return redirect()->route('territories.show', ['territory' => $territory])->with('success', 'Territory added successfully!');
     }
 
     public function editTerritory(Request $request, Territory $territory)

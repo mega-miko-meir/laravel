@@ -14,52 +14,143 @@ use App\Models\EmployeeTerritory;
 use App\Models\EmployeeCredential;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+// use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\View\Components\employee as ComponentsEmployee;
+
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EmployeeController extends Controller
 {
 
 
-
-    public function exportToExcel()
+    private function exportMap()
     {
+        return [
+            'full_name' => fn($e) => $e->full_name,
+            'first_name_eng' => fn($e) =>
+                trim($e->first_name . ' ' . $e->last_name),
+            'city' => fn($e) =>
+                $e->employee_territory()->latest('assigned_at')->first()->city ?? '',
+            'email' => fn($e) => $e->email,
+            'team' => fn($e) =>
+                $e->employee_territory()->latest('assigned_at')->first()->team ?? '',
+            'department' => fn($e) =>
+                $e->employee_territory()->latest('assigned_at')->first()->department ?? '',
+            'manager' => fn($e) =>
+                $e->employee_territory()->latest('assigned_at')->first()->parent->employee->full_name ?? '',
+            'hiring_date' => fn($e) =>
+                optional($e->latestEvent()->first())->event_date
+                    ? \Carbon\Carbon::parse($e->latestEvent()->first()->event_date)->format('d.m.Y')
+                    : '',
+
+        ];
+    }
+
+
+
+
+    // 👇 И МЕТОД ДЛЯ НАЗВАНИЙ
+    private function labels($key)
+    {
+        return [
+            'full_name'      => 'ФИО',
+            'first_name_eng' => 'ФИО англ',
+            'city'           => 'Город',
+            'email' => 'Почта',
+            'team' => 'Группа',
+            'department' => 'Департамент',
+            'manager' => 'РМ',
+            'hiring_date' => 'Дата приема',
+
+
+        ][$key] ?? $key;
+    }
+
+
+    public function exportToExcel(Request $request)
+    {
+        $columns = $request->input('columns', []);
+
+        // $employees = Employee::with('employee_territory')->get();
+
+        $employees = Employee::with('employee_territory', 'latestEvent')
+            ->whereHas('latestEvent', function($query) {
+                $query->where('event_type', 'hired');
+            })
+            ->get();
+
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // Заголовки
-        $sheet->setCellValue('A1', 'ID');
-        $sheet->setCellValue('B1', 'Имя');
-        $sheet->setCellValue('C1', 'Фамилия');
-        $sheet->setCellValue('D1', 'Имэйл');
-        $sheet->setCellValue('E1', 'Группа');
-        $sheet->setCellValue('F1', 'Департамент');
+        $col = 'A';
+        foreach ($columns as $field) {
+            $sheet->setCellValue($col.'1', $this->labels($field));
+            $col++;
+        }
 
-        // Получаем данные из БД
-        $employees = Employee::with('territories')->get();
-        // return $employees;
+        // Данные
         $row = 2;
-
         foreach ($employees as $employee) {
-            $sheet->setCellValue("A$row", $employee->id);
-            $sheet->setCellValue("B$row", $employee->first_name);
-            $sheet->setCellValue("C$row", $employee->last_name);
-            $sheet->setCellValue("D$row", $employee->email);
-            $sheet->setCellValue("E$row", $employee->territories->first()->team ?? '');
-            $sheet->setCellValue("F$row", $employee->territories->first()->department ?? '');
+            $col = 'A';
+            foreach ($columns as $field) {
+                $map = $this->exportMap();
+                $value = isset($map[$field]) ? ($map[$field])($employee) : '';
+                $sheet->setCellValue($col.$row, $value);
+                $col++;
+            }
             $row++;
         }
-        // Сохраняем во временный файл
+
+        // 🔹 Сохраняем временный файл и отдаем пользователю
+        $writer = new Xlsx($spreadsheet);
         $filePath = storage_path('employees.xlsx');
-        // $writer = new Xlsx($spreadsheet);
-        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
         $writer->save($filePath);
 
-        // Возвращаем файл пользователю
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
+
+
+
+    // public function exportToExcel(Request $request)
+    // {
+    //     $spreadsheet = new Spreadsheet();
+    //     $sheet = $spreadsheet->getActiveSheet();
+
+    //     // Заголовки
+    //     $sheet->setCellValue('A1', 'ID');
+    //     $sheet->setCellValue('B1', 'Имя');
+    //     $sheet->setCellValue('C1', 'Фамилия');
+    //     $sheet->setCellValue('D1', 'Имэйл');
+    //     $sheet->setCellValue('E1', 'Группа');
+    //     $sheet->setCellValue('F1', 'Департамент');
+
+    //     // Получаем данные из БД
+    //     $employees = Employee::with('territories')->get();
+    //     // return $employees;
+    //     $row = 2;
+
+    //     foreach ($employees as $employee) {
+    //         $sheet->setCellValue("A$row", $employee->id);
+    //         $sheet->setCellValue("B$row", $employee->first_name);
+    //         $sheet->setCellValue("C$row", $employee->last_name);
+    //         $sheet->setCellValue("D$row", $employee->email);
+    //         $sheet->setCellValue("E$row", $employee->territories->first()->team ?? '');
+    //         $sheet->setCellValue("F$row", $employee->territories->first()->department ?? '');
+    //         $row++;
+    //     }
+    //     // Сохраняем во временный файл
+    //     $filePath = storage_path('employees.xlsx');
+    //     // $writer = new Xlsx($spreadsheet);
+    //     $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+    //     $writer->save($filePath);
+
+    //     // Возвращаем файл пользователю
+    //     return response()->download($filePath)->deleteFileAfterSend(true);
+    // }
 
 
     // This method should be rewritten for employees to upload
@@ -300,7 +391,7 @@ class EmployeeController extends Controller
         // $oldEmployee = Employee::with('tablets')->findOrFail($oldEmployeeId);
         $bricks = Brick::all();
         // $territories = $employee->territories();
-        $selectedBricks = $employee->territories->first()->bricks ?? collect();
+        $selectedBricks = $employee->employee_territory()->latest('assigned_at')->first()->bricks ?? collect();
         // $availableTablets = Tablet::whereNull('employee_id')->with('oldEmployee')->get();
         // $availableTablets = Tablet::whereHas('employees', function ($query) {
         //     $query->whereNotNull('returned_at')
@@ -331,9 +422,9 @@ class EmployeeController extends Controller
         // dd($territoriesHistory);
 
         $lastTerritory = $employee->employee_territory()
-        ->withPivot('assigned_at', 'unassigned_at')
-        ->orderByDesc('assigned_at')
+        ->latest('assigned_at')
         ->first();
+
 
         $lastTablet = $employee->employee_tablet()
         ->withPivot('assigned_at', 'returned_at')
@@ -353,7 +444,7 @@ class EmployeeController extends Controller
         ->orderByDesc('assigned_at')
         ->get();
 
-        $territories = $employee->territories->map(function ($territory) use ($employee) {
+        $territories = $employee->employee_territory()->latest('assigned_at')->map(function ($territory) use ($employee) {
             $territory->assignmentToRemove = DB::table('employee_territory')
                 ->where('employee_id', $employee->id)
                 ->where('territory_id', $territory->id)

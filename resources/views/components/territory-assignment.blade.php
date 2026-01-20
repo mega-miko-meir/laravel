@@ -53,7 +53,7 @@
                 </li>
 
                 @if ($lastTerritory->role === 'Rep')
-                    <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" :lastTerritory="$lastTerritory"/>
+                    <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" :territory="$lastTerritory"/>
 
 
                 @else

@@ -40,7 +40,7 @@
                     </td>
 
                     <td class="px-4 py-3 text-gray-700">
-                        {{ \Carbon\Carbon::parse($employee->events()->latest('event_date')->first()?->event_date)->format('d.m.Y') ?? '-'}}
+                        {{ \Carbon\Carbon::parse($employee->latestEvent?->event_date)->format('d.m.Y') ?? '-'}}
                     </td>
 
                     {{-- <td class="px-4 py-3 text-gray-700">

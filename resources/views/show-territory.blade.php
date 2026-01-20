@@ -2,13 +2,16 @@
 
 @section('content')
 <div class="container mx-auto py-6">
+    <x-flash-message />
     <div class="bg-white shadow-md rounded-lg p-6">
         <x-back-button />
         <h2 class="text-2xl font-bold mb-4">Детали территории</h2>
 
         <p><strong>Территория:</strong> {{ $territory->territory_name }}</p>
+        <p><strong>Позиция:</strong> {{ $territory->role }}</p>
         <p><strong>Группа:</strong> {{ $territory->team }}</p>
         <p><strong>Департамент:</strong> {{ $territory->department }}</p>
+        <p><strong>Город:</strong> {{ $territory->city }}</p>
         <div x-data="{ showForm: false }">
             <p>
                 <strong>Сотрудник:</strong>
@@ -60,7 +63,7 @@
         <x-edit-territory-button :territory="$territory"/>
         <br>
         @if ($territory->role === 'Rep')
-            <x-checkbox :employee="$employee" :bricks="$bricks" :selectedBricks="$selectedBricks" :lastTerritory="$lastTerritory" />
+            <x-checkbox :bricks="$bricks" :selectedBricks="$selectedBricks" :territory="$territory" />
         @endif
         <h3 class="text-xl font-semibold mt-6">История пользователей</h3>
         <table class="w-full border-collapse border border-gray-300">

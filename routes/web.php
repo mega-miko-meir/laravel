@@ -121,7 +121,7 @@ Route::get('/upload', function () {
 });
 Route::get('/bricks', [BrickController::class, 'showBricks']);
 
-Route::get('/export-excel', [EmployeeController::class, 'exportToExcel']);
+Route::post('/export-excel', [EmployeeController::class, 'exportToExcel'])->name('export.excel');
 
 // Uploading files
 Route::middleware(['can:editor'])->group(function () {

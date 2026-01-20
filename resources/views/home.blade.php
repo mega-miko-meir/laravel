@@ -19,10 +19,102 @@
                         + Create
                     </a>
 
-                    <a href="/export-excel"
-                       class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
-                        Export
-                    </a>
+                    <div class="relative inline-block">
+                        <!-- КНОПКА ОТКРЫТИЯ -->
+                        <button
+                            type="button"
+                            id="exportBtn"
+                            class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
+                            Export
+                        </button>
+
+
+                        <!-- DROPDOWN МЕНЮ -->
+                        <div id="exportDropdown"
+                            class="hidden absolute right-0 mt-1 bg-white border rounded-lg shadow-lg p-4 w-72 z-[999]">
+
+                            <form action="{{ route('export.excel') }}" method="POST">
+                                @csrf
+
+                                <p class="font-semibold mb-2">Выберите колонки:</p>
+
+                                <div class="space-y-1 text-sm">
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="full_name" checked class="mr-2">
+                                        ФИО
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="first_name_eng" checked class="mr-2">
+                                        ФИО англ
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="city" checked class="mr-2">
+                                        Город
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="email" checked class="mr-2">
+                                        Почта
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="team" class="mr-2">
+                                        Группа
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="department" class="mr-2">
+                                        Департамент
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="manager" checked class="mr-2">
+                                        Менеджер
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="hiring_date" checked class="mr-2">
+                                        Дата приема
+                                    </label>
+
+                                </div>
+
+                                <div class="mt-3 flex justify-end">
+                                    <button type="submit"
+                                            class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded">
+                                        Скачать
+                                    </button>
+                                </div>
+
+                            </form>
+                        </div>
+                    </div>
+
+
+
+                    <script>
+                    const btn = document.getElementById('exportBtn');
+                    const menu = document.getElementById('exportDropdown');
+
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        menu.classList.toggle('hidden');
+                    });
+
+                    // закрытие при клике вне
+                    document.addEventListener('click', (e) => {
+                        if (!menu.contains(e.target) && e.target !== btn) {
+                            menu.classList.add('hidden');
+                        }
+                    });
+                    </script>
+
+
+
+
                 </div>
                 {{-- <ul>
                     @foreach(App\Models\Role::all() as $role)

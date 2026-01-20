@@ -52,6 +52,9 @@
     <div>
         <label for="team" class="block text-sm font-medium text-gray-600">Team</label>
         <select name="team" id="team" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="" disabled {{ old('team', $territory->territory_name ?? null) ? '' : 'selected' }}>
+                Выберите группу...
+            </option>
             @foreach ($teams as $team)
                 <option value="{{ $team }}" {{ old('team', $territory->team ?? '') == $team ? 'selected' : '' }}>
                     {{ $team }}

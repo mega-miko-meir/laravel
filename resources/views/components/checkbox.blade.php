@@ -1,4 +1,4 @@
-@props(['employee', 'bricks', 'selectedBricks', 'lastTerritory' => null])
+@props(['employee' => null, 'bricks', 'selectedBricks', 'territory'])
 
 <div class="relative inline-block text-left">
     <!-- Кнопка для отображения выпадающего списка -->
@@ -15,8 +15,8 @@
         </div>
 
         <!-- Список с чекбоксами -->
-        @if (isset($lastTerritory) && is_null(optional($lastTerritory->pivot)->unassigned_at))
-            <form action="{{ route('assign.bricks', [$lastTerritory->id]) }}" method="POST">
+        @if (isset($territory) && is_null(optional($territory->pivot)->unassigned_at))
+            <form action="{{ route('assign.bricks', [$territory->id]) }}" method="POST">
                 @csrf
                 <div id="brick-list" class="max-h-48 overflow-y-auto">
                     @foreach($bricks as $brick)
@@ -53,8 +53,8 @@
                             {{ $brick->description }}
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600">
-                            @if(isset($lastTerritory))
-                                <form action="{{ route('assign.bricks', [$lastTerritory->id, $brick->id]) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот brick?');">
+                            @if(isset($territory))
+                                <form action="{{ route('assign.bricks', [$territory->id, $brick->id]) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот brick?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-700 font-medium">Удалить</button>

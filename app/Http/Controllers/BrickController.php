@@ -63,11 +63,14 @@ class BrickController extends Controller{
         $sheet->setCellValue('E1', 'LastName');
         $sheet->setCellValue('E2', $employee->last_name);
         $sheet->setCellValue('F1', 'Territory Name');
-        $sheet->setCellValue('F2', $employee->territories->first()->territory_name);
+        $lastTerritory = $employee->employee_territory()
+        ->latest('assigned_at')
+        ->first();
+        $sheet->setCellValue('F2', $employee->employee_territory()->latest('assigned_at')->first()->territory_name);
         $sheet->setCellValue('G1', 'Parent Territory Name');
-        $sheet->setCellValue('G2', $employee->territories->first()->parent->territory_name);
+        $sheet->setCellValue('G2', $employee->employee_territory()->latest('assigned_at')->first()->parent->territory_name);
         $sheet->setCellValue('H1', 'Division');
-        $sheet->setCellValue('H2', $employee->territories->first()->team);
+        $sheet->setCellValue('H2', $employee->employee_territory()->latest('assigned_at')->first()->team);
         $sheet->setCellValue('I1', 'EmployeeNumber');
         $sheet->setCellValue('I2', '');
         $sheet->setCellValue('J1', 'Country');
@@ -79,7 +82,7 @@ class BrickController extends Controller{
         $sheet->setCellValue('M1', 'Manager Employee Number');
         $sheet->setCellValue('M2', '');
         $sheet->setCellValue('N1', 'Manager Name');
-        $sheet->setCellValue('N2', $employee->territories->first()->parent->employee->first_name . ' ' . $employee->territories->first()->parent->employee->last_name);
+        $sheet->setCellValue('N2', $employee->employee_territory()->latest('assigned_at')->first()->parent->employee->first_name . ' ' . $employee->employee_territory()->latest('assigned_at')->first()->parent->employee->last_name);
 
 
 
@@ -91,12 +94,12 @@ class BrickController extends Controller{
         $sheet2->setCellValue('C1', 'Territory Name');
         $sheet2->setCellValue('D1', 'Note');
 
-        $selectedBricks = $employee->territories ? $employee->territories->first()->bricks : collect();
+        $selectedBricks = $employee->employee_territory()->latest('assigned_at') ? $employee->employee_territory()->latest('assigned_at')->first()->bricks : collect();
 
         foreach ($selectedBricks as $index => $brick) {
             $sheet2->setCellValue('A'.($index+2), $brick->additional_code);
             $sheet2->setCellValue('B'.($index+2), $brick->description);
-            $sheet2->setCellValue('C'.($index+2), $employee->territories->first()->territory_name);
+            $sheet2->setCellValue('C'.($index+2), $employee->employee_territory()->latest('assigned_at')->first()->territory_name);
             $sheet2->setCellValue('D'.($index+2), 'Add this brick to territory');
         }
 

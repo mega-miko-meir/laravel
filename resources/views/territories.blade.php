@@ -44,9 +44,11 @@
                                         @endif
                                     </a>
                                 </th>
+                                <th class="px-4 py-3 text-left">Позиция</th>
                                 <th class="px-4 py-3 text-left">Группа</th>
                                 <th class="px-4 py-3 text-left">Департамент</th>
                                 <th class="px-4 py-3 text-left">Сотрудник</th>
+                                <th class="px-4 py-3 text-left">Город</th>
                                 <th class="px-4 py-3 text-left">Менеджер</th>
                             </tr>
                         </thead>
@@ -57,8 +59,16 @@
                                     {{-- Территория --}}
                                     <td class="px-4 py-3 text-gray-900 font-medium">
                                         <a href="{{ route('territories.show', $territory->id) }}"
-                                        class="text-blue-500 hover:underline">
+                                            class="text-blue-500 hover:underline">
                                             {{ $territory->territory_name }}
+                                        </a>
+                                    </td>
+
+                                    {{-- Позиция --}}
+                                    <td class="px-4 py-3 text-gray-900 font-medium">
+                                        <a href="{{ route('territories.show', $territory->id) }}"
+                                        class="text-blue-500 hover:underline">
+                                            {{ $territory->role }}
                                         </a>
                                     </td>
 
@@ -91,6 +101,11 @@
                                         @else
                                             <span class="text-gray-400 italic">Не назначен</span>
                                         @endif
+                                    </td>
+
+                                    {{-- Группа --}}
+                                    <td class="px-4 py-3 text-gray-700">
+                                        {{ $territory->city ?? '-' }}
                                     </td>
 
                                     {{-- Менеджер --}}
