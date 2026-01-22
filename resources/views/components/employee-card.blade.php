@@ -1,5 +1,25 @@
 @props(['employees', 'sort', 'order'])
 
+
+{{-- <!-- Loader -->
+<div id="loader"
+        class="absolute inset-0 bg-white/70 flex items-center justify-center hidden z-10">
+    <span class="text-gray-500 text-sm">Загрузка…</span>
+</div>
+<script>
+    const loader = document.getElementById('loader');
+    loader.classList.remove('hidden');
+    fetch(url)
+        .then(res => res.text())
+        .then(html => {
+            employeesContainer.innerHTML = html;
+        })
+        .finally(() => {
+            loader.classList.add('hidden');
+        });
+
+</script> --}}
+
 <div class="overflow-x-auto bg-white shadow rounded-lg mt-6 p-4">
     <table class="w-full border-collapse text-sm text-gray-700">
         <thead>
