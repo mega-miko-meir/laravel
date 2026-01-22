@@ -41,7 +41,22 @@ class TabletController extends Controller
             }])
             ->get();
 
-        return view('tablets', ['tablets' => $tablets, 'query' => $query]);
+
+
+        $freeTablets = Tablet::whereHas('employees', function ($query) {
+        $query->whereNotNull('returned_at')
+                ->whereRaw('assigned_at = (
+                        SELECT MAX(assigned_at)
+                        FROM employee_tablet
+                        WHERE employee_tablet.tablet_id = tablets.id
+                )');
+        })
+        ->orWhereDoesntHave('employees') // 👉 планшеты, у которых вообще нет записей
+        ->with('oldEmployee')
+        ->get();
+
+
+        return view('tablets', ['tablets' => $tablets, 'query' => $query, 'freeTablets' => $freeTablets]);
     }
 
 

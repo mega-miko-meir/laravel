@@ -70,7 +70,10 @@
                                     </a> -
                                     @if ($child->employee)
                                         <a href="{{ route('employees.show', $child->employee->id) }}" class="text-blue-600 hover:underline">
-                                            {{ $child->employee->full_name }}
+                                            {{ $child->employeeTerritories()
+                                                ->latest('assigned_at')
+                                                ->first()
+                                                ?->employee->full_name }}
                                         </a>
                                     @else
                                         <span class="text-gray-500 italic">Нет сотрудника ({{$child->employees && $child->employees->last() ? $child->employees->last()->full_name : ''}})</span>

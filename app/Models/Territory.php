@@ -24,6 +24,11 @@ class Territory extends Model
         return $this->belongsTo(Employee::class, 'employee_id');
     }
 
+   public function employeeTerritories()
+    {
+        return $this->hasMany(EmployeeTerritory::class);
+    }
+
     public function oldEmployee(){
         return $this->belongsTo(Employee::class, 'old_employee_id');
     }

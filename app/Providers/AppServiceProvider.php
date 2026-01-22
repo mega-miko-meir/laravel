@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\WeatherService;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -41,6 +43,26 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewer', function (User $user) {
             return in_array($user->role->name, ['admin', 'editor', 'viewer']);
             });
+
+
+        // View::composer('partials.__header', function ($view) {
+        //     $weather = app(WeatherService::class)
+        //         ->getCurrent(config('app.weather_city', 'Karaganda'));
+
+        //     $view->with('weather', $weather);
+        // });
+
+        View::composer('partials.__header', function ($view) {
+            $cities = ['Almaty'];
+            $weatherData = [];
+
+            foreach ($cities as $city) {
+                $weatherData[$city] = app(WeatherService::class)->getCurrent($city);
+            }
+
+            $view->with('weatherData', $weatherData);
+        });
+
 
 
     }

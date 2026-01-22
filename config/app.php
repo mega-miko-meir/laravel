@@ -15,6 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'weather_city' => env('WEATHER_CITY', 'Almaty'),
+
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

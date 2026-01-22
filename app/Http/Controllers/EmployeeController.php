@@ -10,16 +10,17 @@ use App\Models\Territory;
 use Illuminate\Http\Request;
 use App\Models\EmployeeEvent;
 use App\Models\EmployeeTablet;
+use App\Services\WeatherService;
 use App\Models\EmployeeTerritory;
 use App\Models\EmployeeCredential;
 use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 // use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\View\Components\employee as ComponentsEmployee;
-
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EmployeeController extends Controller
 {
@@ -44,7 +45,7 @@ class EmployeeController extends Controller
                 optional($e->latestEvent()->first())->event_date
                     ? \Carbon\Carbon::parse($e->latestEvent()->first()->event_date)->format('d.m.Y')
                     : '',
-
+            'role' => fn($e) => $e->employee_territory()->latest('assigned_at')->first()->role ?? '',
         ];
     }
 
@@ -63,6 +64,7 @@ class EmployeeController extends Controller
             'department' => 'Департамент',
             'manager' => 'РМ',
             'hiring_date' => 'Дата приема',
+            'role' => 'Позиция'
 
 
         ][$key] ?? $key;
@@ -229,7 +231,7 @@ class EmployeeController extends Controller
     {
         // $activeOnly = $request->boolean('active_only');
         $sort = $request->input('sort', 'event_date');
-        $order = $request->input('order', 'desc');
+        $order = $request->input('order', 'asc');
 
         $employees = DB::table('employees as e')
             ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
@@ -259,51 +261,70 @@ class EmployeeController extends Controller
 
     public function searchEmployee(Request $request)
     {
-        $query = $request->input('search');
+        $weather = app(WeatherService::class)->getCurrent('Almaty');
+        // dd($weather);
 
-        $sort = $request->input('sort', 'latest_event_date'); // По умолчанию сортируем по дате последнего события
-        $order = $request->input('order', 'desc'); // По умолчанию сортировка по убыванию
+
+
+        $query = $request->input('search');
+        $sort = $request->input('sort', 'latest_event_date');
+        $order = $request->input('order', 'desc');
         $activeOnly = $request->input('active_only', 1);
 
-        // Подзапрос для получения последнего события каждого сотрудника
+        // Получаем сотрудников
         $employees = Employee::with(['latestEvent', 'territories'])
             ->where(function ($q) use ($query) {
-                $q->where('first_name', 'like', "%$query%")
-                ->orWhere('full_name', 'like', "%$query%")
-                ->orWhere('last_name', 'like', "%$query%")
-                ->orWhere('email', 'like', "%$query%")
+                if (!$query) {
+                    return;
+                }
+
+                $q->where('first_name', 'like', "%{$query}%")
+                ->orWhere('full_name', 'like', "%{$query}%")
+                ->orWhere('last_name', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%")
                 ->orWhereHas('territories', function ($q2) use ($query) {
-                    $q2->where('team', 'like', "%$query%")
-                        ->orWhere('city', 'like', "%$query%");
+                    $q2->where('team', 'like', "%{$query}%")
+                        ->orWhere('city', 'like', "%{$query}%");
                 });
             })
             ->when($activeOnly == 1, function ($q) {
-                // Фильтруем по последнему событию
                 $q->whereHas('latestEvent', function ($q2) {
                     $q2->where('event_type', 'hired');
                 });
             })
-            ->get()
-            ->sortByDesc(function ($employee) use ($sort) {
-                if ($sort === 'event_date') {
-                    return optional($employee->latestEvent)->event_date;
-                }
-                return $employee->{$sort};
-            });
+            ->get();
 
+        // PHP-сортировка с учетом направления
+        $employees = $employees->when(
+            $order === 'desc',
+            fn ($c) => $c->sortByDesc(fn ($e) =>
+                $sort === 'latest_event_date'
+                    ? optional($e->latestEvent)->event_date
+                    : data_get($e, $sort)
+            ),
+            fn ($c) => $c->sortBy(fn ($e) =>
+                $sort === 'latest_event_date'
+                    ? optional($e->latestEvent)->event_date
+                    : data_get($e, $sort)
+            )
+        );
+
+        // AJAX-ответ
         if ($request->ajax()) {
             return view('components.employee-card', compact('employees'))->render();
         }
 
-
+        // Обычный рендер
         return view('home', [
             'employees' => $employees,
             'query' => $query,
             'sort' => $sort,
             'order' => $order,
             'activeOnly' => $activeOnly,
+            'weather' => $weather,
         ]);
     }
+
 
 
     public function deleteEmployee(Employee $employee)

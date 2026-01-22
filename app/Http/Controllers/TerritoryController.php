@@ -251,7 +251,7 @@ class TerritoryController extends Controller
             'territory' => 'required|unique:territories,territory_name,' . $territory->id,
             'territory_name' => 'required|unique:territories,territory_name,' . $territory->id,
             'department' => 'required',
-            'team' => 'required',
+            'team' => 'nullable',
             'role' => 'required',
             'city' => 'required',
             'manager_id' => 'nullable|integer',
@@ -261,7 +261,7 @@ class TerritoryController extends Controller
 
         $territory->update($incomingFields);
 
-        return back()->with('success', 'Данные успешно обновлены!');
+        return redirect()->route('territories.show', ['territory' => $territory])->with('success', 'Territory edited successfully!');
         // return view('territories.create', [
         //     'territory' => $territory, // Передаем текущую территорию
         //     'territories' => Territory::where('id', '!=', $territory->id)->get(), // Исключаем текущую из списка

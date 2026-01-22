@@ -12,15 +12,22 @@
                         @endif
                     </a>
                 </th>
+                <th class="px-4 py-3 text-left">Позиция</th>
                 <th class="px-4 py-3 text-left">Status</th>
-                <th class="px-4 py-3 text-left">
-                    <a href="{{ route('employees.search', ['sort' => 'event_date', 'order' => request('order') === 'asc' ? 'desc' : 'asc']) }}">
+                <th class="px-4 py-3 text-left cursor-pointer">
+                    <a href="{{ route('employees.search', [
+                        'search' => request('search'),
+                        'sort' => 'latest_event_date',
+                        'order' => request('order') === 'asc' ? 'desc' : 'asc',
+                        // 'active_only' => request('active_only', 1),
+                    ]) }}">
                         Event
-                        {{-- @if($sort === 'event_date')
+                        @if($sort === 'latest_event_date')
                             {!! $order === 'asc' ? '↑' : '↓' !!}
-                        @endif --}}
+                        @endif
                     </a>
                 </th>
+
                 <th class="px-4 py-3 text-left">Team</th>
                 <th class="px-4 py-3 text-left">City</th>
                 <th class="px-4 py-3 text-center">Actions</th>
@@ -33,6 +40,9 @@
                         <a href="/employee/{{ $employee->id }}" class="text-blue-500 hover:underline">
                             {{ $employee->full_name }}
                         </a>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">
+                        {{ $employee->employee_territory()->latest('assigned_at')->first()->role ?? '-' }}
                     </td>
                     <td class="px-4 py-3 text-gray-700">
                         {{-- <x-status-badge :status="$employee->events()->latest('event_date')->first()?->event_type" /> --}}

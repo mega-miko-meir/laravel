@@ -52,9 +52,12 @@
     <div>
         <label for="team" class="block text-sm font-medium text-gray-600">Team</label>
         <select name="team" id="team" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="" disabled {{ old('team', $territory->territory_name ?? null) ? '' : 'selected' }}>
-                Выберите группу...
+            <option value=""
+            {{-- {{ old('team', $territory->territory_name ?? null) ? '' : 'selected' }} --}}
+            >
+                No Team
             </option>
+            {{-- <option value="">No Team</option> --}}
             @foreach ($teams as $team)
                 <option value="{{ $team }}" {{ old('team', $territory->team ?? '') == $team ? 'selected' : '' }}>
                     {{ $team }}
@@ -67,7 +70,7 @@
         <select name="role" id="role"
                 class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             @foreach($role as $role)
-                <option value="{{ $role }}" {{ old('role', $employee->role ?? '') === $role ? 'selected' : '' }}>
+                <option value="{{ $role }}" {{ old('role', $territory->role ?? '') === $role ? 'selected' : '' }}>
                     {{ $role }}
                 </option>
             @endforeach

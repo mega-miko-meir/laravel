@@ -7,8 +7,8 @@
             <div class="col-span-10 relative">
 
                 <x-header class="mb-6" />
-                <x-flash-message />
 
+                <x-flash-message />
                 <!-- Кнопки справа -->
                 <div class="absolute top-4 right-4 flex gap-2">
                     <a
@@ -46,37 +46,42 @@
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="first_name_eng" checked class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="first_name_eng" class="mr-2">
                                         ФИО англ
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="city" checked class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="role" checked class="mr-2">
+                                        Позиция
+                                    </label>
+
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="columns[]" value="city" class="mr-2">
                                         Город
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="email" checked class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="email" class="mr-2">
                                         Почта
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="team" class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="team" checked class="mr-2">
                                         Группа
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="department" class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="department" checked class="mr-2">
                                         Департамент
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="manager" checked class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="manager" class="mr-2">
                                         Менеджер
                                     </label>
 
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="columns[]" value="hiring_date" checked class="mr-2">
+                                        <input type="checkbox" name="columns[]" value="hiring_date" class="mr-2">
                                         Дата приема
                                     </label>
 
@@ -84,7 +89,7 @@
 
                                 <div class="mt-3 flex justify-end">
                                     <button type="submit"
-                                            class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded">
+                                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded">
                                         Скачать
                                     </button>
                                 </div>
@@ -123,6 +128,9 @@
                 </ul> --}}
 
                 <!-- Фильтры -->
+
+
+
                 <x-active-employee-checkbox />
                 <x-search class="mb-6" />
 
