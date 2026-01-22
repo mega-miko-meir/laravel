@@ -1,11 +1,18 @@
 
 <div {{ $attributes->merge(['class' => 'p-4']) }}>
-    <form action="{{ $attributes->get('action', '/') }}" method="GET" class="max-w-lg mx-auto">
+    <form action="{{ route('employees.search') }}" method="GET" class="max-w-lg mx-auto">
     {{-- <form action="{{$action ?? '/'}}" method="GET" class="max-w-lg mx-auto"> --}}
         <div class="relative border-2 border-gray-300 rounded-lg overflow-hidden">
             <div class="absolute top-1/2 left-3 transform -translate-y-1/2">
                 <i class="fa fa-search text-gray-400 hover:text-gray-500"></i>
             </div>
+            {{-- сохраняем active_only --}}
+            <input type="hidden" name="active_only" value="{{ request('active_only', 1) }}">
+
+            {{-- если нужно — и сортировку --}}
+            <input type="hidden" name="sort" value="{{ request('sort', 'latest_event_date') }}">
+            <input type="hidden" name="order" value="{{ request('order', 'desc') }}">
+
             <input
                 type="text"
                 name="search"

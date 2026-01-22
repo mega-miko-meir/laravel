@@ -5,7 +5,12 @@
         <thead>
             <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
                 <th class="px-4 py-3 text-left">
-                    <a href="{{ route('employees.search', ['sort' => 'full_name', 'order' => request('order') === 'asc' ? 'desc' : 'asc']) }}">
+                    <a href="{{ route('employees.search', [
+                        'search' => request('search'),
+                        'sort' => 'full_name',
+                        'order' => request('order') === 'asc' ? 'desc' : 'asc',
+                        'active_only' => request('active_only', 1)
+                        ]) }}">
                         Full Name
                         @if($sort === 'full_name')
                             {!! $order === 'asc' ? '↑' : '↓' !!}
@@ -19,7 +24,7 @@
                         'search' => request('search'),
                         'sort' => 'latest_event_date',
                         'order' => request('order') === 'asc' ? 'desc' : 'asc',
-                        // 'active_only' => request('active_only', 1),
+                        'active_only' => request('active_only', 1),
                     ]) }}">
                         Event
                         @if($sort === 'latest_event_date')
