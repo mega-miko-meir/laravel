@@ -22,24 +22,32 @@
                         <!-- flex-wrap добавлен на случай, если кнопки не влезут в одну строку на мобильных -->
                         <div class="flex flex-wrap items-center gap-2 text-sm">
 
-                            <!-- Кнопка удаления -->
-                            <form action="/unassign-territory/{{$employee->id}}/{{$lastTerritory->id}}" method="POST"
-                                onsubmit="return confirm('Are you sure you want to unassign the territory?');" class="flex items-center gap-2">
-                                @csrf
-                                <input type="date" name="unassigned_at" id="unassigned_at" value="{{ now()->format('Y-m-d') }}" class="border rounded px-1">
-                                <button class="bg-red-400 hover:bg-red-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
-                                    ❌ Unassign
-                                </button>
-                            </form>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <!-- Кнопка удаления (с полем даты) -->
+                                <form action="/unassign-territory/{{$employee->id}}/{{$lastTerritory->id}}" method="POST"
+                                    onsubmit="return confirm('Are you sure you want to unassign the territory?');"
+                                    class="flex items-center gap-1">
+                                    @csrf
+                                    <!-- Поле даты: уменьшен шрифт и высота -->
+                                    <input type="date" name="unassigned_at" id="unassigned_at"
+                                        value="{{ now()->format('Y-m-d') }}"
+                                        class="border border-gray-300 rounded text-[11px] px-1 py-0.5 focus:ring-1 focus:ring-blue-300 outline-none h-7">
 
-                            <!-- Кнопка OCE template -->
-                            <form action="/form-template/{{$employee->id}}" method="POST"
-                                onsubmit="return confirm('Are you sure you want to use OCE template?');">
-                                @csrf
-                                <button class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-md shadow-sm transition-all">
-                                    📝 OCE Template
-                                </button>
-                            </form>
+                                    <button class="bg-red-400 hover:bg-red-500 text-white text-[11px] py-1 px-2 rounded shadow-sm transition-all h-7 flex items-center">
+                                        ❌ Unassign
+                                    </button>
+                                </form>
+
+                                <!-- Кнопка OCE template -->
+                                <form action="/form-template/{{$employee->id}}" method="POST"
+                                    onsubmit="return confirm('Are you sure you want to use OCE template?');">
+                                    @csrf
+                                    <button class="bg-blue-400 hover:bg-blue-500 text-white text-[11px] py-1 px-2 rounded shadow-sm transition-all h-7 flex items-center">
+                                        📝 OCE Template
+                                    </button>
+                                </form>
+                            </div>
+
 
                             <!-- Кнопка подтверждения -->
                             @if (!$lastTerritory->pivot->confirmed)
@@ -115,35 +123,37 @@
                     <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
                 </form>
         @endif
-    </div>
-    <div x-data="{open:false}" class="bg-white shadow-md rounded-lg p-4 mt-6">
-        <button
-        {{-- onclick="toggleTerritoryHistory()" --}}s
-        x-on:click="open = !open"
-        class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
-            История территорий
-            <svg :class="{'rotate-180': open}" id="territoryArrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-        </button>
 
-        <ul x-show="open" id="territoryHistoryList" class="text-sm text-gray-600 space-y-2" style="display:none">
-            @foreach($territoriesHistory as $history)
-                <li class="flex justify-between items-center border-b py-2">
-                    <div>
-                        <span>{{$history->pivot->id}}</span>
-                        <span class="font-medium text-gray-800">
-                            <a href="{{route('territories.show', $history->id)}}" class="text-blue-500 hover:underline" >{{ $history->territory_name ?? 'Неизвестная территория' }}</a>
-                        </span>
-                        <span class="text-sm text-gray-500 ml-2">
-                            {{ \Carbon\Carbon::parse($history->pivot->assigned_at)->format('d.m.Y') }} -
-                            {{ $history->pivot->unassigned_at ? \Carbon\Carbon::parse($history->pivot->unassigned_at)->format('d.m.Y') : 'Текущий' }}
-                        </span>
-                    </div>
-                </li>
-            @endforeach
-        </ul>
+        <div x-data="{open:false}" class="bg-white mt-6">
+            <button
+            {{-- onclick="toggleTerritoryHistory()" --}}s
+            x-on:click="open = !open"
+            class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
+                История
+                <svg :class="{'rotate-180': open}" id="territoryArrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <ul x-show="open" id="territoryHistoryList" class="text-sm text-gray-600 space-y-2" style="display:none">
+                @foreach($territoriesHistory as $history)
+                    <li class="flex justify-between items-center border-b py-2">
+                        <div>
+                            {{-- <span>{{$history->pivot->id}}</span> --}}
+                            <span class="font-medium text-gray-800">
+                                <a href="{{route('territories.show', $history->id)}}" class="text-blue-500 hover:underline" >{{ $history->territory_name ?? 'Неизвестная территория' }}</a>
+                            </span>
+                            <span class="text-sm text-gray-500 ml-2">
+                                {{ \Carbon\Carbon::parse($history->pivot->assigned_at)->format('d.m.Y') }} -
+                                {{ $history->pivot->unassigned_at ? \Carbon\Carbon::parse($history->pivot->unassigned_at)->format('d.m.Y') : 'Текущий' }}
+                            </span>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
     </div>
+
 
 </div>
 

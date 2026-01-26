@@ -17,13 +17,11 @@
                     <ul class="space-y-4">
                         {{-- @foreach($employee->tablets as $tablet) --}}
                         <li class="flex flex-col items-start text-sm text-gray-600 py-3 border-b border-gray-200">
-                            <!-- Ссылка на планшет (теперь сверху) -->
-                            <a href="{{route('tablets.show', $lastTablet->id)}}" class="text-blue-500 hover:underline mb-3 font-medium">
-                                {{ $tablet->tablet->invent_number }} - {{ $tablet->tablet->serial_number }}
-                            </a>
-
-                            <!-- Контейнер с кнопками (теперь снизу) -->
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2 align-center">
+                                <!-- Ссылка на планшет (теперь сверху) -->
+                                <a href="{{route('tablets.show', $lastTablet->id)}}" class="text-blue-500 hover:underline mb-3 font-medium">
+                                    {{ $lastTablet->invent_number }} - {{ $lastTablet->serial_number }} - {{ \Carbon\Carbon::parse($lastTablet->latestAssignment->assigned_at)->format('d.m.Y') }}
+                                </a>
                                 <!-- Кнопка печати -->
                                 <form action="/print-act/{{$employee->id}}/{{$tablet->tablet_id}}" method="POST">
                                     @csrf
@@ -38,6 +36,11 @@
                                         🖨️ Print2
                                     </button>
                                 </form>
+                            </div>
+
+                            <!-- Контейнер с кнопками (теперь снизу) -->
+                            <div class="flex flex-wrap items-center gap-2">
+
 
                                 <x-pdf-upload-form :employee="$employee" :tablet="$tablet->tablet"/>
 
@@ -88,46 +91,47 @@
             <button type="submit" class="btn-primary mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Search</button>
         </form> --}}
 
+        <div class="bg-white mt-6">
+            <button onclick="toggleHistory()" class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
+                История
+                <svg id="arrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <ul id="historyList" class="text-sm text-gray-600 space-y-2 hidden">
+                @foreach($tabletHistories as $history)
+                    <li class="flex justify-between items-center border-b py-2">
+                        <div>
+                            {{-- <span class="font-medium text-gray-800">
+                                {{ $history->id }}
+                            </span> --}}
+                            <span class="font-medium text-gray-800">
+                                <a href="{{route('tablets.show', $history->tablet->id)}}" class="text-blue-500 hover:underline" >{{ $history->tablet ? $history->tablet->serial_number : 'Неизвестный планшет' }}</a>
+                            </span>
+                            <span class="text-sm text-gray-500 ml-2">
+                                {{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} -
+                                {{ $history->returned_at ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y') : 'Текущий пользователь' }}
+                            </span>
+                        </div>
+                        <div class="space-x-3">
+                            @if($history->pdf_path)
+                                <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank" class="text-blue-500 hover:underline">PDF1</a>
+                            @else
+                                <form action="/upload"></form>
+                            @endif
+                            @if($history->unassign_pdf)
+                                <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank" class="text-blue-500 hover:underline">PDF2</a>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
 
     </div>
 
-    <div class="bg-white shadow-md rounded-lg p-4 mt-6">
-        <button onclick="toggleHistory()" class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
-            История планшетов
-            <svg id="arrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-        </button>
 
-        <ul id="historyList" class="text-sm text-gray-600 space-y-2 hidden">
-            @foreach($tabletHistories as $history)
-                <li class="flex justify-between items-center border-b py-2">
-                    <div>
-                        <span class="font-medium text-gray-800">
-                            {{ $history->id }}
-                        </span>
-                        <span class="font-medium text-gray-800">
-                            <a href="{{route('tablets.show', $history->tablet->id)}}" class="text-blue-500 hover:underline" >{{ $history->tablet ? $history->tablet->serial_number : 'Неизвестный планшет' }}</a>
-                        </span>
-                        <span class="text-sm text-gray-500 ml-2">
-                            {{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} -
-                            {{ $history->returned_at ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y') : 'Текущий пользователь' }}
-                        </span>
-                    </div>
-                    <div class="space-x-3">
-                        @if($history->pdf_path)
-                            <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank" class="text-blue-500 hover:underline">PDF1</a>
-                        @else
-                            <form action="/upload"></form>
-                        @endif
-                        @if($history->unassign_pdf)
-                            <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank" class="text-blue-500 hover:underline">PDF2</a>
-                        @endif
-                    </div>
-                </li>
-            @endforeach
-        </ul>
-    </div>
 </div>
 
 <script>
