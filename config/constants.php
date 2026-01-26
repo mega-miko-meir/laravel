@@ -3,6 +3,6 @@
 return [
     'roles' => ['Rep', 'RM', 'FFM'],
     'departments' => ['RX', 'OTC'],
-    'teams' => ['1 GROUP', '2 GROUP', '3 GROUP', '4 GROUP', 'OTC-1 GROUP', 'OTC-2 GROUP', 'OTC-3 GROUP'],
+    'teams' => ['1 GROUP', '2 GROUP', '3 GROUP', '4 GROUP', 'OTC-1 GROUP', 'OTC-2 GROUP', 'OTC-3 GROUP', 'MSS'],
     'cities' => ['Алматы', 'Астана', 'Шымкент', 'Павлодар', 'Караганда', 'Семей', 'Оскемен', 'Талдыкорган', 'Костанай', 'Петропавл', 'Актобе', 'Уральск', 'Актау', 'Атырау', 'Кызылорда', 'Тараз']
 ];
