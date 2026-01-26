@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\QuoteService;
 use App\Services\WeatherService;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
@@ -15,7 +16,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(QuoteService::class, function ($app) {
+            return new QuoteService();
+        });
     }
 
     /**
@@ -63,6 +66,11 @@ class AppServiceProvider extends ServiceProvider
             $view->with('weatherData', $weatherData);
         });
 
+
+        View::composer('partials.__header', function ($view) {
+            $quote = app(QuoteService::class)->getDailyQuote();
+            $view->with('dailyQuote', $quote);
+        });
 
 
     }

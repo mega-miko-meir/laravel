@@ -285,6 +285,10 @@ class EmployeeController extends Controller
                 ->orWhereHas('territories', function ($q2) use ($query) {
                     $q2->where('team', 'like', "%{$query}%")
                         ->orWhere('city', 'like', "%{$query}%");
+                })
+                ->orWhereHas('latestEvent', function ($q3) use ($query) {
+                    // Здесь ищем по типу последнего события
+                    $q3->where('event_type', 'like', "%{$query}%");
                 });
             })
             ->when($activeOnly == 1, function ($q) {

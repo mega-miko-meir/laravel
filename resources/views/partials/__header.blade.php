@@ -6,8 +6,61 @@
         </a>
     </div>
 
-    <!-- Правая часть (Погода + Пользователь) -->
+
+
+    <!-- Правая часть (Цитата + Погода + Пользователь) -->
     <div class="flex items-center space-x-6 text-white">
+
+        {{-- <div x-data="quoteComponent()" x-ref="quoteWrapper"
+            class="text-sm cursor-pointer flex items-center justify-end gap-2">
+
+            <!-- кнопка -->
+            <button x-show="!showQuote" @click="toggleQuote()"
+                    class="text-white hover:text-yellow-300 transition">
+                ✨ Ваша цитата дня
+            </button>
+
+            <!-- цитата -->
+            <div x-show="showQuote" @click="toggleQuote()"
+                class="text-white italic max-w-md">
+                <p x-text="dailyQuote.text"></p>
+                <p class="text-xs mt-1" x-text="dailyQuote.author ? '- ' + dailyQuote.author : ''"></p>
+            </div>
+        </div>
+
+        <script>
+        function quoteComponent() {
+            return {
+                showQuote: false,
+                dailyQuote: @json($dailyQuote),
+                loading: false,
+
+                toggleQuote() {
+                    this.showQuote = !this.showQuote;
+                    if (this.showQuote) this.fetchQuote();
+                },
+
+                async fetchQuote() {
+                    this.loading = true;
+                    try {
+                        const res = await fetch('/daily-quote');
+                        const data = await res.json();
+                        this.dailyQuote = data;
+                    } catch (err) {
+                        console.error('Error fetching quote:', err);
+                        this.dailyQuote = {
+                            text: "Couldn't fetch the quote :(",
+                            author: ''
+                        };
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+        </script> --}}
+
+
 
         <!-- Блок погоды -->
         <div class="flex items-center gap-6">

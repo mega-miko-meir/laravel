@@ -38,7 +38,7 @@
                     </a>
                 </th>
                 <th class="px-4 py-3 text-left">Позиция</th>
-                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Статус</th>
                 <th class="px-4 py-3 text-left cursor-pointer">
                     <a href="{{ route('employees.search', [
                         'search' => request('search'),

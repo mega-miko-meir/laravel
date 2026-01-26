@@ -3,9 +3,10 @@
 use App\Models\Listing;
 use App\Models\Employee;
 use App\Models\Territory;
+use App\Services\QuoteService;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\RoleController;
 
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrickController;
@@ -184,3 +185,8 @@ Route::get('/alpine', function(){
 
 Route::get('permissions', [PermissionController::class, 'index']);
 Route::get('permissions', [RoleController::class, 'index']);
+
+
+Route::get('/daily-quote', function (QuoteService $quoteService) {
+    return $quoteService->getDailyQuote(true); // forceRefresh = true
+});
