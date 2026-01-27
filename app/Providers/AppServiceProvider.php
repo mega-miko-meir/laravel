@@ -67,10 +67,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
 
-        View::composer('partials.__header', function ($view) {
-            $quote = app(QuoteService::class)->getDailyQuote();
-            $view->with('dailyQuote', $quote);
-        });
+        // View::composer('partials.__header', function ($view) {
+        //     $quote = app(QuoteService::class)->getDailyQuote();
+        //     $view->with('dailyQuote', $quote);
+        // });
 
 
     }
