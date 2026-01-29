@@ -98,24 +98,40 @@ class TerritoryController extends Controller
     }
 
 
-    public function searchTerritory(Request $request){
+    public function searchTerritory(Request $request)
+    {
         $query = $request->input('search');
+
+        $allowedSorts = [
+            'territory_name',
+            'city',
+            'department',
+            'created_at',
+        ];
+
         $sort = $request->input('sort', 'territory_name');
         $order = $request->input('order', 'asc');
 
-        $territories = Territory::where('territory_name', 'like', "%$query%")
-            ->orWhere('city', 'like', "%$query%")
-            ->orWhere('department', 'like', "%$query%")
-            ->orWhere('manager_id', 'like', "%$query%")
-            ->orWhereHas('employees', function ($q) use ($query) {
-                $q->where('full_name', 'like', "%$query%");
+        // защита
+        if (!in_array($sort, $allowedSorts)) {
+            $sort = 'territory_name';
+        }
+
+        $territories = Territory::where(function ($q) use ($query) {
+                $q->where('territory_name', 'like', "%{$query}%")
+                ->orWhere('city', 'like', "%{$query}%")
+                ->orWhere('department', 'like', "%{$query}%")
+                ->orWhere('manager_id', 'like', "%{$query}%")
+                ->orWhereHas('employees', function ($q2) use ($query) {
+                    $q2->where('full_name', 'like', "%{$query}%");
+                });
             })
             ->orderBy($sort, $order)
             ->get();
 
-
-        return view('territories', ['territories' => $territories, 'query' => $query, 'sort' => $sort, 'order' => $order]);
+        return view('territories', compact('territories', 'query', 'sort', 'order'));
     }
+
 
     public function showTerritory(Territory $territory)
     {

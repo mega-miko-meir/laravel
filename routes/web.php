@@ -190,3 +190,9 @@ Route::get('permissions', [RoleController::class, 'index']);
 Route::get('/daily-quote', function (QuoteService $quoteService) {
     return $quoteService->getDailyQuote(true); // forceRefresh = true
 });
+
+
+Route::get('/my-team', [EmployeeController::class, 'myTeam'])
+    ->name('employees.my-team')
+    // ->middleware('auth')
+    ;

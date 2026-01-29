@@ -110,7 +110,7 @@
 
                                     {{-- Менеджер --}}
                                     <td class="px-4 py-3 text-gray-700">
-                                        {{ $territory->manager_id ?? '-' }}
+                                        {{ $territory->parent->employee->full_name ?? '-' }}
                                     </td>
                                 </tr>
                             @endforeach

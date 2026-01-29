@@ -13,6 +13,38 @@
         @method($method)
     @endif
 
+
+    {{-- Статус планшета --}}
+    <div>
+        <label for="status" class="block text-sm font-medium text-gray-600">
+            Status
+        </label>
+
+        <select
+            name="status"
+            id="status"
+            class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+            @php
+                $statuses = [
+                    'active' => 'Active',
+                    'lost' => 'Lost',
+                    'damaged' => 'Damaged',
+                    'written-off' => 'Written off',
+                ];
+
+                $currentStatus = old('status', $tablet->status ?? '');
+            @endphp
+
+            @foreach($statuses as $value => $label)
+                <option value="{{ $value }}" @selected($currentStatus === $value)>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+
+
     {{-- Модель планшета --}}
     <div>
         <label for="model" class="block text-sm font-medium text-gray-600">Model</label>

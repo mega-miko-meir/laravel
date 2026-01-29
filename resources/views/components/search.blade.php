@@ -1,6 +1,7 @@
+@props(['action'])
 
 <div {{ $attributes->merge(['class' => 'p-4']) }}>
-    <form action="{{ route('employees.search') }}" method="GET" class="max-w-lg mx-auto">
+    <form action="{{$action}}" method="GET" class="max-w-lg mx-auto">
     {{-- <form action="{{$action ?? '/'}}" method="GET" class="max-w-lg mx-auto"> --}}
         <div class="relative border-2 border-gray-300 rounded-lg overflow-hidden">
             <div class="absolute top-1/2 left-3 transform -translate-y-1/2">

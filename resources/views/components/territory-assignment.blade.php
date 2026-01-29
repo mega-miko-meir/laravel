@@ -3,7 +3,7 @@
 <div class="space-y-6">
     <!-- Territory Assignment Section FOR TESTING-->
     <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold text-gray-800">Territory Assignment</h2>
+        {{-- <h2 class="text-xl font-semibold text-gray-800">Territory Assignment</h2> --}}
         {{-- @if ($employee->territories->isNotEmpty()) --}}
 
         @if ($lastTerritory && is_null(optional($lastTerritory->pivot)->unassigned_at))
@@ -33,8 +33,8 @@
                                         value="{{ now()->format('Y-m-d') }}"
                                         class="border border-gray-300 rounded text-[11px] px-1 py-0.5 focus:ring-1 focus:ring-blue-300 outline-none h-7">
 
-                                    <button class="bg-red-400 hover:bg-red-500 text-white text-[11px] py-1 px-2 rounded shadow-sm transition-all h-7 flex items-center">
-                                        ❌ Unassign
+                                    <button class="bg-red-400 hover:bg-red-500 text-white text-[8px] py-1 px-2 rounded shadow-sm transition-all h-7 flex items-center">
+                                        ❌
                                     </button>
                                 </form>
 
@@ -43,7 +43,7 @@
                                     onsubmit="return confirm('Are you sure you want to use OCE template?');">
                                     @csrf
                                     <button class="bg-blue-400 hover:bg-blue-500 text-white text-[11px] py-1 px-2 rounded shadow-sm transition-all h-7 flex items-center">
-                                        📝 OCE Template
+                                        📝 OCE
                                     </button>
                                 </form>
                             </div>
@@ -74,22 +74,31 @@
                             <p>Нет дочерних территорий</p>
                         @else
                             <p>Дочерние территории</p>
-                            <ul>
+                            <ul class="text-sm">
                                 @foreach ($lastTerritory->children->sortBy(['team', 'asc'])->sortBy(['territory_name', 'asc']) as $child)
                                     <li>
                                         <span class="font-semibold text-gray-700">{{ $child->team }}</span> -
                                         <a href="{{route('territories.show', $child->id)}}" class="text-blue-600 hover:underline">
                                             {{ $child->territory_name }}
                                         </a> -
-                                        @if ($child->employee)
-                                            <a href="{{ route('employees.show', $child->employee->id) }}" class="text-blue-600 hover:underline">
-                                                {{ $child->employeeTerritories()
-                                                    ->latest('assigned_at')
-                                                    ->first()
-                                                    ?->employee->full_name }}
+                                        @php
+                                            $lastEmployee = $child->employeeTerritories()
+                                                ->whereNull('unassigned_at')
+                                                ->latest('assigned_at')
+                                                ->first()
+                                                ?->employee;
+
+                                            $lastDismissedEmployee = $child->employeeTerritories()
+                                                ->latest('assigned_at')
+                                                ->first()
+                                                ?->employee;
+                                        @endphp
+                                        @if ($lastEmployee)
+                                            <a href="{{ route('employees.show', $lastEmployee->id) }}" class="text-blue-600 hover:underline">
+                                                {{ $lastEmployee->shName }}
                                             </a>
                                         @else
-                                            <span class="text-gray-500 italic">Нет сотрудника ({{$child->employees && $child->employees->last() ? $child->employees->last()->full_name : ''}})</span>
+                                            <span class="text-gray-500 italic">Нет сотрудника ({{$lastDismissedEmployee?->shName ?? ''}})</span>
                                         @endif
                                     </li>
                                 @endforeach
@@ -105,10 +114,10 @@
         @else
             <p class="text-lg text-gray-600">No territory assigned</p>
             <!-- Assign Territory Form -->
-                <form action="/assign-territory/{{$employee->id}}" method="POST" class="mt-4">
+                <form action="/assign-territory/{{$employee->id}}" method="POST" class="mt-3 space-y-2">
                     @csrf
                     <label for="territory" class="block text-sm font-medium text-gray-600">Assign Territory</label>
-                    <select id="territory" name="territory_id" class="w-full p-3 border rounded-lg mt-2">
+                    <select id="territory" name="territory_id" class="w-full p-2 border rounded-lg text-sm">
                         <option value="">No Territory</option>
                         @foreach ($availableTerritories as $territory)
                         <option value="{{ $territory->id }}">
@@ -119,12 +128,12 @@
 
                         @endforeach
                     </select>
-                    <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d')}}">
-                    <button type="submit" class="btn-primary mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
+                    <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d')}}" class="w-full p-2 border rounded-lg text-sm">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">Assign</button>
                 </form>
         @endif
 
-        <div x-data="{open:false}" class="bg-white mt-6">
+        <div x-data="{open:true}" class="bg-white mt-6">
             <button
             {{-- onclick="toggleTerritoryHistory()" --}}s
             x-on:click="open = !open"
@@ -166,3 +175,5 @@
         arrow.classList.toggle("rotate-180");
     }
 </script> --}}
+
+

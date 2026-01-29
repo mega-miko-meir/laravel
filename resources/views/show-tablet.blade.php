@@ -6,6 +6,7 @@
         <x-back-button />
         <h2 class="text-2xl font-bold mb-4">Детали планшета</h2>
 
+        <p><strong>Статус:</strong> {{ $tablet->status }}</p>
         <p><strong>Модель:</strong> {{ $tablet->model }}</p>
         <p><strong>Инвентарный номер:</strong> {{ $tablet->invent_number }}</p>
         <p><strong>Серийный номер:</strong> {{ $tablet->serial_number }}</p>

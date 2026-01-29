@@ -31,6 +31,7 @@ class TabletController extends Controller
 
         $tablets = Tablet::where('serial_number', 'like', "%$query%")
             ->orWhere('invent_number', 'like', "%$query%")
+            ->orWhere('status', 'like', "%$query%")
             ->orWhere('beeline_number', 'like', "%$query%")
             ->orWhereHas('employees', function ($q) use ($query) {
                 $q->where('full_name', 'like', "%$query%");
@@ -41,22 +42,40 @@ class TabletController extends Controller
             }])
             ->get();
 
-
-
-        $freeTablets = Tablet::whereHas('employees', function ($query) {
-        $query->whereNotNull('returned_at')
-                ->whereRaw('assigned_at = (
-                        SELECT MAX(assigned_at)
-                        FROM employee_tablet
-                        WHERE employee_tablet.tablet_id = tablets.id
-                )');
-        })
-        ->orWhereDoesntHave('employees') // 👉 планшеты, у которых вообще нет записей
+        $freeTablets = Tablet::free()
         ->with('oldEmployee')
         ->get();
 
 
-        return view('tablets', ['tablets' => $tablets, 'query' => $query, 'freeTablets' => $freeTablets]);
+        $availableEmployees = Employee::whereHas('events', function ($query) {
+            $query->whereIn('event_type', ['new', 'hired'])
+                  ->whereRaw('event_date = (
+                      SELECT MAX(event_date)
+                      FROM employee_events
+                      WHERE employee_events.employee_id = employees.id
+                  )');
+        })
+        ->where(function ($query) {
+            $query->whereDoesntHave('employee_tablet')
+                  ->orWhereHas('employee_tablet', function ($subQuery) {
+                      $subQuery->whereNotNull('returned_at')
+                               ->whereRaw('assigned_at = (
+                                   SELECT MAX(assigned_at)
+                                   FROM employee_tablet
+                                   WHERE employee_tablet.employee_id = employees.id
+                               )');
+                  });
+        })
+        ->orderBy('full_name', 'asc')
+        ->get();
+
+    // Количество сотрудников без планшета
+    $count = $availableEmployees->count();
+
+
+
+
+        return view('tablets', ['tablets' => $tablets, 'query' => $query, 'freeTablets' => $freeTablets, 'availableEmployees' => $availableEmployees, 'count' => $count]);
     }
 
 
@@ -127,15 +146,17 @@ class TabletController extends Controller
     {
         $incomingFields = $request->validate([
             'model' => 'required',
+            'status' => 'nullable',
             'invent_number' => 'required',
             'serial_number' => 'required',
             'imei' => 'required',
             'beeline_number' => 'required'
+
         ]);
 
         $tablet->update($incomingFields);
 
-        return back()->with('success', 'Данные успешно обновлены!');
+        return redirect()->route('tablets.show', ['tablet' => $tablet])->with('success', 'Данные успешно обновлены!');
     }
 
 }

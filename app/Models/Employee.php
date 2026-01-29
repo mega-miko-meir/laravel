@@ -29,6 +29,13 @@ class Employee extends Model
                     ->withTimestamps();
     }
 
+    public function getCurrentTerritoryAttribute()
+    {
+        return $this->employee_territory()
+            ->latest('assigned_at')
+            ->value('territory');
+    }
+
     public function getCurrentTeamAttribute()
     {
         return $this->employee_territory()
@@ -43,13 +50,52 @@ class Employee extends Model
             ->value('city');
     }
 
+
+    // public function getCurrentManagerAttribute()
+    // {
+    //     $assignment =  $this->employee_territory()
+    //         ->latest('assigned_at')
+    //         ->first();
+
+    //     return optional($assignment)->parent?->employee?->full_name;
+    // }
+
+    public function getShNameAttribute()
+    {
+        $assignment =  $this;
+
+        $name = optional($assignment)->full_name;
+
+        $shortName = $name
+            ? implode(' ', array_slice(explode(' ', $name), 0, 2))
+            : null;
+
+        return $shortName;
+
+    }
+
     public function getCurrentManagerAttribute()
     {
         $assignment =  $this->employee_territory()
             ->latest('assigned_at')
             ->first();
 
-        return optional($assignment)->parent?->employee?->full_name;
+        return optional($assignment)->parent?->employeeTerritories()->latest('assigned_at')->first()->employee;
+    }
+
+
+    public function getCurrentManagerShNameAttribute()
+    {
+
+        // Используем уже готовый метод для получения объекта менеджера
+        $name = $this->current_manager?->full_name;
+
+        if (!$name) return null;
+
+        // Разбиваем имя на массив, берем первые 2 элемента и склеиваем обратно
+        $parts = explode(' ', $name);
+        return implode(' ', array_slice($parts, 0, 2));
+
     }
 
     public function tablets(){

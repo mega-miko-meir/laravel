@@ -15,10 +15,12 @@ use App\Models\EmployeeTerritory;
 use App\Models\EmployeeCredential;
 use Illuminate\Support\Facades\DB;
 // use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use Illuminate\Foundation\Auth\User;
+use Illuminate\Support\Facades\Auth;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\View\Components\employee as ComponentsEmployee;
 
@@ -227,9 +229,52 @@ class EmployeeController extends Controller
     //     ->get();
 
 
+    // public function myTeam()
+    // {
+    //     // $user = Auth::user();
+    //     $user = User::where('email', 'azamat.mukhan@nobel.kz')->firstOrFail();
+
+
+    //     // 1️⃣ Сотрудник, связанный с пользователем
+    //     $employee = Employee::where('email', $user->email)->with('employee_territory')
+    //         ->firstOrFail();
+
+    //     // 2️⃣ Его команда
+    //     $lastTerritory = $employee->employee_territory()
+    //         ->latest('assigned_at')
+    //         ->first();
+
+    //     return view('my-team', compact('employee', 'lastTerritory'));
+    // }
+
+    public function myTeam()
+    {
+        // 1️⃣ Все FFM
+        $ffms = Employee::where('position', 'FFM')
+            ->with([
+                'employee_territory.children.children.employee', // чтобы не было N+1
+                'employee_territory.employee'
+            ])
+            ->get();
+
+        // 2️⃣ Для каждого FFM определяем его последнюю территорию
+        $ffms = $ffms->map(function ($employee) {
+            $employee->lastTerritory = $employee->employee_territory()
+                ->latest('assigned_at')
+                ->first();
+
+            return $employee;
+        });
+
+        return view('my-team', compact('ffms'));
+    }
+
+
+
     public function index(Request $request)
     {
         // $activeOnly = $request->boolean('active_only');
+        $activeOnly = $request->input('active_only', 1);
         $sort = $request->input('sort', 'event_date');
         $order = $request->input('order', 'asc');
 
@@ -284,7 +329,8 @@ class EmployeeController extends Controller
                 ->orWhere('email', 'like', "%{$query}%")
                 ->orWhereHas('territories', function ($q2) use ($query) {
                     $q2->where('team', 'like', "%{$query}%")
-                        ->orWhere('city', 'like', "%{$query}%");
+                        ->orWhere('city', 'like', "%{$query}%")
+                        ->orWhere('role', 'like', "%{$query}%");
                 })
                 ->orWhereHas('latestEvent', function ($q3) use ($query) {
                     // Здесь ищем по типу последнего события

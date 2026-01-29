@@ -15,9 +15,42 @@
                 <x-flash-message />
 
                 <!-- Кнопка для создания сотрудника -->
-                <div class="absolute top-0 right-0 mt-4 mr-4">
+                <div class="absolute top-0 right-0 mr-4">
                     <x-create-tablet-button />
                 </div>
+
+                <div class="">
+                    {{-- <h2 class="text-xl font-bold mb-3">Сотрудники без планшета</h2> --}}
+
+                    <div x-data="{ open: false }" class="relative">
+                        <!-- Кнопка раскрытия -->
+                        <button @click="open = !open" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all focus:outline-none">
+                            Посмотреть сотрудников без планшета ({{ $availableEmployees->count() }})
+                        </button>
+
+                        <!-- Выпадающий список -->
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute left-0 mt-2 w-80 bg-white shadow-lg rounded-lg border border-gray-200 z-50 max-h-64 overflow-y-auto"
+                        >
+                            <ul>
+                                @forelse($availableEmployees as $employee)
+                                    <li class="px-4 py-2 hover:bg-gray-100 border-b border-gray-100">
+                                        <a href="{{ route('employees.show', $employee->id) }}" class="text-blue-600 hover:underline font-medium">
+                                            {{ $employee->full_name }}
+                                        </a>
+                                    </li>
+                                @empty
+                                    <li class="px-4 py-2 text-gray-500">Нет сотрудников без планшета</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+
 
                 <!-- Компонент поиска -->
                 {{-- <x-search class="mb-6" action="{{route('tablets.search')}}" /> --}}
@@ -35,7 +68,7 @@
                             <tr class="bg-gray-100 text-gray-600 uppercase text-xs cursor-pointer">
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
-                                <th class="px-4 py-3 text-left">Последний с отрудник</th>
+                                <th class="px-4 py-3 text-left">Последний сотрудник</th>
                                 <th class="px-4 py-3 text-left">Выдача (PDF)</th>
                                 <th class="px-4 py-3 text-left">Возврат (PDF)</th>
                             </tr>
@@ -110,6 +143,7 @@
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Сотрудник</th>
+                                <th class="px-4 py-3 text-left">Статус</th>
                                 <th class="px-4 py-3 text-left">Выдача (PDF)</th>
                                 <th class="px-4 py-3 text-left">Возврат (PDF)</th>
                             </tr>
@@ -138,6 +172,9 @@
                                             Не назначен
                                         @endif
 
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-900 font-medium">
+                                        {{ $tablet->status }}
                                     </td>
                                     <td class="px-4 py-3 text-gray-700">
                                         @if ($tablet->currentAssignment && $tablet->currentAssignment->pdf_path)

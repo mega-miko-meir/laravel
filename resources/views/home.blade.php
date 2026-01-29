@@ -9,6 +9,7 @@
                 <x-header class="mb-6" />
 
                 <x-flash-message />
+
                 <!-- Кнопки справа -->
                 <div class="absolute top-4 right-4 flex gap-2">
                     <a
@@ -132,7 +133,7 @@
 
 
                 <x-active-employee-checkbox />
-                <x-search class="mb-6" />
+                <x-search class="mb-6" :action="route('employees.search')" />
 
                 <!-- Заголовок -->
                 <h2 class="text-2xl font-bold mb-4 mt-6">

@@ -25,7 +25,20 @@
             {{-- <p><span class="font-medium">Город:</span> {{ $employee->employee_territory()->latest('assigned_at')->first()->city ?? '-' }}</p> --}}
             <p><span class="font-medium">Город:</span> {{ $employee->current_city ?? '-' }}</p>
             {{-- <p><span class="font-medium">Менеджер:</span> {{ $employee->employee_territory()->latest('assigned_at')->first()->parent->employee->full_name ?? '-' }}</p> --}}
-            <p><span class="font-medium">Менеджер:</span> {{ $employee->current_manager ?? '-' }}</p>
+            {{-- <p><span class="font-medium">Менеджер:</span> {{ $employee->current_manager_sh_name ?? '-' }}</p> --}}
+            <p>
+                <span class="font-medium">Менеджер:</span>
+
+                @if($employee->current_manager)
+                    <a href="{{ route('employees.show', $employee->current_manager->id) }}"
+                    class="text-blue-600 hover:underline">
+                        {{ $employee->current_manager->sh_name }}
+                    </a>
+                @else
+                    —
+                @endif
+            </p>
+
             {{-- @if($employee->territories->isNotEmpty())
                 <p><span class="font-medium">Команда:</span> {{ $employee->territories->first()->team }}</p>
 

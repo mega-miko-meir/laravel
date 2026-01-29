@@ -62,6 +62,24 @@ class Tablet extends Model
     }
 
 
+    public function scopeFree($query)
+    {
+        return $query->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereHas('employees', function ($q) {
+                    $q->whereNotNull('returned_at')
+                        ->whereRaw('assigned_at = (
+                            SELECT MAX(assigned_at)
+                            FROM employee_tablet
+                            WHERE employee_tablet.tablet_id = tablets.id
+                        )');
+                })
+                ->orWhereDoesntHave('employees');
+            });
+    }
+
+
+
 
     // public function currentAssignment()
     // {
