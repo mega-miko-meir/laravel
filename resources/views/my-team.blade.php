@@ -6,7 +6,7 @@
     Команды
 </h1>
 
-@foreach($ffms->groupBy(fn($f) => $f->lastTerritory->department ?? 'Без департамента') as $deptName => $groupedFfms)
+@foreach($ffms->sortByDesc(fn($f) => $f->lastTerritory?->department)->groupBy(fn($f) => $f->lastTerritory->department ?? 'Без департамента') as $deptName => $groupedFfms)
 
     <div class="font-bold text-gray-500 uppercase text-xs mb-2 mt-6">
         Департамент: {{ $deptName }}
@@ -39,12 +39,8 @@
             }
         @endphp
 
-        <h2 class="font-semibold mb-3">
-            {{ $ffm->full_name ?? 'FFM' }}
-            — {{ $occupiedPlaces }}/{{ $allPlaces }}
-        </h2>
 
-        <h2 class="font-semibold mb-3">
+        <h2 class="font-semibold mb-3 bt-3">
             {{ $ffm->full_name ?? 'FFM' }}
             — {{ $occupiedPlaces }}/{{ $allPlaces }}
         </h2>
