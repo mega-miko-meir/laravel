@@ -22,16 +22,27 @@
             $allPlaces = 0;
             $occupiedPlaces = 0;
 
-            foreach ($lastTerritory->children as $child) {
-                foreach ($child->children as $memberTerritory) {
-                    $allPlaces++;
+            // Проверяем, существует ли территория вообще
+            if ($lastTerritory) {
+                foreach ($lastTerritory->children as $child) {
+                    // Также на всякий случай проверяем существование дочерних элементов
+                    if ($child->children) {
+                        foreach ($child->children as $memberTerritory) {
+                            $allPlaces++;
 
-                    if ($memberTerritory->employee) {
-                        $occupiedPlaces++;
+                            if ($memberTerritory->employee) {
+                                $occupiedPlaces++;
+                            }
+                        }
                     }
                 }
             }
         @endphp
+
+        <h2 class="font-semibold mb-3">
+            {{ $ffm->full_name ?? 'FFM' }}
+            — {{ $occupiedPlaces }}/{{ $allPlaces }}
+        </h2>
 
         <h2 class="font-semibold mb-3">
             {{ $ffm->full_name ?? 'FFM' }}
