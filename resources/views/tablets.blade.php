@@ -24,8 +24,8 @@
 
                     <div x-data="{ open: false }" class="relative">
                         <!-- Кнопка раскрытия -->
-                        <button @click="open = !open" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all focus:outline-none">
-                            Посмотреть сотрудников без планшета ({{ $availableEmployees->count() }})
+                        <button @click="open = !open" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all focus:outline-none">
+                            Сотрудники без планшета ({{ $availableEmployees->count() }})
                         </button>
 
                         <!-- Выпадающий список -->
@@ -66,7 +66,6 @@
                     <table class="w-full border-collapse text-sm text-gray-700">
                         <thead id="head-btn">
                             <tr class="bg-gray-100 text-gray-600 uppercase text-xs cursor-pointer">
-                                <th class="px-4 py-3 text-left">Модель</th>
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Последний сотрудник</th>
@@ -144,6 +143,7 @@
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Сотрудник</th>
+                                <th class="px-4 py-3 text-left">Модель</th>
                                 <th class="px-4 py-3 text-left">Статус</th>
                                 <th class="px-4 py-3 text-left">Выдача (PDF)</th>
                                 <th class="px-4 py-3 text-left">Возврат (PDF)</th>
@@ -152,11 +152,6 @@
                         <tbody>
                             @foreach($tablets as $tablet)
                                 <tr class="border-b hover:bg-gray-50 transition">
-                                    <td class="px-4 py-3 text-gray-900 font-medium">
-                                        {{-- <a href="{{ route('tablets.show', $tablet->id) }}" class="text-blue-500 hover:underline"> --}}
-                                            {{ $tablet->model }}
-                                        {{-- </a> --}}
-                                    </td>
                                     <td class="px-4 py-3 text-gray-900 font-medium">
                                         <a href="{{ route('tablets.show', $tablet->id) }}" class="text-blue-500 hover:underline">
                                             {{ $tablet->invent_number }}
@@ -178,6 +173,11 @@
                                             Не назначен
                                         @endif
 
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-900 font-medium">
+                                        {{-- <a href="{{ route('tablets.show', $tablet->id) }}" class="text-blue-500 hover:underline"> --}}
+                                            {{ $tablet->model }}
+                                        {{-- </a> --}}
                                     </td>
                                     <td class="px-4 py-3 text-gray-900 font-medium">
                                         {{ $tablet->status }}

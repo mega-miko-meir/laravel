@@ -61,7 +61,7 @@
                                 class="ml-2 text-blue-500 hover:underline text-sm">✎
                             </button>
                         </td>
-                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ? \Carbon\Carbon::parse($record->pivot->returned_at)->format('d.m.Y')  : '—'}}
+                        <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ? \Carbon\Carbon::parse($record->pivot->returned_at)->format('d.m.Y')  : 'Текущий пользователь'}}
                             <button
                                 onclick="openEditModal('{{ $record->pivot->id }}', 'returned_at', '{{ $record->pivot->returned_at }}', 'tablet')"
                                 class="ml-2 text-blue-500 hover:underline text-sm">✎
@@ -81,7 +81,7 @@
                             @if($record->pivot->unassign_pdf)
                                 <a href="{{ asset('storage/' . $record->pivot->unassign_pdf) }}" class="text-blue-500 hover:underline" target="_blank">📄 PDF</a>
                             @else
-                                Текущий сотрудник
+                                -
                             @endif
                         </td>
                     </tr>

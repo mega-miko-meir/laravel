@@ -5,7 +5,7 @@
 @else
     <p>Дочерние территории</p>
     <ul class="text-sm">
-        @foreach ($territory->children->sortBy(['team', 'asc'])->sortBy(['territory_name', 'asc']) as $child)
+        @foreach ($territory->children->sortBy(['territory_name', 'asc'])->sortBy(['team', 'asc']) as $child)
             <li>
                 <span class="font-semibold text-gray-700">{{ $child->team }}</span> -
                 <a href="{{route('territories.show', $child->id)}}" class="text-blue-600 hover:underline">

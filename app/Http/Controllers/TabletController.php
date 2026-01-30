@@ -32,6 +32,7 @@ class TabletController extends Controller
         $tablets = Tablet::where('serial_number', 'like', "%$query%")
             ->orWhere('invent_number', 'like', "%$query%")
             ->orWhere('status', 'like', "%$query%")
+            ->orWhere('model', 'like', "%$query%")
             ->orWhere('beeline_number', 'like', "%$query%")
             ->orWhereHas('employees', function ($q) use ($query) {
                 $q->where('full_name', 'like', "%$query%");

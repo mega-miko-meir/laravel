@@ -1,10 +1,10 @@
 @extends('layout')
 
 @section('content')
+<x-back-button />
 <div class="container mx-auto py-6">
 
     <x-flash-message />
-    <x-back-button />
 
     <!-- Обертка для двух колонок -->
     <div class="flex flex-wrap lg:flex-nowrap gap-6 w-full">

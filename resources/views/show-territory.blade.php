@@ -1,17 +1,11 @@
 @extends('layout')
 
 @section('content')
+<x-back-button />
 <div class="container mx-auto py-6">
     <x-flash-message />
     <div class="bg-white shadow-md rounded-lg p-6">
-        <x-back-button />
         <h2 class="text-2xl font-bold mb-4">Детали территории</h2>
-
-        <p><strong>Территория:</strong> {{ $territory->territory_name }}</p>
-        <p><strong>Позиция:</strong> {{ $territory->role }}</p>
-        <p><strong>Группа:</strong> {{ $territory->team }}</p>
-        <p><strong>Департамент:</strong> {{ $territory->department }}</p>
-        <p><strong>Город:</strong> {{ $territory->city }}</p>
         <div x-data="{ showForm: false }">
             <p>
                 <strong>Сотрудник:</strong>
@@ -44,6 +38,12 @@
                 </form>
             </div>
         </div>
+        <p><strong>Территория:</strong> {{ $territory->territory_name }}</p>
+        <p><strong>Позиция:</strong> {{ $territory->role }}</p>
+        <p><strong>Группа:</strong> {{ $territory->team }}</p>
+        <p><strong>Департамент:</strong> {{ $territory->department }}</p>
+        <p><strong>Город:</strong> {{ $territory->city }}</p>
+
 
         {{-- <p><strong>Менеджер:</strong> <a href="{{route('employees.show', $territory->parent->employee->id)}}" class="text-blue-500 hover:underline">{{ $territory->parent && $territory->parent->employee ? $territory->parent->employee->first_name . ' ' .$territory->parent->employee->last_name : '' }}</a></p> --}}
 
