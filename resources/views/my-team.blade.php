@@ -132,7 +132,7 @@
                                     <div class="mt-2 space-y-1">
                                         @foreach($groupTerritories as $memberTerritory)
 
-                                            <div class="ml-3 border-l pl-3">
+                                            <div class="ml-2 mb-2 border-l pl-3">
                                                 <div class="text-sm">
                                                     @if($memberTerritory->employee)
                                                         <a href="{{ route('employees.show', $memberTerritory->employee->id) }}"
@@ -140,7 +140,7 @@
                                                             {{ $memberTerritory->employee->sh_name }}
                                                         </a>
                                                     @else
-                                                        <em class="text-gray-500">Нет сотрудника ({{$memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->sh_name}})</em>
+                                                        <em class="text-gray-500">({{$memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->sh_name}})</em>
                                                     @endif
                                                 </div>
                                             </div>

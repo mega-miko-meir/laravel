@@ -141,7 +141,6 @@
                     <table class="w-full border-collapse text-sm text-gray-700">
                         <thead>
                             <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
-                                <th class="px-4 py-3 text-left">Модель</th>
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Сотрудник</th>
@@ -173,7 +172,7 @@
                                         @if ($tablet->current_employee)
                                             <a href="{{ route('employees.show', $tablet->current_employee->id) }}"
                                             class="text-blue-500 hover:underline">
-                                                {{ $tablet->current_employee->full_name }}
+                                                {{ $tablet->current_employee->sh_name }}
                                             </a>
                                         @else
                                             Не назначен

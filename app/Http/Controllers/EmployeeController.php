@@ -470,17 +470,22 @@ class EmployeeController extends Controller
         // })
         // ->with('oldEmployee')
         // ->get();
-        $availableTablets = Tablet::whereHas('employees', function ($query) {
-        $query->whereNotNull('returned_at')
-                ->whereRaw('assigned_at = (
-                        SELECT MAX(assigned_at)
-                        FROM employee_tablet
-                        WHERE employee_tablet.tablet_id = tablets.id
-                )');
-        })
-        ->orWhereDoesntHave('employees') // 👉 планшеты, у которых вообще нет записей
+        // $availableTablets = Tablet::whereHas('employees', function ($query) {
+        // $query->whereNotNull('returned_at')
+        //         ->whereRaw('assigned_at = (
+        //                 SELECT MAX(assigned_at)
+        //                 FROM employee_tablet
+        //                 WHERE employee_tablet.tablet_id = tablets.id
+        //         )');
+        // })
+        // ->orWhereDoesntHave('employees') // 👉 планшеты, у которых вообще нет записей
+        // ->with('oldEmployee')
+        // ->get();
+
+        $availableTablets = Tablet::free()
         ->with('oldEmployee')
         ->get();
+
 
 
 

@@ -218,7 +218,7 @@ class TerritoryController extends Controller
 
         if($territory->role === "Rep"){
             $parentTerritories = Territory::with('employee')
-            ->whereIn('role', 'RM')
+            ->where('role', 'RM')
             ->get();
         } elseif($territory->role === "RM"){
             $parentTerritories = Territory::with('employee')

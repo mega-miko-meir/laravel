@@ -1,10 +1,11 @@
 @extends('layout')
 
 @section('content')
+<x-flash-message />
+<x-back-button />
 <div class="container mx-auto py-6">
     <div class="bg-white shadow-md rounded-lg p-6">
-        <x-back-button />
-        <h2 class="text-2xl font-bold mb-4">Детали планшета</h2>
+        <h2 class="text-lg font-bold mb-4">Детали планшета</h2>
 
         <p><strong>Статус:</strong> {{ $tablet->status }}</p>
         <p><strong>Модель:</strong> {{ $tablet->model }}</p>
@@ -80,7 +81,7 @@
                             @if($record->pivot->unassign_pdf)
                                 <a href="{{ asset('storage/' . $record->pivot->unassign_pdf) }}" class="text-blue-500 hover:underline" target="_blank">📄 PDF</a>
                             @else
-                                —
+                                Текущий сотрудник
                             @endif
                         </td>
                     </tr>

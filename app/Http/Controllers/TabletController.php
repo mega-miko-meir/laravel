@@ -69,8 +69,8 @@ class TabletController extends Controller
         ->orderBy('full_name', 'asc')
         ->get();
 
-    // Количество сотрудников без планшета
-    $count = $availableEmployees->count();
+        // Количество сотрудников без планшета
+        $count = $availableEmployees->count();
 
 
 

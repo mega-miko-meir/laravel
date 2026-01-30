@@ -1,9 +1,9 @@
 @extends('layout')
 
 @section('content')
+<x-back-button />
     <div class="bg-gray-200 min-h-screen flex items-center justify-center">
         <div class="p-8 bg-white rounded-lg shadow-lg w-full max-w-3xl">
-            <x-back-button />
 
             {{-- @if(isset($employee) && $employee->territories->isNotEmpty()) --}}
                 {{-- @foreach ($employee->territories as $territory) --}}
