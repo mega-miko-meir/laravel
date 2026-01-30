@@ -31,6 +31,7 @@
                     'lost' => 'Lost',
                     'damaged' => 'Damaged',
                     'written-off' => 'Written off',
+                    'admin' => 'Admin',
                 ];
 
                 $currentStatus = old('status', $tablet->status ?? '');

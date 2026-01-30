@@ -1,4 +1,5 @@
-@props(['action', 'method' => 'POST', 'employee' => null, 'positions' => ['Rep', 'RM', 'FFM']])
+@props(['action', 'method' => 'POST', 'employee' => null, 'positions' => ['Rep', 'RM', 'FFM'], 'role' => collect(config('constants.roles'))->sort()->reverse()->toArray()])
+
 
 <form action="{{ $action }}" method="POST" class="space-y-4">
     @csrf
@@ -44,7 +45,7 @@
         <label for="position" class="block text-sm font-medium text-gray-600">Position</label>
         <select name="position" id="position"
                 class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            @foreach($positions as $position)
+            @foreach($role as $position)
                 <option value="{{ $position }}" {{ old('position', $employee->position ?? '') === $position ? 'selected' : '' }}>
                     {{ $position }}
                 </option>
