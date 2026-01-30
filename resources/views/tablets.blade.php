@@ -66,6 +66,7 @@
                     <table class="w-full border-collapse text-sm text-gray-700">
                         <thead id="head-btn">
                             <tr class="bg-gray-100 text-gray-600 uppercase text-xs cursor-pointer">
+                                <th class="px-4 py-3 text-left">Модель</th>
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Последний сотрудник</th>
@@ -140,6 +141,7 @@
                     <table class="w-full border-collapse text-sm text-gray-700">
                         <thead>
                             <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                <th class="px-4 py-3 text-left">Модель</th>
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Сотрудник</th>
@@ -151,6 +153,11 @@
                         <tbody>
                             @foreach($tablets as $tablet)
                                 <tr class="border-b hover:bg-gray-50 transition">
+                                    <td class="px-4 py-3 text-gray-900 font-medium">
+                                        {{-- <a href="{{ route('tablets.show', $tablet->id) }}" class="text-blue-500 hover:underline"> --}}
+                                            {{ $tablet->model }}
+                                        {{-- </a> --}}
+                                    </td>
                                     <td class="px-4 py-3 text-gray-900 font-medium">
                                         <a href="{{ route('tablets.show', $tablet->id) }}" class="text-blue-500 hover:underline">
                                             {{ $tablet->invent_number }}

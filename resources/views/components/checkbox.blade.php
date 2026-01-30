@@ -39,7 +39,7 @@
 <div class="territory-info">
     <!-- Таблица с бриками -->
     <table id="bricks-list" class="w-full max-w-md border rounded-lg shadow-sm divide-y divide-gray-200">
-        <thead id="table-head" class="bg-gray-100 text-gray-700 text-sm uppercase font-semibold">
+        <thead id="table-head" class="bg-gray-100 text-gray-700 text-sm uppercase font-semibold cursor-pointer">
             <tr>
                 <th class="px-4 py-3 text-left tracking-wider">Брики</th>
                 <th id="action-column" class="px-4 py-3 text-left tracking-wider"></th>

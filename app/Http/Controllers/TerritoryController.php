@@ -213,9 +213,12 @@ class TerritoryController extends Controller
 
 
     public function editTerritoryForm(Territory $territory){
+
+        $parentTerritories = collect();
+
         if($territory->role === "Rep"){
             $parentTerritories = Territory::with('employee')
-            ->where('role', 'RM')
+            ->whereIn('role', 'RM')
             ->get();
         } elseif($territory->role === "RM"){
             $parentTerritories = Territory::with('employee')

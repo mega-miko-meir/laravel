@@ -71,11 +71,33 @@
                             {{-- Левая часть --}}
                             <div>
                                 <div class="font-bold text-gray-800 text-sm">
-                                    {{ $child->employeeTerritories()
-                                        ->latest('assigned_at')
-                                        ->first()
-                                        ?->employee->sh_name ?? 'Нет сотрудника' }}
+                                    @php
+                                        $employee = optional(
+                                            $child->employeeTerritories()
+                                                ->whereNull('unassigned_at')
+                                                ->latest('assigned_at')
+                                                ->first()
+                                        )->employee;
+
+                                        $employeeDismissed = optional(
+                                            $child->employeeTerritories()
+                                                ->whereNotNull('unassigned_at')
+                                                ->latest('assigned_at')
+                                                ->first()
+                                        )->employee;
+                                    @endphp
+
+                                    @if ($employee)
+                                        {{ $employee->sh_name_sh }}
+                                    @else
+                                        <em class="text-gray-500">
+                                            @if ($employeeDismissed)
+                                                ({{ $employeeDismissed->sh_name_sh }})
+                                            @endif
+                                        </em>
+                                    @endif
                                 </div>
+
                                 <div class="text-sm text-gray-500">
                                     {{ $child->city }}
                                 </div>

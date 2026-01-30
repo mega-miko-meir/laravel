@@ -64,6 +64,8 @@
         <br>
         @if ($territory->role === 'Rep')
             <x-checkbox :bricks="$bricks" :selectedBricks="$selectedBricks" :territory="$territory" />
+        @else
+            <x-child-territories :territory="$territory" />
         @endif
         <h3 class="text-xl font-semibold mt-6">История пользователей</h3>
         <table class="w-full border-collapse border border-gray-300">

@@ -74,6 +74,27 @@ class Employee extends Model
 
     }
 
+    public function getShNameShAttribute()
+    {
+        $assignment =  $this;
+
+        $name = optional($assignment)->full_name;
+
+        if (!$name) {
+            return null;
+        }
+
+        $parts = preg_split('/\s+/', trim($name));
+
+        $lastName = $parts[0] ?? null;
+        $firstName = $parts[1] ?? null;
+
+        return $firstName
+            ? $lastName . ' ' . mb_substr($firstName, 0, 1) . '.'
+            : $lastName;
+    }
+
+
     public function getCurrentManagerAttribute()
     {
         $assignment =  $this->employee_territory()
@@ -97,6 +118,8 @@ class Employee extends Model
         return implode(' ', array_slice($parts, 0, 2));
 
     }
+
+
 
     public function tablets(){
         return $this->hasMany(Tablet::class, 'employee_id');
