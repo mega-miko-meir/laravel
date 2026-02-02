@@ -2,11 +2,21 @@
 
 @section('content')
 
+{{-- <div x-data="{ open2: false }" class="text-2xl font-bold mt-10 mb-6">
+    <button @click="open2 = !open2">Click</button>
+    <h1 >Команда 1</h1>
+    <div>
+        <h1 x-show="open2">Команда 2</h1>
+        <h1 x-show="open2">Команда 3</h1>
+    </div>
+</div> --}}
+
 <h1 class="text-2xl font-bold mt-10 mb-6">
-    Команды
+    Команда
 </h1>
 
 @foreach($ffms->sortByDesc(fn($f) => $f->lastTerritory?->department)->groupBy(fn($f) => $f->lastTerritory->department ?? 'Без департамента') as $deptName => $groupedFfms)
+<div x-data="{ open2: false }">
 
     @php
         $rmTotal = 0;
@@ -14,6 +24,8 @@
 
         $repTotal = 0;
         $repUsed  = 0;
+
+        $teamsStats = []; // 🔹 team => ['used' => 0, 'total' => 0]
 
         foreach ($groupedFfms as $ffm) {
             if (!$ffm->lastTerritory) continue;
@@ -33,26 +45,52 @@
                     if ($repTerritory->employee) {
                         $repUsed++;
                     }
+
+                    $team = $repTerritory->team ?? 'Без группы';
+
+                    if (!isset($teamsStats[$team])) {
+                        $teamsStats[$team] = ['used' => 0, 'total' => 0];
+                    }
+
+                    $teamsStats[$team]['total']++;
+
+                    if ($repTerritory->employee) {
+                        $teamsStats[$team]['used']++;
+                    }
                 }
             }
         }
+
+        // 🔤 сортировка team по алфавиту
+        ksort($teamsStats, SORT_NATURAL | SORT_FLAG_CASE);
     @endphp
 
+    <div @click="open2 = !open2" class="cursor-pointer flex flex-wrap items-center gap-2 font-bold uppercase text-xs mb-2 mt-6">
+        {{-- Название департамента --}}
+        <span class="text-gray-500">
+            Департамент: {{ $deptName }}
+        </span>
 
-
-    <div class="flex items-center gap-2 font-bold text-gray-500 uppercase text-xs mb-2 mt-6">
-        <span>Департамент: {{ $deptName }}</span>
-
+        {{-- RM --}}
         <span class="text-blue-600">
             RM {{ $rmUsed }}/{{ $rmTotal }}
         </span>
 
+        {{-- Rep --}}
         <span class="text-green-600">
             Rep {{ $repUsed }}/{{ $repTotal }}
         </span>
+
+        {{-- Teams --}}
+        @foreach($teamsStats as $teamName => $stat)
+            <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-800">
+                {{ $teamName }} {{ $stat['used'] }}/{{ $stat['total'] }}
+            </span>
+        @endforeach
+
     </div>
 
-
+    <div  x-show="open2">
     @foreach($groupedFfms as $ffm)
         @php
             $lastTerritory = $ffm->lastTerritory;
@@ -61,32 +99,51 @@
             $rmTotal = 0;
             $rmUsed  = 0;
 
-            // Rep
+            // Rep (общие)
             $repTotal = 0;
             $repUsed  = 0;
 
+            // Rep по team
+            $teamsStats = [];
+
             if ($lastTerritory) {
                 foreach ($lastTerritory->children as $rmTerritory) {
-                    // считаем RM
-                    $rmTotal++;
 
+                    // 🔹 RM
+                    $rmTotal++;
                     if ($rmTerritory->employee) {
                         $rmUsed++;
                     }
 
-                    // считаем Rep внутри RM
+                    // 🔹 Rep внутри RM
                     foreach ($rmTerritory->children as $repTerritory) {
+
                         $repTotal++;
+                        $team = $repTerritory->team ?? 'Без группы';
+
+                        if (!isset($teamsStats[$team])) {
+                            $teamsStats[$team] = [
+                                'total' => 0,
+                                'used'  => 0,
+                            ];
+                        }
+
+                        $teamsStats[$team]['total']++;
 
                         if ($repTerritory->employee) {
                             $repUsed++;
+                            $teamsStats[$team]['used']++;
                         }
                     }
                 }
             }
+
+            // сортировка team по алфавиту
+            ksort($teamsStats);
         @endphp
 
-        <h2 class="mb-3 mt-4 flex items-center gap-3">
+        <h2 class="mb-3 mt-4 flex flex-wrap items-center gap-2">
+
             {{-- Имя FFM --}}
             <a href="{{ route('employees.show', $ffm->id) }}"
             class="font-semibold text-gray-800 hover:text-blue-600 transition underline-offset-4 hover:underline">
@@ -95,16 +152,26 @@
 
             {{-- RM --}}
             <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                        bg-blue-50 text-blue-700">
+                        bg-blue-100 text-blue-700">
                 RM {{ $rmUsed }}/{{ $rmTotal }}
             </span>
 
             {{-- Rep --}}
             <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                        bg-green-50 text-green-700">
+                        bg-green-100 text-green-700">
                 Rep {{ $repUsed }}/{{ $repTotal }}
             </span>
+
+            {{-- Rep по team --}}
+            @foreach($teamsStats as $teamName => $stat)
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                            bg-gray-100 text-gray-800">
+                    {{ $teamName }} {{ $stat['used'] }}/{{ $stat['total'] }}
+                </span>
+            @endforeach
+
         </h2>
+
 
 
         @if($lastTerritory && $lastTerritory->children->isNotEmpty())
@@ -222,9 +289,9 @@
         @endif
 
     @endforeach
-
+    </div>
+</div>
 @endforeach
-
 @endsection
 
 
