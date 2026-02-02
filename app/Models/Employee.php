@@ -101,7 +101,12 @@ class Employee extends Model
             ->latest('assigned_at')
             ->first();
 
-        return optional($assignment)->parent?->employeeTerritories()->latest('assigned_at')->first()->employee;
+        return $assignment?->parent
+            ?->employeeTerritories()
+            ->latest('assigned_at')
+            ->first()
+            ?->employee;
+
     }
 
 

@@ -61,7 +61,7 @@ class UserController extends Controller
 
     public function showRegister($user = null){
         $roles = Role::all(); // Получаем все роли (admin, editor, viewer)
-        return view('Components/registration', compact('user', 'roles'));
+        return view('components/registration', compact('user', 'roles'));
     }
 
     public function register(Request $request){
