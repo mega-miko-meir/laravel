@@ -265,7 +265,35 @@
 
                                             <div class="ml-2 mb-2 border-l pl-3">
                                                 <div class="text-sm">
-                                                    @if($memberTerritory->employee)
+                                                    @php
+                                                        $activeAssignment = $memberTerritory->employeeTerritories()
+                                                            ->whereNull('unassigned_at')
+                                                            ->latest('assigned_at')
+                                                            ->first();
+
+                                                        $lastAssignment = $memberTerritory->employeeTerritories()
+                                                            ->latest('assigned_at')
+                                                            ->first();
+
+                                                        $employee = $activeAssignment?->employee;
+                                                        $lastEmployee = $lastAssignment?->employee;
+                                                    @endphp
+
+                                                    @if($employee)
+                                                        <a href="{{ route('employees.show', $employee->id) }}"
+                                                        class="text-blue-600 hover:underline">
+                                                            {{ $employee->sh_name }}
+                                                        </a>
+                                                    @elseif($lastEmployee)
+                                                        <a href="{{ route('employees.show', $lastEmployee->id) }}"
+                                                        class="text-gray-500 hover:underline italic">
+                                                            ({{ $lastEmployee->sh_name }})
+                                                        </a>
+                                                    @else
+                                                        <span class="text-gray-400 italic">Нет сотрудника</span>
+                                                    @endif
+
+                                                    {{-- @if($memberTerritory->employee)
                                                         <a href="{{ route('employees.show', $memberTerritory->employee->id) }}"
                                                         class="text-blue-600 hover:underline">
                                                             {{ $memberTerritory->employee->sh_name }}
@@ -274,7 +302,7 @@
                                                         <a href="{{ route('employees.show', $memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->id) }}">
                                                         <em class="text-gray-500 hover:underline">({{$memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->sh_name}})</em>
                                                         </a>
-                                                    @endif
+                                                    @endif --}}
                                                 </div>
                                             </div>
 
