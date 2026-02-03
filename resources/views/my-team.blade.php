@@ -25,7 +25,8 @@
         $repTotal = 0;
         $repUsed  = 0;
 
-        $teamsStats = []; // 🔹 team => ['used' => 0, 'total' => 0]
+        // team => ['used' => 0, 'total' => 0]
+        $teamsStats = [];
 
         foreach ($groupedFfms as $ffm) {
             if (!$ffm->lastTerritory) continue;
@@ -34,7 +35,12 @@
             foreach ($ffm->lastTerritory->children as $rmTerritory) {
                 $rmTotal++;
 
-                if ($rmTerritory->employee) {
+                $rmActive = $rmTerritory->employeeTerritories()
+                    ->whereNull('unassigned_at')
+                    ->latest('assigned_at')
+                    ->first();
+
+                if ($rmActive) {
                     $rmUsed++;
                 }
 
@@ -42,19 +48,27 @@
                 foreach ($rmTerritory->children as $repTerritory) {
                     $repTotal++;
 
-                    if ($repTerritory->employee) {
+                    $repActive = $repTerritory->employeeTerritories()
+                        ->whereNull('unassigned_at')
+                        ->latest('assigned_at')
+                        ->first();
+
+                    if ($repActive) {
                         $repUsed++;
                     }
 
                     $team = $repTerritory->team ?? 'Без группы';
 
                     if (!isset($teamsStats[$team])) {
-                        $teamsStats[$team] = ['used' => 0, 'total' => 0];
+                        $teamsStats[$team] = [
+                            'used'  => 0,
+                            'total' => 0,
+                        ];
                     }
 
                     $teamsStats[$team]['total']++;
 
-                    if ($repTerritory->employee) {
+                    if ($repActive) {
                         $teamsStats[$team]['used']++;
                     }
                 }
@@ -64,6 +78,7 @@
         // 🔤 сортировка team по алфавиту
         ksort($teamsStats, SORT_NATURAL | SORT_FLAG_CASE);
     @endphp
+
 
     <div @click="open2 = !open2" class="cursor-pointer flex flex-wrap items-center gap-2 font-bold uppercase text-xs mb-2 mt-6">
         {{-- Название департамента --}}
@@ -104,6 +119,7 @@
             $repUsed  = 0;
 
             // Rep по team
+            // team => ['total' => 0, 'used' => 0]
             $teamsStats = [];
 
             if ($lastTerritory) {
@@ -111,7 +127,13 @@
 
                     // 🔹 RM
                     $rmTotal++;
-                    if ($rmTerritory->employee) {
+
+                    $rmActive = $rmTerritory->employeeTerritories()
+                        ->whereNull('unassigned_at')
+                        ->latest('assigned_at')
+                        ->first();
+
+                    if ($rmActive) {
                         $rmUsed++;
                     }
 
@@ -119,6 +141,16 @@
                     foreach ($rmTerritory->children as $repTerritory) {
 
                         $repTotal++;
+
+                        $repActive = $repTerritory->employeeTerritories()
+                            ->whereNull('unassigned_at')
+                            ->latest('assigned_at')
+                            ->first();
+
+                        if ($repActive) {
+                            $repUsed++;
+                        }
+
                         $team = $repTerritory->team ?? 'Без группы';
 
                         if (!isset($teamsStats[$team])) {
@@ -130,17 +162,17 @@
 
                         $teamsStats[$team]['total']++;
 
-                        if ($repTerritory->employee) {
-                            $repUsed++;
+                        if ($repActive) {
                             $teamsStats[$team]['used']++;
                         }
                     }
                 }
             }
 
-            // сортировка team по алфавиту
-            ksort($teamsStats);
+            // 🔤 сортировка team по алфавиту
+            ksort($teamsStats, SORT_NATURAL | SORT_FLAG_CASE);
         @endphp
+
 
         <h2 class="mb-3 mt-4 flex flex-wrap items-center gap-2">
 
