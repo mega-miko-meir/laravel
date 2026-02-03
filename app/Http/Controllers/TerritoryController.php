@@ -129,7 +129,21 @@ class TerritoryController extends Controller
             ->orderBy($sort, $order)
             ->get();
 
-        return view('territories', compact('territories', 'query', 'sort', 'order'));
+        $availableEmployees = Employee::whereHas('events', function ($query) {
+            $query->whereIn('event_type', ['new', 'hired'])
+                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
+        })
+        ->where(function ($query) {
+            $query->whereDoesntHave('employee_territory') // Нет записей в employee_territory
+                  ->orWhereHas('employee_territory', function ($subQuery) {
+                      $subQuery->whereNotNull('unassigned_at')
+                               ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
+                  });
+        })
+        ->orderBy('full_name', 'asc')
+        ->get();
+
+        return view('territories', compact('territories', 'query', 'sort', 'order', 'availableEmployees'));
     }
 
 
@@ -219,7 +233,8 @@ class TerritoryController extends Controller
         if($territory->role === "Rep"){
             $parentTerritories = Territory::with('employee')
             ->where('role', 'RM')
-            ->get();
+            ->get()
+            ->sortBy(fn($f) => $f->employee?->first_name);
         } elseif($territory->role === "RM"){
             $parentTerritories = Territory::with('employee')
             ->where('role', 'FFM')

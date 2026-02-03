@@ -317,25 +317,38 @@ class EmployeeController extends Controller
         $activeOnly = $request->input('active_only', 1);
 
         // Получаем сотрудников
+        $queryNormalized = strtolower(trim($query));
+        $isRoleSearch = in_array($queryNormalized, ['rm', 'rep', 'ffm']);
+
         $employees = Employee::with(['latestEvent', 'territories'])
-            ->where(function ($q) use ($query) {
+            ->where(function ($q) use ($query, $queryNormalized, $isRoleSearch) {
+
                 if (!$query) {
                     return;
                 }
 
+                // 🔴 ЕСЛИ ИЩУТ RM / REP — ТОЛЬКО ПО ROLE
+                if ($isRoleSearch) {
+                    $q->whereHas('territories', function ($q2) use ($queryNormalized) {
+                        $q2->whereRaw('LOWER(role) = ?', [$queryNormalized]);
+                    });
+
+                    return; // ⛔️ важно — дальше не идем
+                }
+
+                // 🟢 ОБЫЧНЫЙ ПОИСК
                 $q->where('first_name', 'like', "%{$query}%")
-                ->orWhere('full_name', 'like', "%{$query}%")
-                ->orWhere('last_name', 'like', "%{$query}%")
-                ->orWhere('email', 'like', "%{$query}%")
-                ->orWhereHas('territories', function ($q2) use ($query) {
-                    $q2->where('team', 'like', "%{$query}%")
-                        ->orWhere('city', 'like', "%{$query}%")
-                        ->orWhere('role', 'like', "%{$query}%");
-                })
-                ->orWhereHas('latestEvent', function ($q3) use ($query) {
-                    // Здесь ищем по типу последнего события
-                    $q3->where('event_type', 'like', "%{$query}%");
-                });
+                    ->orWhere('full_name', 'like', "%{$query}%")
+                    ->orWhere('last_name', 'like', "%{$query}%")
+                    ->orWhere('position', 'like', "%{$query}%")
+                    ->orWhere('email', 'like', "%{$query}%")
+                    ->orWhereHas('territories', function ($q2) use ($query) {
+                        $q2->where('team', 'like', "{$query}%")
+                            ->orWhere('city', 'like', "%{$query}%");
+                    })
+                    ->orWhereHas('latestEvent', function ($q3) use ($query) {
+                        $q3->where('event_type', 'like', "%{$query}%");
+                    });
             })
             ->when($activeOnly == 1, function ($q) {
                 $q->whereHas('latestEvent', function ($q2) {
@@ -343,6 +356,7 @@ class EmployeeController extends Controller
                 });
             })
             ->get();
+
 
         // PHP-сортировка с учетом направления
         $employees = $employees->when(

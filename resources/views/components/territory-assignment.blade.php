@@ -114,7 +114,7 @@
                             </span>
                             <span class="text-sm text-gray-500 ml-2">
                                 {{ \Carbon\Carbon::parse($history->pivot->assigned_at)->format('d.m.Y') }} -
-                                {{ $history->pivot->unassigned_at ? \Carbon\Carbon::parse($history->pivot->unassigned_at)->format('d.m.Y') : 'Текущий' }}
+                                {{ $history->pivot->unassigned_at ? \Carbon\Carbon::parse($history->pivot->unassigned_at)->format('d.m.Y') : 'Текущий пользователь' }}
                             </span>
                         </div>
                     </li>

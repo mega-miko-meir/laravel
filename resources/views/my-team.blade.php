@@ -271,7 +271,9 @@
                                                             {{ $memberTerritory->employee->sh_name }}
                                                         </a>
                                                     @else
-                                                        <em class="text-gray-500">({{$memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->sh_name}})</em>
+                                                        <a href="{{ route('employees.show', $memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->id) }}">
+                                                        <em class="text-gray-500 hover:underline">({{$memberTerritory->employeeTerritories()->latest('assigned_at')->first()?->employee->sh_name}})</em>
+                                                        </a>
                                                     @endif
                                                 </div>
                                             </div>

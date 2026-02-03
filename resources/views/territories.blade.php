@@ -19,6 +19,43 @@
                     <x-create-territory-button />
                 </div>
 
+
+
+                <div class="">
+                    {{-- <h2 class="text-xl font-bold mb-3">Сотрудники без планшета</h2> --}}
+
+                    <div x-data="{ open: false }" class="relative">
+                        <!-- Кнопка раскрытия -->
+                        <button @click="open = !open" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all focus:outline-none">
+                            Сотрудники без территории ({{ $availableEmployees->count() }})
+                        </button>
+
+                        <!-- Выпадающий список -->
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute left-0 mt-2 w-80 bg-white shadow-lg rounded-lg border border-gray-200 z-50 max-h-64 overflow-y-auto"
+                        >
+                            <ul>
+                                @forelse($availableEmployees as $employee)
+                                    <li class="px-4 py-2 hover:bg-gray-100 border-b border-gray-100">
+                                        <a href="{{ route('employees.show', $employee->id) }}" class="text-blue-600 hover:underline font-medium">
+                                            {{ $employee->full_name }}
+                                        </a>
+                                    </li>
+                                @empty
+                                    <li class="px-4 py-2 text-gray-500">Нет сотрудников без планшета</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+
                 <!-- Компонент поиска -->
                 {{-- <x-search class="mb-6" action="{{route('tablets.search')}}" /> --}}
                 <x-search class="mb-6" :action="route('territories.search')" />
@@ -96,7 +133,7 @@
                                         @if ($employee)
                                             <a href="{{ route('employees.show', $employee->id) }}"
                                             class="text-blue-500 hover:underline">
-                                                {{ $employee->full_name }}
+                                                {{ $employee->sh_name }}
                                             </a>
                                         @else
                                             <span class="text-gray-400 italic">Не назначен</span>
