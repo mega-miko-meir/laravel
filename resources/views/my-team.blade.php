@@ -109,9 +109,21 @@
             if ($lastTerritory) {
                 foreach ($lastTerritory->children as $rmTerritory) {
 
+                    $activeAssignment = $rmTerritory->employeeTerritories()
+                        ->whereNull('unassigned_at')
+                        ->latest('assigned_at')
+                        ->first();
+
+                    $lastAssignment = $rmTerritory->employeeTerritories()
+                        ->latest('assigned_at')
+                        ->first();
+
+                    $employee = $activeAssignment?->employee;
+                    $lastEmployee = $lastAssignment?->employee;
+
                     // 🔹 RM
                     $rmTotal++;
-                    if ($rmTerritory->employee) {
+                    if ($employee) {
                         $rmUsed++;
                     }
 
@@ -128,9 +140,25 @@
                             ];
                         }
 
+
+
                         $teamsStats[$team]['total']++;
 
-                        if ($repTerritory->employee) {
+
+                        $activeAssignment = $rmTerritory->employeeTerritories()
+                            ->whereNull('unassigned_at')
+                            ->latest('assigned_at')
+                            ->first();
+
+                        $lastAssignment = $rmTerritory->employeeTerritories()
+                            ->latest('assigned_at')
+                            ->first();
+
+                        $employee = $activeAssignment?->employee;
+                        $lastEmployee = $lastAssignment?->employee;
+
+
+                        if ($employee) {
                             $repUsed++;
                             $teamsStats[$team]['used']++;
                         }
@@ -185,9 +213,25 @@
                             $occupiedPlaces = 0;
 
 
+
+
                             foreach ($child->children as $memberTerritory) {
                                 $allPlaces++;
-                                if ($memberTerritory->employee) {
+
+                                $activeAssignment = $memberTerritory->employeeTerritories()
+                                    ->whereNull('unassigned_at')
+                                    ->latest('assigned_at')
+                                    ->first();
+
+                                $lastAssignment = $memberTerritory->employeeTerritories()
+                                    ->latest('assigned_at')
+                                    ->first();
+
+                                $employee = $activeAssignment?->employee;
+                                $lastEmployee = $lastAssignment?->employee;
+
+
+                                if ($employee) {
                                     $occupiedPlaces++;
                                 }
                             }
