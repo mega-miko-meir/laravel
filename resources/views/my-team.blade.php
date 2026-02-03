@@ -109,21 +109,9 @@
             if ($lastTerritory) {
                 foreach ($lastTerritory->children as $rmTerritory) {
 
-                    $activeAssignment = $rmTerritory->employeeTerritories()
-                        ->whereNull('unassigned_at')
-                        ->latest('assigned_at')
-                        ->first();
-
-                    $lastAssignment = $rmTerritory->employeeTerritories()
-                        ->latest('assigned_at')
-                        ->first();
-
-                    $employee = $activeAssignment?->employee;
-                    $lastEmployee = $lastAssignment?->employee;
-
                     // 🔹 RM
                     $rmTotal++;
-                    if ($employee) {
+                    if ($rmTerritory->employee) {
                         $rmUsed++;
                     }
 
@@ -140,25 +128,9 @@
                             ];
                         }
 
-
-
                         $teamsStats[$team]['total']++;
 
-
-                        $activeAssignment = $rmTerritory->employeeTerritories()
-                            ->whereNull('unassigned_at')
-                            ->latest('assigned_at')
-                            ->first();
-
-                        $lastAssignment = $rmTerritory->employeeTerritories()
-                            ->latest('assigned_at')
-                            ->first();
-
-                        $employee = $activeAssignment?->employee;
-                        $lastEmployee = $lastAssignment?->employee;
-
-
-                        if ($employee) {
+                        if ($repTerritory->employee) {
                             $repUsed++;
                             $teamsStats[$team]['used']++;
                         }
@@ -212,9 +184,6 @@
                             $allPlaces = 0;
                             $occupiedPlaces = 0;
 
-
-
-
                             foreach ($child->children as $memberTerritory) {
                                 $allPlaces++;
 
@@ -223,15 +192,7 @@
                                     ->latest('assigned_at')
                                     ->first();
 
-                                $lastAssignment = $memberTerritory->employeeTerritories()
-                                    ->latest('assigned_at')
-                                    ->first();
-
-                                $employee = $activeAssignment?->employee;
-                                $lastEmployee = $lastAssignment?->employee;
-
-
-                                if ($employee) {
+                                if ($activeAssignment) {
                                     $occupiedPlaces++;
                                 }
                             }
@@ -246,30 +207,31 @@
                             <div>
                                 <div class="font-bold text-gray-800 text-sm">
                                     @php
-                                        $employee = optional(
-                                            $child->employeeTerritories()
-                                                ->whereNull('unassigned_at')
-                                                ->latest('assigned_at')
-                                                ->first()
-                                        )->employee;
+                                        $activeAssignment = $child->employeeTerritories()
+                                            ->whereNull('unassigned_at')
+                                            ->latest('assigned_at')
+                                            ->first();
 
-                                        $employeeDismissed = optional(
-                                            $child->employeeTerritories()
-                                                ->whereNotNull('unassigned_at')
-                                                ->latest('assigned_at')
-                                                ->first()
-                                        )->employee;
+                                        $dismissedAssignment = $child->employeeTerritories()
+                                            ->whereNotNull('unassigned_at')
+                                            ->latest('assigned_at')
+                                            ->first();
+
+                                        $employee = $activeAssignment?->employee;
+                                        $employeeDismissed = $dismissedAssignment?->employee;
                                     @endphp
+
 
                                     @if ($employee)
                                         {{ $employee->sh_name_sh }}
-                                    @else
+                                    @elseif ($employeeDismissed)
                                         <em class="text-gray-500">
-                                            @if ($employeeDismissed)
-                                                ({{ $employeeDismissed->sh_name_sh }})
-                                            @endif
+                                            ({{ $employeeDismissed->sh_name_sh }})
                                         </em>
+                                    @else
+                                        <em class="text-gray-400">—</em>
                                     @endif
+
                                 </div>
 
                                 <div class="text-sm text-gray-500">
