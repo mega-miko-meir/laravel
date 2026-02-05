@@ -17,6 +17,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TerritoryController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTabletController;
 use App\Http\Controllers\ExcelDataUploadController;
@@ -54,6 +55,14 @@ Route::middleware(['can:admin'])->group(function () {
     Route::get('/users/{id}', [UserController::class, 'show'])->name('users.show');
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     // Route::put('/users/{id}', [UserController::class, 'edit'])->name('users.update');
+
+    // routes/web.php
+    Route::get('/activity', [ActivityLogController::class, 'index'])
+        ->name('activity.logs');
+    Route::get('/activity/export', [ActivityLogController::class, 'export'])
+    ->name('activity.export');
+
+
 });
 
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\LogActivity;
 use Illuminate\Foundation\Application;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
    ->withMiddleware(function (Middleware $middleware) {
+
+        $middleware->appendToGroup('web', [
+            LogActivity::class,
+        ]);
+
         $middleware->alias([
             'web' => EncryptCookies::class,
             \Illuminate\Session\Middleware\StartSession::class,
@@ -22,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // добавь это!
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+
+
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

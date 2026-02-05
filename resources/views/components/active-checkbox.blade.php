@@ -1,6 +1,8 @@
+@props(['label' => 'Только активные сотрудники'])
+
 <div style="display: flex; align-items: center; gap: 10px;">
     <label for="ticker" style="cursor: pointer; font-size: 16px;">
-        Только активные сотрудники
+        {{$label}}
     </label>
 
     <input type="checkbox" id="ticker" style="display: none;">

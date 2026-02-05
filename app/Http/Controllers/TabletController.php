@@ -29,6 +29,8 @@ class TabletController extends Controller
         $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
         $order = $request->input('order', 'desc'); // По умолчанию сортировка по возрастанию
 
+        $activeOnly = $request->boolean('active_only');
+
         $tablets = Tablet::where('serial_number', 'like', "%$query%")
             ->orWhere('invent_number', 'like', "%$query%")
             ->orWhere('status', 'like', "%$query%")
@@ -44,7 +46,7 @@ class TabletController extends Controller
             ->get();
 
         $freeTablets = Tablet::free()
-        ->with('oldEmployee')
+        // ->with('oldEmployee')
         ->get();
 
 

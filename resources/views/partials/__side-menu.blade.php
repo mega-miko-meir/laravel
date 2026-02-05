@@ -6,8 +6,14 @@
                 <a href="/users" class="transition duration-200
                 {{request()->is('users') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
                 Пользователи
-            </a>
-        </li>
+                </a>
+            </li>
+            <li class="mb-4">
+                <a href="{{ route('activity.logs') }}" class="transition duration-200
+                {{request()->is('activity') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
+                Активность
+                </a>
+            </li>
         @endcan
         <li class="mb-4">
             <a href="/dashboard" class="transition duration-200

@@ -132,7 +132,7 @@
 
 
 
-                <x-active-employee-checkbox />
+                <x-active-checkbox />
                 <x-search class="mb-6" :action="route('employees.search')" />
 
                 <!-- Заголовок -->

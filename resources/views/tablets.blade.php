@@ -57,8 +57,11 @@
                 <x-search class="mb-6" :action="route('tablets.search')" />
 
                 <!-- Заголовок с количеством сотрудников -->
-                <h2 class="text-2xl font-bold mb-4 mt-6">
-                    Список свободных планшетов ({{ $freeTablets->count() }})
+                <h2 class="text-xl font-semibold text-gray-800">
+                    Список свободных планшетов
+                    <span class="text-gray-500 font-normal">
+                        ({{ $freeTablets->count() }})
+                    </span>
                 </h2>
 
                 <!-- Список свободных планшетов -->
@@ -130,10 +133,19 @@
                 </div>
 
 
-                <!-- Заголовок с количеством сотрудников -->
-                <h2 class="text-2xl font-bold mb-4 mt-6">
-                    Список всех планшетов ({{ $tablets->count() }})
-                </h2>
+                <div class="flex items-center justify-between mb-6 mt-6">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        Список всех планшетов
+                        <span class="text-gray-500 font-normal">
+                            ({{ $tablets->count() }})
+                        </span>
+                    </h2>
+                    <div>
+                        <x-active-checkbox label="Только активные планшеты"/>
+                    </div>
+                </div>
+
+
 
                 <!-- Список планшетов -->
                 <div class="overflow-x-auto bg-white shadow rounded-lg mt-6 p-4">
