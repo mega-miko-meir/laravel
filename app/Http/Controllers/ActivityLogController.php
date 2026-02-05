@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 // app/Http/Controllers/ActivityLogController.php
 use Illuminate\Http\Request;
@@ -29,39 +33,53 @@ class ActivityLogController extends Controller
         $from = $request->from . ' 00:00:00';
         $to   = $request->to . ' 23:59:59';
 
-        $fileName = "activity_logs_{$request->from}_{$request->to}.csv";
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return response()->streamDownload(function () use ($from, $to) {
+        // Заголовки
+        $sheet->fromArray([
+            'Пользователь',
+            'URL',
+            'Метод',
+            'IP',
+            'Дата',
+        ], null, 'A1');
 
-            $handle = fopen('php://output', 'w');
+        // Немного стилей
+        $sheet->getStyle('A1:E1')->getFont()->setBold(true);
+        $sheet->freezePane('A2');
 
-            // заголовки CSV
-            fputcsv($handle, [
-                'Пользователь',
-                'URL',
-                'Метод',
-                'IP',
-                'Дата'
-            ]);
+        $row = 2;
 
-            ActivityLog::with('user')
-                ->whereBetween('created_at', [$from, $to])
-                ->orderByDesc('created_at')
-                ->chunk(500, function ($logs) use ($handle) {
-                    foreach ($logs as $log) {
-                        fputcsv($handle, [
-                            $log->user?->full_name ?? 'Гость',
-                            $log->url,
-                            $log->method,
-                            $log->ip,
-                            $log->created_at->format('d.m.Y H:i'),
-                        ]);
-                    }
-                });
+        ActivityLog::with('user')
+            ->whereBetween('created_at', [$from, $to])
+            ->orderByDesc('created_at')
+            ->chunk(500, function ($logs) use (&$row, $sheet) {
+                foreach ($logs as $log) {
+                    $sheet->fromArray([
+                        $log->user?->full_name ?? 'Гость',
+                        $log->url,
+                        $log->method,
+                        $log->ip,
+                        $log->created_at->format('d.m.Y H:i'),
+                    ], null, 'A' . $row);
 
-            fclose($handle);
+                    $row++;
+                }
+            });
+
+        // Автоширина колонок
+        foreach (range('A', 'E') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = "activity_logs_{$request->from}_{$request->to}.xlsx";
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
         }, $fileName, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 }

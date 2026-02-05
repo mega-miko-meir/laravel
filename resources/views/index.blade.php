@@ -62,9 +62,9 @@
 
                     <button
                         type="submit"
-                        class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm"
+                        class="w-full bg-blue-600 text-white py-2 rounded hover:bg-green-700 text-sm mt-2"
                     >
-                        Скачать CSV
+                        Скачать Excel
                     </button>
                 </form>
             </div>
