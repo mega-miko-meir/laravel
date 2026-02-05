@@ -319,6 +319,33 @@
 
                                                     @if($employee)
                                                         <a href="{{ route('employees.show', $employee->id) }}"
+                                                        class="text-blue-600 hover:underline flex items-center gap-1">
+
+                                                            {{ $employee->sh_name }}
+
+                                                            @if($employee->latestEvent->event_date && \Carbon\Carbon::parse($employee->latestEvent->event_date)->greaterThanOrEqualTo(now()->subDays(30)))
+                                                               <span class="ml-1 inline-flex items-center justify-center
+                                                                            min-w-[22px] px-2 py-0.5 text-[10px] font-bold
+                                                                            text-white rounded-lg"
+                                                                            style="background-color: #50C878">
+                                                                    new
+                                                                </span>
+
+                                                            @endif
+                                                        </a>
+
+                                                    @elseif($lastEmployee)
+                                                        <a href="{{ route('employees.show', $lastEmployee->id) }}"
+                                                        class="text-gray-500 hover:underline italic">
+                                                            ({{ $lastEmployee->sh_name }})
+                                                        </a>
+                                                    @else
+                                                        <span class="text-gray-400 italic">Нет сотрудника</span>
+                                                    @endif
+
+
+                                                    {{-- @if($employee)
+                                                        <a href="{{ route('employees.show', $employee->id) }}"
                                                         class="text-blue-600 hover:underline">
                                                             {{ $employee->sh_name }}
                                                         </a>
@@ -329,7 +356,7 @@
                                                         </a>
                                                     @else
                                                         <span class="text-gray-400 italic">Нет сотрудника</span>
-                                                    @endif
+                                                    @endif --}}
 
                                                     {{-- @if($memberTerritory->employee)
                                                         <a href="{{ route('employees.show', $memberTerritory->employee->id) }}"
