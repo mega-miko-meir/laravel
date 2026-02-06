@@ -16,6 +16,7 @@
         {{-- <option value="new" {{$lastEventType === 'new' ? 'selected' : ''}}>New</option> --}}
         <option value="hired" {{$lastEventType === 'hired' ? 'selected' : ''}}>Hired</option>
         <option value="dismissed" {{$lastEventType === 'dismissed' ? 'selected' : ''}}>Dismissed</option>
+        <option value="return_from_leave" {{$lastEventType === 'return_from_leave' ? 'selected' : ''}}>Return from leave</option>
         <option value="maternity_leave" {{$lastEventType === 'maternity_leave' ? 'selected' : ''}}>Maternity leave</option>
         <option value="change_position" {{$lastEventType === 'changed_position' ? 'selected' : ''}}>Changed position</option>
         <option value="long_vacation" {{$lastEventType === 'long_vacation' ? 'selected' : ''}}>Long vacation</option>

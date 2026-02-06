@@ -39,6 +39,22 @@
                 @endif
             </p>
 
+            @if ($employee->current_role === 'Rep')
+                <p>
+                    <span class="font-medium">ФФМ:</span>
+
+                    @if($employee->FFM)
+                        <a href="{{ route('employees.show', $employee->FFM->id) }}"
+                        class="text-blue-600 hover:underline">
+                            {{ $employee->FFM->sh_name }}
+                        </a>
+                    @else
+                        —
+                    @endif
+                </p>
+
+            @endif
+
             {{-- @if($employee->territories->isNotEmpty())
                 <p><span class="font-medium">Команда:</span> {{ $employee->territories->first()->team }}</p>
 

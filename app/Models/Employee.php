@@ -43,6 +43,13 @@ class Employee extends Model
             ->value('team');
     }
 
+    public function getCurrentRoleAttribute()
+    {
+        return $this->employee_territory()
+            ->latest('assigned_at')
+            ->value('role');
+    }
+
     public function getCurrentCityAttribute()
     {
         return $this->employee_territory()
@@ -99,6 +106,19 @@ class Employee extends Model
     {
         $assignment =  $this->employee_territory()
             ->latest('assigned_at')
+            ->first();
+
+        return $assignment?->parent
+            ?->employeeTerritories()
+            ->latest('assigned_at')
+            ->first()
+            ?->employee;
+
+    }
+
+    public function getFFMAttribute()
+    {
+        $assignment =  $this->getCurrentManagerAttribute()->employee_territory()->latest('assigned_at')
             ->first();
 
         return $assignment?->parent

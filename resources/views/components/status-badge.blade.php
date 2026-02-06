@@ -2,8 +2,8 @@
 
 @php
     $colors = [
-        'new' => 'bg-green-500 text-white',
-        'hired' => 'bg-blue-500 text-white',
+        'hired' => 'bg-green-500 text-white',
+        'return_from_leave' => 'bg-blue-500 text-white',
         'dismissed' => 'bg-red-500 text-white',
         'maternity_leave' => 'bg-yellow-500 text-black',
         'long_vacation' => 'bg-pink-500 text-black',
