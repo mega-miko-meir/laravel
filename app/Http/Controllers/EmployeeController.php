@@ -76,40 +76,81 @@ class EmployeeController extends Controller
     public function exportToExcel(Request $request)
     {
         $columns = $request->input('columns', []);
-
-        // $employees = Employee::with('employee_territory')->get();
+        $withExperience = $request->boolean('with_experience');
+        $experienceDate = $request->input('experience_date')
+            ? Carbon::parse($request->experience_date)
+            : now();
 
         $employees = Employee::with('employee_territory', 'latestEvent')
-            ->whereHas('latestEvent', function($query) {
+            ->whereHas('latestEvent', function ($query) {
                 $query->where('event_type', 'hired');
             })
             ->get();
 
-
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Заголовки
+        /*
+        |--------------------------------------------------------------------------
+        | Заголовки
+        |--------------------------------------------------------------------------
+        */
         $col = 'A';
+
         foreach ($columns as $field) {
-            $sheet->setCellValue($col.'1', $this->labels($field));
+            $sheet->setCellValue($col . '1', $this->labels($field));
             $col++;
         }
 
-        // Данные
+        if ($withExperience) {
+            $sheet->setCellValue($col . '1', 'Стаж (лет)');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Данные
+        |--------------------------------------------------------------------------
+        */
         $row = 2;
+
         foreach ($employees as $employee) {
             $col = 'A';
+
             foreach ($columns as $field) {
                 $map = $this->exportMap();
                 $value = isset($map[$field]) ? ($map[$field])($employee) : '';
-                $sheet->setCellValue($col.$row, $value);
+                $sheet->setCellValue($col . $row, $value);
                 $col++;
             }
+
+            if ($withExperience) {
+                $experience = '';
+
+                // Берем дату приема из latestEvent с типом "hired"
+                $hiringEvent = $employee->latestEvent
+                    ? ($employee->latestEvent->event_type === 'hired' ? $employee->latestEvent : null)
+                    : null;
+
+                if ($hiringEvent && $hiringEvent->event_date) {
+                    $experience = round(
+                        Carbon::parse($hiringEvent->event_date)
+                            ->diffInDays($experienceDate) / 365,
+                        1
+                    );
+                }
+
+                $sheet->setCellValue($col . $row, $experience);
+            }
+
+
             $row++;
         }
 
-        // 🔹 Сохраняем временный файл и отдаем пользователю
+        /*
+        |--------------------------------------------------------------------------
+        | Сохранение и отдача файла
+        |--------------------------------------------------------------------------
+        */
         $writer = new Xlsx($spreadsheet);
         $filePath = storage_path('employees.xlsx');
         $writer->save($filePath);

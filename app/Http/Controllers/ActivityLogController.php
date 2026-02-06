@@ -17,6 +17,9 @@ class ActivityLogController extends Controller
     public function index()
     {
         $logs = ActivityLog::with('user')
+            ->whereHas('user', function($query){
+                $query->where('email', '!=', 'meirzhan.akimbekov@nobel.kz');
+            })
             ->latest()
             ->paginate(20);
 

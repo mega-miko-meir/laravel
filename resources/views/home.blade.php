@@ -85,6 +85,27 @@
                                         <input type="checkbox" name="columns[]" value="hiring_date" class="mr-2">
                                         Дата приема
                                     </label>
+                                    <hr class="my-3">
+                                    <p class="font-semibold mb-2 text-sm">Стаж работы:</p>
+
+                                    <label class="flex items-center text-sm mb-2">
+                                        <input type="checkbox"
+                                            name="with_experience"
+                                            value="1"
+                                            class="mr-2">
+                                        Выгружать стаж
+                                    </label>
+
+                                    <div class="text-sm">
+                                        <label class="block text-gray-600 mb-1">
+                                            На дату:
+                                        </label>
+                                        <input type="date"
+                                            name="experience_date"
+                                            value="{{ now()->toDateString() }}"
+                                            class="w-full border rounded px-2 py-1 text-sm">
+                                    </div>
+
 
                                 </div>
 
