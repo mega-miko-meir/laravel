@@ -14,6 +14,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use App\Http\Controllers\TabletController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TerritoryController;
 use App\Http\Controllers\PermissionController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\EmployeeTabletController;
 use App\Http\Controllers\ExcelDataUploadController;
 use App\Http\Controllers\EmployeeTerritoryController;
 use App\Http\Controllers\EmployeeCredentialsController;
+use App\Http\Controllers\NotificationController;
 
 // Route::get('/rennes', []);
 
@@ -61,6 +63,13 @@ Route::middleware(['can:admin'])->group(function () {
         ->name('activity.logs');
     Route::get('/activity/export', [ActivityLogController::class, 'export'])
     ->name('activity.export');
+
+
+    Route::get('/admin/notifications', [NotificationController::class, 'index'])
+        ->name('admin.notifications');
+
+    Route::get('/admin/notifications/{notification}', [NotificationController::class, 'show'])
+        ->name('admin.notifications.show');
 
 
 });
@@ -205,3 +214,7 @@ Route::get('/my-team', [EmployeeController::class, 'myTeam'])
     ->name('employees.my-team')
     // ->middleware('auth')
     ;
+
+
+Route::post('/feedback', [FeedbackController::class, 'store'])
+        ->name('feedback.store');

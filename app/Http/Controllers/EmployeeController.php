@@ -44,8 +44,8 @@ class EmployeeController extends Controller
             'manager' => fn($e) =>
                 $e->employee_territory()->latest('assigned_at')->first()->parent->employee->full_name ?? '',
             'hiring_date' => fn($e) =>
-                optional($e->latestEvent()->first())->event_date
-                    ? \Carbon\Carbon::parse($e->latestEvent()->first()->event_date)->format('d.m.Y')
+                optional($e->events()->where('event_type', 'hired')->latest('event_date')->first())->event_date
+                    ? \Carbon\Carbon::parse($e->events()->where('event_type', 'hired')->latest('event_date')->first()->event_date)->format('d.m.Y')
                     : '',
             'role' => fn($e) => $e->employee_territory()->latest('assigned_at')->first()->role ?? '',
         ];
@@ -83,7 +83,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::with('employee_territory', 'latestEvent')
             ->whereHas('latestEvent', function ($query) {
-                $query->where('event_type', 'hired');
+                $query->whereIn('event_type', ['hired', 'return_from_leave']);
             })
             ->get();
 
@@ -127,9 +127,20 @@ class EmployeeController extends Controller
                 $experience = '';
 
                 // Берем дату приема из latestEvent с типом "hired"
-                $hiringEvent = $employee->latestEvent
-                    ? ($employee->latestEvent->event_type === 'hired' ? $employee->latestEvent : null)
-                    : null;
+                // $hiringEvent = $employee->latestEvent
+                //     ? ($employee->latestEvent->event_type === 'hired' ? $employee->latestEvent : null)
+                //     : null;
+
+                $latestEvent = $employee->latestEvent;
+
+                if($latestEvent && $latestEvent !== "dismissed"){
+                    $hiringEvent = $employee->events()
+                    ->where('event_type', 'hired')
+                    ->latest('event_date')
+                    ->first();
+                } else {
+                    $hiringEvent = null;
+                }
 
                 if ($hiringEvent && $hiringEvent->event_date) {
                     $experience = round(
@@ -347,10 +358,8 @@ class EmployeeController extends Controller
 
     public function searchEmployee(Request $request)
     {
-        $weather = app(WeatherService::class)->getCurrent('Almaty');
+        // $weather = app(WeatherService::class)->getCurrent('Almaty');
         // dd($weather);
-
-
 
         $query = $request->input('search');
         $sort = $request->input('sort', 'latest_event_date');
@@ -393,7 +402,7 @@ class EmployeeController extends Controller
             })
             ->when($activeOnly == 1, function ($q) {
                 $q->whereHas('latestEvent', function ($q2) {
-                    $q2->where('event_type', 'hired');
+                    $q2->whereIn('event_type', ['hired', 'return_from_leave']);
                 });
             })
             ->get();
@@ -426,7 +435,7 @@ class EmployeeController extends Controller
             'sort' => $sort,
             'order' => $order,
             'activeOnly' => $activeOnly,
-            'weather' => $weather,
+            // 'weather' => $weather,
         ]);
     }
 
