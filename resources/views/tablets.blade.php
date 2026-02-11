@@ -140,9 +140,13 @@
                             ({{ $tablets->count() }})
                         </span>
                     </h2>
-                    <div>
-                        <x-active-checkbox label="Только активные планшеты"/>
-                    </div>
+
+                        <div
+                        x-data="{ activeOnly: true }"
+                        >
+                            <x-active-checkbox label="Только активные планшеты"/>
+                        </div>
+
                 </div>
 
 

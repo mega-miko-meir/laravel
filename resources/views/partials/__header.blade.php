@@ -12,13 +12,6 @@
             $unreadCount = auth()->user()->unreadNotifications()->count();
         @endphp
 
-        <button
-            @click="feedbackOpen = true"
-            class="relative text-gray-600 hover:text-blue-600"
-            title="Обратная связь">
-            💬
-        </button>
-
         @can('admin')
             <div class="relative inline-flex items-center">
                 <a href="{{ route('admin.notifications') }}" class="relative inline-block text-xl">
@@ -35,6 +28,13 @@
             </div>
 
         @endcan
+
+        {{-- <button
+            @click="feedbackOpen = true"
+            class="relative text-gray-600 text-2xl hover:text-blue-600 mr-16"
+            title="Обратная связь">
+            💬<span class="text-sm">Обратная связь</span>
+        </button> --}}
 
         <!-- Блок погоды -->
         <div class="flex items-center gap-6">
