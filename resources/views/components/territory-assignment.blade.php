@@ -8,7 +8,7 @@
 
         @if ($lastTerritory && is_null(optional($lastTerritory->pivot)->unassigned_at))
             <div class="mt-4">
-                <span class="font-medium text-gray-800">Territory:</span>
+                <span class="font-medium text-gray-800">Территория:</span>
 
                     <!-- Изменено: flex-col и items-start (чтобы прижать к левому краю) -->
                     <li class="flex flex-col items-start text-gray-600 py-2 border-bottom">
@@ -72,11 +72,11 @@
                     @endif
             </div>
         @else
-            <p class="text-lg text-gray-600">No territory assigned</p>
+            <p class="text-lg text-gray-600">Нет назначенных территории</p>
             <!-- Assign Territory Form -->
                 <form action="/assign-territory/{{$employee->id}}" method="POST" class="mt-3 space-y-2">
                     @csrf
-                    <label for="territory" class="block text-sm font-medium text-gray-600">Assign Territory</label>
+                    <label for="territory" class="block text-sm font-medium text-gray-600">Назначение территории</label>
                     <select id="territory" name="territory_id" class="w-full p-2 border rounded-lg text-sm">
                         <option value="">No Territory</option>
                         @foreach ($availableTerritories as $territory)
@@ -89,7 +89,7 @@
                         @endforeach
                     </select>
                     <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d')}}" class="w-full p-2 border rounded-lg text-sm">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">Assign</button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">Назначить</button>
                 </form>
         @endif
 

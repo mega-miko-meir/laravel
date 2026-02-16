@@ -71,7 +71,7 @@
         <table class="w-full border-collapse border border-gray-300">
             <thead>
                 <tr class="bg-gray-200">
-                    <th class="border border-gray-300 px-4 py-2">ID</th>
+                    {{-- <th class="border border-gray-300 px-4 py-2">ID</th> --}}
                     <th class="border border-gray-300 px-4 py-2">ФИО</th>
                     <th class="border border-gray-300 px-4 py-2">Дата привзяки</th>
                     <th class="border border-gray-300 px-4 py-2">Дата отвязки</th>
@@ -80,7 +80,7 @@
             <tbody>
                 @foreach($previousUsers as $record)
                     <tr>
-                        <td class="border border-gray-300 px-4 py-2">{{$record->pivot->id}}</td>
+                        {{-- <td class="border border-gray-300 px-4 py-2">{{$record->pivot->id}}</td> --}}
                         <td class="border border-gray-300 px-4 py-2">
                             <a href="{{ route('employees.show', $record->id) }}" class="text-blue-600 hover:underline">
                                 {{ $record->full_name }}

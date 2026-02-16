@@ -30,7 +30,7 @@ class Tablet extends Model
 
     public function employees(){
         return $this->belongsToMany(Employee::class, 'employee_tablet')
-                    ->withPivot('assigned_at', 'returned_at', 'confirmed', 'pdf_path', 'unassign_pdf')
+                    ->withPivot('assigned_at', 'returned_at', 'confirmed', 'pdf_path', 'unassign_pdf', 'employee_id', 'tablet_id')
                     ->withTimestamps();
     }
 
@@ -64,7 +64,7 @@ class Tablet extends Model
 
     public function scopeFree($query)
     {
-        return $query->where('status', 'active')
+        return $query->whereIn('status', ['active', 'admin'])
             ->where(function ($q) {
                 $q->whereHas('employees', function ($q) {
                     $q->whereNotNull('returned_at')

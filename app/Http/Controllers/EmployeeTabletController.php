@@ -60,6 +60,8 @@ class EmployeeTabletController extends Controller
     }
 
 
+
+
     public function assignTabletWithPdf(Request $request, Employee $employee, Tablet $tablet)
     {
         // $request->validate([

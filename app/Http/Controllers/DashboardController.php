@@ -114,7 +114,7 @@ class DashboardController extends Controller
             case 'hired_total':
                 $employees = DB::table('employees as e')
                     ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
-                    ->where('ev.event_type', 'hired')
+                    ->whereIn('ev.event_type', ['hired', 'return_from_leave'])
                     ->whereRaw('ev.id = (
                         SELECT ee.id FROM employee_events ee
                         WHERE ee.employee_id = ev.employee_id

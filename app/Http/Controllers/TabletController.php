@@ -24,6 +24,42 @@ class TabletController extends Controller
         return back()->with('success', 'Дата обновлена');
     }
 
+    public function updatePdf(Request $request, $id)
+    {
+        $request->validate([
+            'pdf_value' => 'required|mimes:pdf|max:5120',
+            'field_name' => 'required|in:pdf_path,unassign_pdf',
+        ]);
+
+        $record = DB::table('employee_tablet')
+            ->where('id', $id)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Запись не найдена');
+        }
+
+        // Загружаем новый файл
+        $path = $request->file('pdf_value')
+            ->store('employee_tablets', 'public');
+
+        // Удаляем старый файл если есть
+        if ($record->{$request->field_name}) {
+            Storage::disk('public')
+                ->delete($record->{$request->field_name});
+        }
+
+        // Обновляем поле
+        DB::table('employee_tablet')
+            ->where('id', $id)
+            ->update([
+                $request->field_name => $path
+            ]);
+
+        return back()->with('success', 'PDF обновлен');
+    }
+
+
     public function searchTablet(Request $request){
         $query = $request->input('search');
         $sort = $request->input('sort', 'hiring_date'); // По умолчанию сортируем
@@ -86,7 +122,7 @@ class TabletController extends Controller
     public function showTablet(Tablet $tablet)
     {
         $previousUsers = $tablet->employees()
-        ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf', 'id')
+        ->withPivot('assigned_at', 'returned_at', 'pdf_path', 'unassign_pdf', 'id', 'employee_id', 'tablet_id')
         ->orderByDesc('employee_tablet.assigned_at')
         ->get();
 
@@ -140,9 +176,10 @@ class TabletController extends Controller
             return redirect()->back()->with('error', 'Такой iPad уже существует');
         }
 
-        Tablet::create($incomingFields);
+        $tablet = Tablet::create($incomingFields);
 
-        return redirect()->back()->with('success', 'iPad created successfully!');
+        return redirect()->route('tablets.show', ['tablet' => $tablet])->with('success', 'Планшет добавлен успешно!');
+
     }
 
     public function editTablet(Request $request, Tablet $tablet)

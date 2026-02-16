@@ -118,7 +118,7 @@ class Employee extends Model
 
     public function getFFMAttribute()
     {
-        $assignment =  $this->getCurrentManagerAttribute()->employee_territory()->latest('assigned_at')
+        $assignment =  $this->getCurrentManagerAttribute()?->employee_territory()->latest('assigned_at')
             ->first();
 
         return $assignment?->parent

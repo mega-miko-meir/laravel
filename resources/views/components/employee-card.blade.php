@@ -31,7 +31,7 @@
                         'order' => request('order') === 'asc' ? 'desc' : 'asc',
                         'active_only' => request('active_only', 1)
                         ]) }}">
-                        Full Name
+                        ФИО
                         @if($sort === 'full_name')
                             {!! $order === 'asc' ? '↑' : '↓' !!}
                         @endif
@@ -53,9 +53,9 @@
                     </a>
                 </th>
 
-                <th class="px-4 py-3 text-left">Team</th>
-                <th class="px-4 py-3 text-left">City</th>
-                <th class="px-4 py-3 text-center">Actions</th>
+                <th class="px-4 py-3 text-left">Группа</th>
+                <th class="px-4 py-3 text-left">Город</th>
+                <th class="px-4 py-3 text-center">Действие</th>
             </tr>
         </thead>
         <tbody>

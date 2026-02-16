@@ -32,7 +32,7 @@
                         @endforeach
                     </select>
                     <input type="date" name="assigned_at" id="assigned_at" value="{{now()->format('Y-m-d')}}" class="mt-2 w-full p-2 border rounded-lg">
-                    <button type="submit" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Assign</button>
+                    <button type="submit" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Назначить</button>
                 </form>
             </div>
         </div>
@@ -67,26 +67,61 @@
                                 class="ml-2 text-blue-500 hover:underline text-sm">✎
                             </button>
                         </td>
-                        {{-- <td class="border border-gray-300 px-4 py-2">{{ $record->pivot->returned_at ?? '—' }}</td> --}}
                         <td class="border border-gray-300 px-4 py-2">
-                            @if($record->pivot->pdf_path)
-                                <a href="{{ asset('storage/' . $record->pivot->pdf_path) }}" class="text-blue-500 hover:underline" target="_blank">📄 PDF</a>
-                                <button onclick="openPdfModal('{{ $record->pivot->id }}', 'pdf_path', '{{ $record->pivot->pdf_path }}', 'tablet')"
-                                    class="ml-2 text-blue-500 hover:underline text-sm">✎</button>
-                            @else
-                                —
-                            @endif
+                            <div class="flex items-center gap-2">
+
+                                @if($record->pivot->pdf_path)
+                                    <a href="{{ asset('storage/' . $record->pivot->pdf_path) }}"
+                                    class="text-blue-500 hover:underline"
+                                    target="_blank">
+                                        📄 PDF
+                                    </a>
+                                @else
+                                    <span class="text-gray-400 text-sm">—</span>
+                                @endif
+
+                                {{-- Карандаш ВСЕГДА --}}
+                                <button
+                                    onclick="openPdfModal('{{ $record->pivot->id }}')"
+                                    class="text-gray-500 hover:text-blue-600 text-sm"
+                                    title="{{ $record->pivot->pdf_path ? 'Редактировать PDF' : 'Добавить PDF' }}"
+                                >
+                                    ✏️
+                                </button>
+
+                            </div>
                         </td>
+
+
                         <td class="border border-gray-300 px-4 py-2">
-                            @if($record->pivot->unassign_pdf)
-                                <a href="{{ asset('storage/' . $record->pivot->unassign_pdf) }}" class="text-blue-500 hover:underline" target="_blank">📄 PDF</a>
-                            @else
-                                -
-                            @endif
+                            <div class="flex items-center gap-2">
+
+                                @if($record->pivot->unassign_pdf)
+                                    <a href="{{ asset('storage/' . $record->pivot->unassign_pdf) }}"
+                                    class="text-blue-500 hover:underline"
+                                    target="_blank">
+                                        📄 PDF
+                                    </a>
+                                @else
+                                    <span class="text-gray-400 text-sm">—</span>
+                                @endif
+
+                                {{-- Карандаш ВСЕГДА --}}
+                                <button
+                                    onclick="openPdfModal('{{ $record->pivot->id }}', 'unassign_pdf')"
+                                    class="text-gray-500 hover:text-blue-600 text-sm"
+                                    title="{{ $record->pivot->unassign_pdf ? 'Редактировать PDF' : 'Добавить PDF' }}"
+                                >
+                                    ✏️
+                                </button>
+
+                            </div>
                         </td>
+
                     </tr>
                 @endforeach
                 <x-data-edit-modal />
+                <x-pdf-edit-modal />
 
             </tbody>
         </table>

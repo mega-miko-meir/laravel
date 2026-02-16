@@ -158,6 +158,10 @@ Route::middleware(['can:editor'])->group(function () {
 
     // Route::get('/upload-pdf', [EmployeeTabletController::class, 'showForm']);
     Route::post('/upload-assign-pdf/{employee}/{tablet}', [EmployeeTabletController::class, 'assignTabletWithPdf']);
+    Route::post('/upload-pdf/{id}', [EmployeeTabletController::class, 'assignTabletWithPdf2']);
+
+    Route::post('/employee-tablet/{id}/updatePdf',[EmployeeTabletController::class, 'updatePdf']);
+
 
     Route::get('/upload-assign-pdf/{id}', [EmployeeTabletController::class, 'download']);
 
@@ -187,6 +191,7 @@ Route::middleware(['can:editor'])->group(function () {
 
     Route::patch('/employee-territory/{id}/update', [EmployeeTerritoryController::class, 'updateDate'])->name('employee-territory.updateDate');
     Route::patch('/employee-tablet/{id}/update', [TabletController::class, 'updateDate'])->name('employee-tablet.updateDate');
+    Route::patch('/employee-tablet/{id}/updatePdf', [TabletController::class, 'updatePdf'])->name('employee-tablet.updatePdf');
 
 
 });
@@ -199,7 +204,11 @@ Route::get('/territories/{territory}', [TerritoryController::class, 'showTerrito
 
 
 Route::get('/alpine', function(){
-    return view('alpine-for-practice');
+    // Берем только нужные поля, чтобы не перегружать страницу
+    $employees = Employee::select('id', 'full_name')->get();
+
+    // Передаем переменную во вьюху через compact
+    return view('alpine-for-practice', compact('employees'));
 });
 
 Route::get('permissions', [PermissionController::class, 'index']);

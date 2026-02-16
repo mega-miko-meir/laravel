@@ -12,7 +12,7 @@
         {{-- @if ($lastTablet && is_null(optional($lastTablet->pivot)->returned_at)) --}}
         @if ($tablet && is_null($tablet->returned_at))
             <div class="mt-4">
-                <p class="text-lg text-gray-800 font-medium mb-2">Tablet:</p>
+                <p class="text-lg text-gray-800 font-medium mb-2">Планшет:</p>
                 <ul class="space-y-3">
                     <li class="flex flex-col gap-2 text-sm text-gray-700 p-3 rounded-lg shadow-sm">
 
@@ -64,11 +64,11 @@
                 </ul>
             </div>
         @else
-            <p class="text-lg text-gray-600">No tablets assigned</p>
+            <p class="text-lg text-gray-600">Нет назначенных планшетов</p>
 
             <form action="/assign-tablet/{{$employee->id}}" method="POST" class="mt-3 space-y-2">
                 @csrf
-                <label for="tablet" class="block text-sm font-medium text-gray-600">Assign Tablet</label>
+                <label for="tablet" class="block text-sm font-medium text-gray-600">Назначить</label>
                 <select id="tablet" name="tablet_id" class="w-full p-2 border rounded-lg text-sm">
                     <option value="">No Tablet</option>
                     @foreach ($availableTablets as $tablet)
@@ -81,7 +81,7 @@
                 <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d') }}" class="w-full p-2 border rounded-lg text-sm">
 
                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">
-                    Assign
+                    Назначить
                 </button>
             </form>
         @endif

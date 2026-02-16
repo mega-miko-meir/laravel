@@ -18,13 +18,13 @@
                 type="text"
                 name="search"
                 class="h-14 w-full pl-12 pr-32 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-                placeholder="Search employee..."
+                placeholder="Поиск..."
             />
             <button
                 type="submit"
                 class="absolute top-0 right-0 h-full px-6 bg-blue-600 text-white font-semibold rounded-r-lg hover:bg-blue-700 transition-all"
             >
-                Search
+                Поиск
             </button>
         </div>
     </form>

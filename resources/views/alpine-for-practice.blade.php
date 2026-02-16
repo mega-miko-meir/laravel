@@ -2,63 +2,87 @@
 
 @section('content')
 
-<body>
-    <div class="container mx-auto mt-20 max-w-sm">
-        <h1 class="text-1xl mb-4">Alpine demo</h1>
-        {{-- x-data alpine component--}}
-        <div x-data="{
-        open: false,
-        name: 'Brad',
-        search: '',
-        checked: false
-        }">
-            {{-- x-on and x-bind--}}
-            <button x-on:click="open = !open"
-            x-bind:class="open ? 'bg-blue-800' : 'bg-slate-700' "
-            class=" text-white px-4 py-2 rounded">
-                Toggle
-            </button>
-            {{-- x-show --}}
-            <div x-show="open" x-transition style="display: none">
-                <p class="bg-gray-200 p-4 my-6">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Ad maxime quaerat, quisquam fugit esse minima iste totam possimus tenetur aliquid.
-                </p>
-            </div>
-            {{-- x-text --}}
-            <div class="my-4">
-                The value of name is <span x-text="name" class="font-bold"></span>
-            </div>
-            {{-- x-model --}}
-            {{-- first example --}}
-            <div>
-                <input
-                type="text"
-                x-model="search"
-                placeholder="Search.."
-                class="border p-2 w-full mb-2 mt-6"
-                >
-                Searching for <span x-text="search" class="font-bold"></span>
-            </div>
-            {{-- second example --}}
-            <div">
-                <input type="checkbox" x-model="checked">
-                <p x-text="checked ? 'Turned on' : 'turned off' "></p>
-            </div>
+{{-- <body>
+    <div x-data="{
+    search: '',
+    employees: @js($employees),
 
-            {{-- x-for --}}
-            <div x-data="{ posts: ['Apple', 'Orange', 'Lemon', 'Banana'] }">
-                <h3 class="font-bold mt-6 mb-3 text-2xl">Posts</h3>
-                <template x-for="post in posts">
-                    <div x-text="post"></div>
-                </template>
-                <button x-on:click="posts.push('New post')" class="bg-blue-800 text-white mt-4 rounded-md px-4 py-2">Add post</button>
-            </div>
+    employees: {{ $employees->map(fn($e) => ['id' => $e->id, 'full_name' => $e->full_name])->toJson() }},
 
+    get filteredEmployees() {
+        if (!this.search) return this.employees;
+        return this.employees.filter(e =>
+            e.full_name.toLowerCase().includes(this.search.toLowerCase())
+        );
+    }
+}">
+
+    <input type="text" x-model="search" placeholder="Поиск по сотрудникам..." class="border p-2 w-full mt-8 mb-4">
+
+    <div class="border rounded divide-y">
+        <template x-for="employee in filteredEmployees" :key="employee.id">
+            <div class="p-3 hover:bg-gray-50 flex justify-between items-center">
+                <span x-text="employee.full_name"></span>
+                <button @click="console.log('Выбран ID:', employee.id)" class="text-blue-500 text-sm">Выбрать</button>
+            </div>
+        </template>
+
+        <div x-show="filteredEmployees.length === 0" class="p-3 text-gray-400 text-center">
+            Сотрудник не найден
         </div>
+    </div>
+</div>
 
+</body> --}}
+
+
+<div x-data="{
+    search: '',
+    showOnlyActive: false, {{-- Состояние чекбокса --}}
+    employees: @js($employees), {{-- Предположим, у каждого есть поле status --}}
+
+    get filteredEmployees() {
+        return this.employees.filter(e => {
+            {{-- Условие 1: Поиск по имени --}}
+            const matchName = e.full_name.toLowerCase().includes(this.search.toLowerCase());
+
+            {{-- Условие 2: Если чекбокс включен, проверяем активность. Если выключен — пропускаем всех --}}
+            const matchActive = this.showOnlyActive ? (e.status === 'active') : true;
+
+            return matchName && matchActive;
+        });
+    }
+}">
+    <div class="flex flex-col gap-4 mb-4">
+        <!-- Поиск -->
+        <input type="text" x-model="search" placeholder="Поиск..." class="border p-2 w-full mt-8">
+
+        <!-- Чекбокс -->
+        <label class="flex items-center gap-2 cursor-pointer text-sm">
+            <input type="checkbox" x-model="showOnlyActive" class="rounded border-gray-300">
+            <span>Только активные сотрудники</span>
+        </label>
+
+        <div class="text-xs text-gray-500 mt-1">
+        Найдено: <span class="font-bold text-blue-600" x-text="filteredEmployees.length"></span>
+        из <span x-text="employees.length"></span>
+    </div>
     </div>
 
-</body>
+
+
+    <!-- Список -->
+    <ul class="border rounded divide-y">
+        <template x-for="employee in filteredEmployees" :key="employee.id">
+            <li class="p-2 flex justify-between">
+                <span x-text="employee.full_name"></span>
+                <span x-show="employee.status" class="text-xs text-green-600 bg-green-50 px-2 rounded-full">Active</span>
+            </li>
+        </template>
+    </ul>
+</div>
+
+
 
 
 <script src="{{ asset('js/search.js') }}"></script>

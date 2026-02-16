@@ -3,7 +3,7 @@
 <div class="flex flex-col space-y-2">
     {{-- <input type="date" name="returned_at" id="returned_at" value="{{now()->format("Y-d-m")}}"> --}}
     <button id="openModalBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded text-xs">
-        Unassign iPad
+        Отвязать
     </button>
 </div>
 
@@ -21,10 +21,10 @@
 
             <div class="flex justify-between">
                 <button type="button" id="closeModalBtn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">
-                    Cancel
+                    Отмена
                 </button>
                 <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                    Unassign
+                    Отвязать
                 </button>
             </div>
         </form>

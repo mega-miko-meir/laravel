@@ -50,8 +50,6 @@
                     </div>
                 </div>
 
-
-
                 <!-- Компонент поиска -->
                 {{-- <x-search class="mb-6" action="{{route('tablets.search')}}" /> --}}
                 <x-search class="mb-6" :action="route('tablets.search')" />
@@ -141,11 +139,11 @@
                         </span>
                     </h2>
 
-                        <div
+                        {{-- <div
                         x-data="{ activeOnly: true }"
                         >
                             <x-active-checkbox label="Только активные планшеты"/>
-                        </div>
+                        </div> --}}
 
                 </div>
 
