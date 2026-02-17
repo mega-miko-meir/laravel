@@ -107,20 +107,10 @@
 
     </div>
 
-    <div x-data="{ viewMode: 'ffm' }">
+    <div x-data="{ viewMode: 'team' }">
 
         <div x-show="open2" class="mb-4">
             <div class="inline-flex rounded-lg bg-gray-100 p-1">
-                <button
-                    @click="viewMode = 'ffm'"
-                    :class="viewMode === 'ffm'
-                        ? 'bg-white shadow text-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'"
-                    class="px-4 py-1.5 text-sm font-medium rounded-md transition"
-                >
-                    По FFM и RM
-                </button>
-
                 <button
                     @click="viewMode = 'team'"
                     :class="viewMode === 'team'
@@ -129,6 +119,15 @@
                     class="px-4 py-1.5 text-sm font-medium rounded-md transition"
                 >
                     По группам
+                </button>
+                <button
+                    @click="viewMode = 'ffm'"
+                    :class="viewMode === 'ffm'
+                        ? 'bg-white shadow text-blue-600'
+                        : 'text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-1.5 text-sm font-medium rounded-md transition"
+                >
+                    По FFM и RM
                 </button>
             </div>
         </div>

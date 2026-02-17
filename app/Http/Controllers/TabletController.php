@@ -67,19 +67,28 @@ class TabletController extends Controller
 
         $activeOnly = $request->boolean('active_only');
 
-        $tablets = Tablet::where('serial_number', 'like', "%$query%")
-            ->orWhere('invent_number', 'like', "%$query%")
-            ->orWhere('status', 'like', "%$query%")
-            ->orWhere('model', 'like', "%$query%")
-            ->orWhere('beeline_number', 'like', "%$query%")
-            ->orWhereHas('employees', function ($q) use ($query) {
-                $q->where('full_name', 'like', "%$query%");
-            })
-            ->with(['currentAssignment' => function ($q) {
-                $q->select('tablet_id', 'pdf_path', 'unassign_pdf')
-                ->orderByDesc('id');
-            }])
-            ->get();
+        $tablets = Tablet::query()
+        ->when($query, function ($q) use ($query) {
+            $q->where(function ($sub) use ($query) {
+                $sub->where('serial_number', 'like', "%$query%")
+                    ->orWhere('invent_number', 'like', "%$query%")
+                    ->orWhere('status', 'like', "%$query%")
+                    ->orWhere('model', 'like', "%$query%")
+                    ->orWhere('beeline_number', 'like', "%$query%")
+                    ->orWhereHas('employees', function ($emp) use ($query) {
+                        $emp->where('full_name', 'like', "%$query%");
+                    });
+            });
+        })
+        ->with([
+            'latestAssignment.employee',
+            'currentAssignment'
+        ])
+        ->get()
+        ->sortByDesc(function ($tablet) {
+            return optional($tablet->latestAssignment)->assigned_at;
+        })
+        ->values();
 
         $freeTablets = Tablet::free()
         // ->with('oldEmployee')

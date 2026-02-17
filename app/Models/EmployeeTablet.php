@@ -23,6 +23,11 @@ class EmployeeTablet extends Model
         'returned_at'
     ];
 
+    protected $casts = [
+        'assigned_at' => 'datetime',
+        'returned_at' => 'datetime',
+    ];
+
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id');

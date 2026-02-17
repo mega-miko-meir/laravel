@@ -64,7 +64,7 @@ class Tablet extends Model
 
     public function scopeFree($query)
     {
-        return $query->whereIn('status', ['active', 'admin'])
+        return $query->whereIn('status', ['active'])
             ->where(function ($q) {
                 $q->whereHas('employees', function ($q) {
                     $q->whereNotNull('returned_at')

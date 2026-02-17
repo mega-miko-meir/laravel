@@ -12,7 +12,7 @@ class DashboardController extends Controller
     public function showDashboard()
     {
         $hired_total = DB::table('employee_events as ee1')
-            ->where('ee1.event_type', 'hired')
+            ->whereIn('ee1.event_type', ['hired', 'return_from_leave'])
             ->whereRaw('ee1.id = (
                 SELECT ee2.id FROM employee_events as ee2
                 WHERE ee2.employee_id = ee1.employee_id

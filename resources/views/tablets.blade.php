@@ -157,6 +157,7 @@
                                 <th class="px-4 py-3 text-left">Номер</th>
                                 <th class="px-4 py-3 text-left">Серийный номер</th>
                                 <th class="px-4 py-3 text-left">Сотрудник</th>
+                                <th class="px-4 py-3 text-left">Дата привязки</th>
                                 <th class="px-4 py-3 text-left">Модель</th>
                                 <th class="px-4 py-3 text-left">Статус</th>
                                 <th class="px-4 py-3 text-left">Выдача (PDF)</th>
@@ -186,8 +187,17 @@
                                         @else
                                             Не назначен
                                         @endif
-
                                     </td>
+                                    <td class="px-4 py-3 text-gray-700">
+                                        @if ($tablet->latestAssignment)
+                                            {{ $tablet->latestAssignment->assigned_at->format('d.m.Y') }}
+                                        @else
+                                            Не назначен
+                                        @endif
+                                    </td>
+
+
+
                                     <td class="px-4 py-3 text-gray-900 font-medium">
                                         {{-- <a href="{{ route('tablets.show', $tablet->id) }}" class="text-blue-500 hover:underline"> --}}
                                             {{ $tablet->model }}

@@ -29,12 +29,12 @@
 
         @endcan
 
-        {{-- <button
+        <button
             @click="feedbackOpen = true"
             class="relative text-gray-600 text-2xl hover:text-blue-600 mr-16"
             title="Обратная связь">
-            💬<span class="text-sm">Обратная связь</span>
-        </button> --}}
+            <span class="text-sm">Обратная связь</span>💬
+        </button>
 
         <!-- Блок погоды -->
         <div class="flex items-center gap-6">
