@@ -13,7 +13,7 @@
                 <!-- Кнопки справа -->
                 <div class="absolute top-4 right-4 flex gap-2">
                     <a
-                        @can('admin')
+                        @can('editor')
                             href="/create-employee"
                         @endcan
                         class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
@@ -28,7 +28,6 @@
                             class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 flex items-center text-sm">
                             Выгрузить
                         </button>
-
 
                         <!-- DROPDOWN МЕНЮ -->
                         <div id="exportDropdown"
