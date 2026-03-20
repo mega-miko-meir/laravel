@@ -36,7 +36,7 @@
             <span class="text-sm">Обратная связь</span>💬
         </button>
 
-        <!-- Блок погоды -->
+        {{-- <!-- Блок погоды -->
         <div class="flex items-center gap-6">
             @foreach($weatherData as $city => $weather)
                 @if($weather)
@@ -51,7 +51,7 @@
                     </div>
                 @endif
             @endforeach
-        </div>
+        </div> --}}
 
         <!-- Разделитель между погодой и пользователем -->
         <div class="h-8 w-px bg-white/20 hidden sm:block"></div>

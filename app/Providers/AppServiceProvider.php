@@ -55,16 +55,16 @@ class AppServiceProvider extends ServiceProvider
         //     $view->with('weather', $weather);
         // });
 
-        View::composer('partials.__header', function ($view) {
-            $cities = ['Almaty'];
-            $weatherData = [];
+        // View::composer('partials.__header', function ($view) {
+        //     $cities = ['Almaty'];
+        //     $weatherData = [];
 
-            foreach ($cities as $city) {
-                $weatherData[$city] = app(WeatherService::class)->getCurrent($city);
-            }
+        //     foreach ($cities as $city) {
+        //         $weatherData[$city] = app(WeatherService::class)->getCurrent($city);
+        //     }
 
-            $view->with('weatherData', $weatherData);
-        });
+        //     $view->with('weatherData', $weatherData);
+        // });
 
 
         // View::composer('partials.__header', function ($view) {

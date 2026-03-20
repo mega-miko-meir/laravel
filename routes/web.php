@@ -11,6 +11,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrickController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\TabletController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\EmployeeController;
@@ -19,12 +20,12 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TerritoryController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTabletController;
 use App\Http\Controllers\ExcelDataUploadController;
 use App\Http\Controllers\EmployeeTerritoryController;
 use App\Http\Controllers\EmployeeCredentialsController;
-use App\Http\Controllers\NotificationController;
 
 // Route::get('/rennes', []);
 
@@ -228,3 +229,9 @@ Route::get('/my-team', [EmployeeController::class, 'myTeam'])
 
 Route::post('/feedback', [FeedbackController::class, 'store'])
         ->name('feedback.store');
+
+
+Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+
+Route::post('/clients/export', [ClientController::class, 'export'])
+    ->name('export.onekey');
