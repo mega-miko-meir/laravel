@@ -46,6 +46,12 @@
                 Команда
             </a>
         </li>
+        <li class="mb-4">
+            <a href="{{ route('clients.index') }}" class="transition duration-200
+            {{request()->is('clients') ? 'text-yellow-300 font-bold' : 'hover:text-gray-300'}}">
+                База OneKey
+            </a>
+        </li>
         {{-- <div class="mb-6">
             <a href="{{ route('employees.my-team') }}"
             class="inline-flex items-center gap-2 px-2 py-1

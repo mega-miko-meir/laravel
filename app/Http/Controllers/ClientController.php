@@ -28,7 +28,6 @@ class ClientController extends Controller
 
         // dd($request->brick_name);
 
-        // Город (multi-select)
         if ($request->filled('city')) {
             $query->whereIn('city', $request->city);
         }
@@ -89,9 +88,16 @@ class ClientController extends Controller
         // dd('export works');
         $query = Client::query();
 
+        // dd($request->all());
+
         // фильтры
+
         if ($request->filled('full_name')) {
             $query->where('full_name', 'like', '%' . $request->full_name . '%');
+        }
+
+        if ($request->filled('brick_label')) {
+            $query->whereIn('brick_label', $request->brick_label);
         }
 
         if ($request->filled('specialty')) {
@@ -101,6 +107,7 @@ class ClientController extends Controller
         if ($request->filled('city')) {
             $query->whereIn('city', $request->city);
         }
+
 
         if ($request->filled('organization_type')) {
             $query->where('organization_type', $request->organization_type);

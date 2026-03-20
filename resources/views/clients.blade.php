@@ -307,6 +307,10 @@
                     <input type="hidden" name="city[]" value="{{ $item }}">
                 @endforeach
 
+                @foreach(request('brick_label', []) as $item)
+                    <input type="hidden" name="brick_label[]" value="{{ $item }}">
+                @endforeach
+
                 <input type="hidden" name="organization_type" value="{{ request('organization_type') }}">
                 <div class="mt-3 flex justify-end">
                     <button type="submit"
