@@ -73,7 +73,7 @@
                 <tr class="bg-gray-200">
                     {{-- <th class="border border-gray-300 px-4 py-2">ID</th> --}}
                     <th class="border border-gray-300 px-4 py-2">ФИО</th>
-                    <th class="border border-gray-300 px-4 py-2">Дата привзяки</th>
+                    <th class="border border-gray-300 px-4 py-2">Дата привязки</th>
                     <th class="border border-gray-300 px-4 py-2">Дата отвязки</th>
                 </tr>
             </thead>
