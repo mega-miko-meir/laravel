@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TaskStoreRequest;
+use App\Http\Requests\TaskUpdateRequest;
 use Illuminate\Http\Request;
 use Illuminate\Console\View\Components\Task;
 
@@ -21,14 +23,9 @@ class TaskController extends Controller
 
 
 
-    public function store(Request $request)
+    public function store(TaskStoreRequest $request)
     {
-        $data = $request->validate([
-            'title' => 'required|string',
-            'description' => 'nullable|string',
-            'status' => 'in:todo,in_progress,done',
-            'deadline' => 'nullable|date'
-        ]);
+        $data = $request->validated();
 
         auth()->user()->tasks()->create($data);
 
@@ -42,16 +39,11 @@ class TaskController extends Controller
         return $task;
     }
 
-    public function update(Request $request, Task $task)
+    public function update(TaskUpdateRequest $request, Task $task)
     {
         $this->authorizeTask($task);
 
-        $data = $request->validate([
-            'title' => 'string',
-            'description' => 'nullable|string',
-            'status' => 'in:todo,in_progress,done',
-            'deadline' => 'nullable|date'
-        ]);
+        $data = $request->validated();
 
         $task->update($data);
         return $task;

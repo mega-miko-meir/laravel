@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\FeedbackStoreRequest;
 use App\Models\User;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
@@ -10,19 +11,15 @@ use App\Notifications\NewFeedbackNotification;
 
 class FeedbackController extends Controller
 {
-    public function store(Request $request)
+    public function store(FeedbackStoreRequest $request)
     {
-        $request->validate([
-            'title'   => 'required|string|max:255',
-            'message' => 'required|string',
-            'screenshot' => 'nullable',
-        ]);
+        $validated = $request->validated();
 
         $feedback = Feedback::create([
             'user_id' => auth()->id(),
-            'title'   => $request->title,
-            'message' => $request->message,
-            'screenshot' => $request->screenshot,
+            'title'   => $validated['title'],
+            'message' => $validated['message'],
+            'screenshot' => $validated['screenshot'] ?? null,
         ]);
 
         // все админы

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ExcelDataUploadRequest;
 use Carbon\Carbon;
 use App\Models\Brick;
 use App\Models\Tablet;
@@ -18,13 +19,8 @@ class ExcelDataUploadController extends Controller
     }
 
 
-    public function uploadTabletsAssignment(Request $request)
+    public function uploadTabletsAssignment(ExcelDataUploadRequest $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
-            'sheet_name' => 'nullable|string',
-        ]);
-
         $file = $request->file('file');
 
         try {
@@ -79,11 +75,7 @@ class ExcelDataUploadController extends Controller
 
 
 
-    public function uploadTablets(Request $request){
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
-            'sheet_name' => 'nullable|string', // Добавляем поле для выбора листа
-        ]);
+    public function uploadTablets(ExcelDataUploadRequest $request){
 
         $file = $request->file('file');
 
@@ -130,11 +122,7 @@ class ExcelDataUploadController extends Controller
         }
     }
 
-    public function uploadEmployees(Request $request){
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
-            'sheet_name' => 'nullable|string', // Добавляем поле для выбора листа
-        ]);
+    public function uploadEmployees(ExcelDataUploadRequest $request){
 
         $file = $request->file('file');
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EmployeeTerritoryUpdateDateRequest;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Http\Request;
@@ -9,16 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeeTerritoryController extends Controller
 {
-    public function updateDate(Request $request, $id)
+    public function updateDate(EmployeeTerritoryUpdateDateRequest $request, $id)
     {
-        $request->validate([
-            'date_value' => 'required|date',
-            'field_name' => 'required|in:assigned_at,unassigned_at',
-        ]);
+        $validated = $request->validated();
 
         DB::table('employee_territory')
             ->where('id', $id)
-            ->update([$request->field_name => $request->date_value]);
+            ->update([$validated['field_name'] => $validated['date_value']]);
 
         return back()->with('success', 'Дата обновлена');
     }

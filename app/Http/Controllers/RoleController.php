@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RoleUpsertRequest;
 use App\Models\Role;
-use Illuminate\Http\Request;
 
 class RoleController extends Controller
 {
@@ -11,8 +11,8 @@ class RoleController extends Controller
         return Role::all();
     }
 
-    public function store(Request $request){
-        $role = Role::create($request->only('name'));
+    public function store(RoleUpsertRequest $request){
+        $role = Role::create($request->validated());
 
 
         return redirect('/users')->with('success', 'Congrats! You created a new role');
@@ -22,9 +22,9 @@ class RoleController extends Controller
         return Role::find($id);
     }
 
-    public function update(Request $request, $id){
+    public function update(RoleUpsertRequest $request, $id){
         $role = Role::find($id);
-        $role->update($request->only('name'));
+        $role->update($request->validated());
 
         return redirect('/users')->with('success', 'Congrats! You updated the role');
     }

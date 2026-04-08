@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ClientExportRequest;
+use App\Http\Requests\ClientIndexRequest;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -10,35 +12,25 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class ClientController extends Controller
 {
+    private const EXPORTABLE_COLUMNS = [
+        'full_name',
+        'organization_type',
+        'specialty',
+        'specialty2',
+        'parent_organization',
+        'workplace',
+        'primary_address',
+        'city',
+        'brick_name',
+        'brick_label',
+        'onekey_id',
+        'coordinates',
+    ];
 
-    public function index(Request $request)
+    public function index(ClientIndexRequest $request)
     {
         $query = Client::query();
-
-        // Поиск по ФИО
-        if ($request->filled('full_name')) {
-            $query->where('full_name', 'like', '%' . $request->full_name . '%');
-        }
-
-        // Специальность (multi-select)
-        if ($request->filled('specialty')) {
-            $query->whereIn('specialty', $request->specialty);
-        }
-        // dd(Client::pluck('brick_name'));
-
-        // dd($request->brick_name);
-
-        if ($request->filled('city')) {
-            $query->whereIn('city', $request->city);
-        }
-
-        if ($request->filled('brick_label')) {
-            $query->whereIn('brick_label', $request->brick_label);
-        }
-
-        if ($request->filled('organization_type')) {
-            $query->where('organization_type', $request->organization_type);
-        }
+        $this->applyFilters($query, $request);
 
         $clients = $query->paginate(50);
 
@@ -83,37 +75,11 @@ class ClientController extends Controller
         ][$key] ?? $key;
     }
 
-    public function export(Request $request)
+    public function export(ClientExportRequest $request)
     {
-        // dd('export works');
         $query = Client::query();
-
-        // dd($request->all());
-
-        // фильтры
-
-        if ($request->filled('full_name')) {
-            $query->where('full_name', 'like', '%' . $request->full_name . '%');
-        }
-
-        if ($request->filled('brick_label')) {
-            $query->whereIn('brick_label', $request->brick_label);
-        }
-
-        if ($request->filled('specialty')) {
-            $query->whereIn('specialty', $request->specialty);
-        }
-
-        if ($request->filled('city')) {
-            $query->whereIn('city', $request->city);
-        }
-
-
-        if ($request->filled('organization_type')) {
-            $query->where('organization_type', $request->organization_type);
-        }
-
-        $columns = $request->columns ?? ['full_name'];
+        $this->applyFilters($query, $request);
+        $columns = $this->sanitizeColumns($request->input('columns', ['full_name']));
 
         $data = $query->get($columns);
 
@@ -151,6 +117,37 @@ class ClientController extends Controller
         }, $fileName, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
+    }
+
+    private function applyFilters($query, Request $request): void
+    {
+        if ($request->filled('full_name')) {
+            $query->where('full_name', 'like', '%' . $request->input('full_name') . '%');
+        }
+
+        if ($request->filled('specialty')) {
+            $query->whereIn('specialty', (array) $request->input('specialty'));
+        }
+
+        if ($request->filled('city')) {
+            $query->whereIn('city', (array) $request->input('city'));
+        }
+
+        if ($request->filled('brick_label')) {
+            $query->whereIn('brick_label', (array) $request->input('brick_label'));
+        }
+
+        if ($request->filled('organization_type')) {
+            $query->where('organization_type', $request->input('organization_type'));
+        }
+    }
+
+    private function sanitizeColumns(mixed $columns): array
+    {
+        $columns = is_array($columns) ? $columns : [$columns];
+        $columns = array_values(array_intersect($columns, self::EXPORTABLE_COLUMNS));
+
+        return $columns !== [] ? $columns : ['full_name'];
     }
 
 }

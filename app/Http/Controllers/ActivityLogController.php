@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ActivityLogExportRequest;
 use App\Models\ActivityLog;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -9,7 +10,6 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 // app/Http/Controllers/ActivityLogController.php
-use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ActivityLogController extends Controller
@@ -26,15 +26,12 @@ class ActivityLogController extends Controller
         return view('index', compact('logs'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(ActivityLogExportRequest $request): StreamedResponse
     {
-        $request->validate([
-            'from' => 'required|date',
-            'to'   => 'required|date',
-        ]);
+        $validated = $request->validated();
 
-        $from = $request->from . ' 00:00:00';
-        $to   = $request->to . ' 23:59:59';
+        $from = $validated['from'] . ' 00:00:00';
+        $to   = $validated['to'] . ' 23:59:59';
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -76,7 +73,7 @@ class ActivityLogController extends Controller
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $fileName = "activity_logs_{$request->from}_{$request->to}.xlsx";
+        $fileName = "activity_logs_{$validated['from']}_{$validated['to']}.xlsx";
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UserLoginRequest;
+use App\Http\Requests\UserStoreRequest;
+use App\Http\Requests\UserUpdateRequest;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,12 +17,8 @@ class UserController extends Controller
         return redirect('/');
     }
 
-    public function login(Request $request){
-
-        $credentials = $request->validate([
-        'loginname' => ['required', 'email'],
-        'loginpassword' => ['required'],
-    ]);
+    public function login(UserLoginRequest $request){
+        $credentials = $request->validated();
 
     if (Auth::attempt(['email' => $credentials['loginname'], 'password' => $credentials['loginpassword']])) {
         $request->session()->regenerate();
@@ -64,18 +63,8 @@ class UserController extends Controller
         return view('components/registration', compact('user', 'roles'));
     }
 
-    public function register(Request $request){
-        $incomingFields = $request->validate(
-            [
-                'full_name' => 'required|string|max:255',
-                'first_name' => 'required',
-                'last_name' => 'required',
-                'position' => 'nullable',
-                'email' => 'required|email|unique:users,email|max:255',
-                'password' => 'required|min:8|confirmed',
-                'role_id' => 'required'
-                ]
-            );
+    public function register(UserStoreRequest $request){
+        $incomingFields = $request->validated();
 
             if ($request->password !== $request->password_confirmation) {
                 return redirect()->back()
@@ -120,18 +109,10 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(Request $request, $userId)
+    public function update(UserUpdateRequest $request, $userId)
     {
         $user = User::findOrFail($userId);
-        $incomingFields = $request->validate([
-            'full_name'  => 'required|max:255',
-            'first_name' => 'nullable|max:255',
-            'last_name'  => 'nullable|max:255',
-            'position'   => 'nullable|max:255',
-            'email'      => 'required|email|unique:users,email,' . $user->id,
-            'role_id'    => 'required',
-            'password'   => 'nullable|min:8|confirmed'
-        ]);
+        $incomingFields = $request->validated();
 
         // Если пароль пустой — не трогаем
         if (empty($incomingFields['password'])) {

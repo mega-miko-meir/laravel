@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TerritoryStoreRequest;
+use App\Http\Requests\TerritoryUpdateRequest;
 use App\Models\Brick;
 use App\Models\Employee;
 use App\Models\Territory;
@@ -250,18 +252,8 @@ class TerritoryController extends Controller
 
 
 
-    public function createTerritory(Request $request){
-        $incomingFields = $request->validate([
-            'territory' => 'required',
-            'territory_name' => 'required',
-            'department' => 'required',
-            'team' => 'nullable',
-            'role' => 'required',
-            'city' => 'required',
-            'manager_id' => 'nullable|integer',
-            'old_employee_id' => 'nullable|string',
-            'parent_territory_id' => 'nullable|string'
-        ]);
+    public function createTerritory(TerritoryStoreRequest $request){
+        $incomingFields = $request->validated();
 
         $existingTerritory = Territory::where('territory_name', $incomingFields['territory_name'])->first();
 
@@ -279,19 +271,9 @@ class TerritoryController extends Controller
         return redirect()->route('territories.show', ['territory' => $territory])->with('success', 'Territory added successfully!');
     }
 
-    public function editTerritory(Request $request, Territory $territory)
+    public function editTerritory(TerritoryUpdateRequest $request, Territory $territory)
     {
-        $incomingFields = $request->validate([
-            'territory' => 'required|unique:territories,territory_name,' . $territory->id,
-            'territory_name' => 'required|unique:territories,territory_name,' . $territory->id,
-            'department' => 'required',
-            'team' => 'nullable',
-            'role' => 'required',
-            'city' => 'required',
-            'manager_id' => 'nullable|integer',
-            'old_employee_id' => 'nullable|string',
-            'parent_territory_id' => 'nullable|string'
-        ]);
+        $incomingFields = $request->validated();
 
         $territory->update($incomingFields);
 

@@ -206,4 +206,29 @@ class Employee extends Model
         return $this->hasMany(EmployeeCredential::class);
     }
 
+    /**
+     * Scope for active employees.
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereHas('latestEvent', function ($q) {
+            $q->whereIn('event_type', ['hired', 'return_from_leave']);
+        });
+    }
+
+    /**
+     * Scope for employees with latest event.
+     */
+    public function scopeWithLatestEvent($query)
+    {
+        return $query->with('latestEvent');
+    }
+
+    /**
+     * Scope for FFM position.
+     */
+    public function scopeFFM($query)
+    {
+        return $query->where('position', 'FFM');
+    }
 }

@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TabletStoreRequest;
+use App\Http\Requests\TabletUpdateDateRequest;
+use App\Http\Requests\TabletUpdatePdfRequest;
+use App\Http\Requests\TabletUpdateRequest;
 use App\Models\Tablet;
 use App\Models\Employee;
 use Illuminate\Http\Request;
@@ -10,26 +14,20 @@ use Illuminate\Support\Facades\DB;
 
 class TabletController extends Controller
 {
-    public function updateDate(Request $request, $id)
+    public function updateDate(TabletUpdateDateRequest $request, $id)
     {
-        $request->validate([
-            'date_value' => 'required|date',
-            'field_name' => 'required|in:assigned_at,returned_at',
-        ]);
+        $validated = $request->validated();
 
         DB::table('employee_tablet')
             ->where('id', $id)
-            ->update([$request->field_name => $request->date_value]);
+            ->update([$validated['field_name'] => $validated['date_value']]);
 
         return back()->with('success', 'Дата обновлена');
     }
 
-    public function updatePdf(Request $request, $id)
+    public function updatePdf(TabletUpdatePdfRequest $request, $id)
     {
-        $request->validate([
-            'pdf_value' => 'required|mimes:pdf|max:5120',
-            'field_name' => 'required|in:pdf_path,unassign_pdf',
-        ]);
+        $validated = $request->validated();
 
         $record = DB::table('employee_tablet')
             ->where('id', $id)
@@ -44,16 +42,16 @@ class TabletController extends Controller
             ->store('employee_tablets', 'public');
 
         // Удаляем старый файл если есть
-        if ($record->{$request->field_name}) {
+        if ($record->{$validated['field_name']}) {
             Storage::disk('public')
-                ->delete($record->{$request->field_name});
+                ->delete($record->{$validated['field_name']});
         }
 
         // Обновляем поле
         DB::table('employee_tablet')
             ->where('id', $id)
             ->update([
-                $request->field_name => $path
+                $validated['field_name'] => $path
             ]);
 
         return back()->with('success', 'PDF обновлен');
@@ -170,14 +168,8 @@ class TabletController extends Controller
     }
 
 
-    public function createTablet(Request $request){
-        $incomingFields = $request->validate([
-                'model' => 'required',
-                'invent_number' => 'required',
-                'serial_number' => 'required',
-                'imei' => 'required',
-                'beeline_number' => 'required'
-            ]);
+    public function createTablet(TabletStoreRequest $request){
+        $incomingFields = $request->validated();
 
         $incomingTablet = Tablet::where('serial_number', $incomingFields['serial_number'])->first();
 
@@ -191,17 +183,9 @@ class TabletController extends Controller
 
     }
 
-    public function editTablet(Request $request, Tablet $tablet)
+    public function editTablet(TabletUpdateRequest $request, Tablet $tablet)
     {
-        $incomingFields = $request->validate([
-            'model' => 'required',
-            'status' => 'nullable',
-            'invent_number' => 'required',
-            'serial_number' => 'required',
-            'imei' => 'required',
-            'beeline_number' => 'required'
-
-        ]);
+        $incomingFields = $request->validated();
 
         $tablet->update($incomingFields);
 

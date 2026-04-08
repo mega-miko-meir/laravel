@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UploadExcelFileRequest;
 use App\Models\Brick;
 use App\Models\Employee;
 use App\Models\Territory;
@@ -198,12 +199,8 @@ class BrickController extends Controller{
     //     return view('bricks', compact('bricks'));
     // }
 
-    public function uploadBricks(Request $request)
+    public function uploadBricks(UploadExcelFileRequest $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
-        ]);
-
         $file = $request->file('file');
 
         try {

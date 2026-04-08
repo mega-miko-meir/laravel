@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EmployeeEventStoreRequest;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use App\Models\EmployeeEvent;
@@ -11,15 +12,12 @@ use Symfony\Contracts\EventDispatcher\Event;
 
 class EmployeeEventController extends Controller
 {
-    public function addingEvent(Request $request, Employee $employee, TerritoryAssignmentService $territoryAssignmentService, TabletAssignmentService $tabletAssignmentService)
+    public function addingEvent(EmployeeEventStoreRequest $request, Employee $employee, TerritoryAssignmentService $territoryAssignmentService, TabletAssignmentService $tabletAssignmentService)
     {
-        $request->validate([
-            'event_type' => 'required|string',
-            'event_date' => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
-        $eventDate = $request->event_date ?? now();
-        $returned_at = $request->event_date ?? now();
+        $eventDate = $validated['event_date'] ?? now();
+        $returned_at = $validated['event_date'] ?? now();
 
 
         $latestEvent = $employee->events()->latest('event_date')->first();
@@ -30,17 +28,17 @@ class EmployeeEventController extends Controller
 
 
 
-        if ($currentStatus === $request->event_type && $currentStatusDate === $request->event_date) {
+        if ($currentStatus === $validated['event_type'] && $currentStatusDate === ($validated['event_date'] ?? null)) {
             return back()->with('error', 'Статус сотрудника уже установлен.');
-        } elseif(($currentStatus !== $request->event_type && $currentStatusDate === $request->event_date) || $currentStatus === $request->event_type && $currentStatusDate !== $request->event_date){
-            $latestEvent->update(['event_type' => $request->event_type, 'event_date' => $eventDate]);
+        } elseif(($currentStatus !== $validated['event_type'] && $currentStatusDate === ($validated['event_date'] ?? null)) || $currentStatus === $validated['event_type'] && $currentStatusDate !== ($validated['event_date'] ?? null)){
+            $latestEvent->update(['event_type' => $validated['event_type'], 'event_date' => $eventDate]);
             return back()->with('success', 'Статус сотрудника обновлен.');
         }
 
         // Обновляем статус и даты в таблице employees
         // $updateData = ['status' => $request->event];
 
-        if ($currentStatus === 'new' && $request->event_type === 'hired' ?? $latestEvent) {
+        if ($currentStatus === 'new' && $validated['event_type'] === 'hired' ?? $latestEvent) {
             $latestEvent->update(['event_type' => 'hired', 'event_date' => $eventDate]);
             // $updateData['hiring_date'] = $eventDate;
             // $updateData['firing_date'] = null;
@@ -51,12 +49,12 @@ class EmployeeEventController extends Controller
 
             EmployeeEvent::create([
                 'employee_id' => $employee->id,
-                'event_type' => $request->event_type,
+                'event_type' => $validated['event_type'],
                 'event_date' => $eventDate,
             ]);
         }
 
-        $needUnassign = in_array($request->event_type, [
+        $needUnassign = in_array($validated['event_type'], [
             'dismissed',
             'maternity_leave',
             'change_position',
