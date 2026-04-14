@@ -12,10 +12,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\TabletController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\EmployeeCrudController;
-use App\Http\Controllers\EmployeeSearchController;
-use App\Http\Controllers\EmployeeExportController;
-use App\Http\Controllers\EmployeeImportController;
+use App\Http\Controllers\EmployeeDataController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TerritoryController;
@@ -26,7 +23,6 @@ use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTabletController;
 use App\Http\Controllers\ExcelDataUploadController;
 use App\Http\Controllers\EmployeeTerritoryController;
-use App\Http\Controllers\EmployeeCredentialsController;
 
 Route::post('/logout', [UserController::class, 'logout']);
 Route::post('/login', [UserController::class, 'login']);
@@ -36,17 +32,17 @@ Route::get('/login', function () {
 
 
 Route::middleware(['auth', 'can:editor'])->group(function () {
-    Route::get('/create-employee', [EmployeeCrudController::class, 'createEmployeeForm']);
-    Route::post('/create-employee', [EmployeeCrudController::class, 'createEmployee']);
-    Route::get('/edit-employee/{employee}', [EmployeeCrudController::class, 'showEditEmployee']);
-    Route::put('/edit-employee/{employee}', [EmployeeCrudController::class, 'actuallyEditEmployee']);
-    Route::delete('/delete-employee/{employee}', [EmployeeCrudController::class, 'deleteEmployee']);
+    Route::get('/create-employee', [EmployeeController::class, 'createEmployeeForm']);
+    Route::post('/create-employee', [EmployeeController::class, 'createEmployee']);
+    Route::get('/edit-employee/{employee}', [EmployeeController::class, 'showEditEmployee']);
+    Route::put('/edit-employee/{employee}', [EmployeeController::class, 'actuallyEditEmployee']);
+    Route::delete('/delete-employee/{employee}', [EmployeeController::class, 'deleteEmployee']);
 });
 
 
-Route::get('/employee/{id}', [EmployeeCrudController::class, 'showEmployee'])->name('employees.show');
+Route::get('/employee/{id}', [EmployeeController::class, 'showEmployee'])->name('employees.show');
 
-Route::get('/employees', [EmployeeSearchController::class, 'index']);
+Route::get('/employees', [EmployeeController::class, 'index']);
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/register', [UserController::class, 'showRegister']);
@@ -75,7 +71,7 @@ Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
 
 Route::get('employees/list/{type}', [DashboardController::class, 'filteredList'])->name('employees.filtered');
 
-Route::get('/', [EmployeeSearchController::class, 'searchEmployee'])->name('employees.search');
+Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
 Route::post('/print-act/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct']);
 Route::post('/print-act2/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct2']);
 
@@ -129,7 +125,7 @@ Route::get('/upload', function () {
 });
 Route::get('/bricks', [BrickController::class, 'showBricks']);
 
-Route::post('/export-excel', [EmployeeExportController::class, 'exportToExcel'])->name('export.excel');
+Route::post('/export-excel', [EmployeeDataController::class, 'exportToExcel'])->name('export.excel');
 
 Route::middleware(['auth', 'can:editor'])->group(function () {
     Route::match(['POST', 'DELETE'], '/assign-bricks/{territory}/{brick?}', [BrickController::class, 'handleBricks'])->name('assign.bricks');
@@ -137,7 +133,7 @@ Route::middleware(['auth', 'can:editor'])->group(function () {
 
     Route::post('/upload-bricks', [BrickController::class, 'uploadBricks']);
     Route::post('/upload-territories', [BrickController::class, 'uploadTerritories']);
-    Route::post('/upload-employees', [ExcelDataUploadController::class, 'uploadEmployees']);
+Route::post('/upload-employees', [EmployeeDataController::class, 'uploadEmployees']);
     Route::post('/upload-tablets', [ExcelDataUploadController::class, 'uploadTablets']);
     Route::post('/upload-tablets-assignment', [ExcelDataUploadController::class, 'uploadTabletsAssignment']);
 
@@ -160,7 +156,7 @@ Route::middleware(['auth', 'can:editor'])->group(function () {
         ->name('employees.updateStatusAndEvent');
 
 
-    Route::put('/employees/{id}/update-credentials', [EmployeeCredentialsController::class, 'updateCredentials'])
+    Route::put('/employees/{id}/update-credentials', [EmployeeController::class, 'updateCredentials'])
         ->name('employees.updateCredentials');
 
     Route::delete('/employees/credentials/{id}', [EmployeeController::class, 'deleteCredential']);
@@ -197,7 +193,7 @@ Route::get('/daily-quote', function (QuoteService $quoteService) {
 });
 
 
-Route::get('/my-team', [EmployeeSearchController::class, 'myTeam'])
+Route::get('/my-team', [EmployeeController::class, 'myTeam'])
     ->name('employees.my-team');
 
 

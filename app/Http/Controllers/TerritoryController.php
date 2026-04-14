@@ -107,6 +107,7 @@ class TerritoryController extends Controller
         $allowedSorts = [
             'territory_name',
             'city',
+            'role',
             'department',
             'created_at',
         ];
@@ -123,6 +124,7 @@ class TerritoryController extends Controller
                 $q->where('territory_name', 'like', "%{$query}%")
                 ->orWhere('city', 'like', "%{$query}%")
                 ->orWhere('department', 'like', "%{$query}%")
+                ->orWhere('role', 'like', "%{$query}%")
                 ->orWhere('manager_id', 'like', "%{$query}%")
                 ->orWhereHas('employees', function ($q2) use ($query) {
                     $q2->where('full_name', 'like', "%{$query}%");

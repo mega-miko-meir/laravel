@@ -15,7 +15,7 @@ class TabletUpdateRequest extends FormRequest
     {
         return [
             'model' => 'required',
-            'status' => 'nullable',
+            'status' => 'nullable|in:active,lost,damaged,written-off,admin',
             'invent_number' => 'required',
             'serial_number' => 'required',
             'imei' => 'required',

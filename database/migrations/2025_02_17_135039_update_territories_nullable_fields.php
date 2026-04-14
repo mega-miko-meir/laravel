@@ -12,7 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('territories', function (Blueprint $table) {
-            $table->string('employee_id')->nullable()->change();
             $table->string('manager_id')->nullable()->change();
             $table->string('old_employee_id')->nullable()->change();
         });
@@ -24,7 +23,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('territories', function (Blueprint $table) {
-            $table->string('employee_id')->nullable(false)->change();
             $table->string('manager_id')->nullable(false)->change();
             $table->string('old_employee_id')->nullable(false)->change();
         });

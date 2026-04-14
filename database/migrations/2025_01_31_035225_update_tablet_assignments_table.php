@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // Переименовываем таблицу
-        // Schema::rename('tablet_assignments', 'employee_tablet');
+        Schema::rename('tablet_assignments', 'employee_tablet');
 
         Schema::table('employee_tablet', function(Blueprint $table){
             $table->unsignedBigInteger('employee_id');
