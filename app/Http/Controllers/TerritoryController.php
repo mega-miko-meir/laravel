@@ -222,7 +222,7 @@ class TerritoryController extends Controller
 
     public function createTerritoryForm(){
         $parentTerritories = Territory::with('employee')
-            ->whereIn('role', ['RM', 'FFM'])
+            ->whereIn('role', ['RM', 'FFM', 'Marketing'])
             ->get();
 
 
@@ -242,6 +242,10 @@ class TerritoryController extends Controller
         } elseif($territory->role === "RM"){
             $parentTerritories = Territory::with('employee')
             ->where('role', 'FFM')
+            ->get();
+        } elseif($territory->role === "Product"){
+            $parentTerritories = Territory::with('employee')
+            ->where('role', 'Marketing')
             ->get();
         }
 

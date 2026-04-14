@@ -19,7 +19,7 @@ class TabletStoreRequest extends FormRequest
             'invent_number' => 'required',
             'serial_number' => 'required',
             'imei' => 'required',
-            'beeline_number' => 'required',
+            'beeline_number' => 'nullable',
         ];
     }
 }

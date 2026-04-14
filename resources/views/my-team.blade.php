@@ -1,8 +1,8 @@
 @extends('layout')
 
 @section('content')
-
-<h2 class="text-xl font-bold mt-10 mb-6">
+<br>
+<h2 class="text-xl font-bold mb-6">
     Полевая команда
 </h2>
 
