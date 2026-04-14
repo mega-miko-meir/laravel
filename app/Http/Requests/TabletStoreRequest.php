@@ -16,9 +16,9 @@ class TabletStoreRequest extends FormRequest
         return [
             'model' => 'required',
             'status' => 'nullable|in:active,lost,damaged,written-off,admin',
-            'invent_number' => 'required',
+            'invent_number' => 'nullable',
             'serial_number' => 'required',
-            'imei' => 'required',
+            'imei' => 'nullable',
             'beeline_number' => 'nullable',
         ];
     }
