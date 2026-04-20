@@ -43,6 +43,32 @@ class EmployeeTabletController extends Controller
         return redirect()->back()->with('success', $result['success']);
     }
 
+    // TabletController
+    public function cityCheck(Request $request)
+    {
+        $employeeId = $request->input('employee_id');
+        $tabletId   = $request->input('tablet_id');
+
+        $employee = Employee::findOrFail($employeeId);
+        $tablet   = Tablet::with('responsible')->findOrFail($tabletId);
+
+        $employeeCity  = $employee->employee_territory()
+            ->whereNull('unassigned_at')
+            ->latest('assigned_at')
+            ->first()?->city;
+
+        $responsibleCity = $tablet->responsible?->employee_territory()
+            ->whereNull('unassigned_at')
+            ->latest('assigned_at')
+            ->first()?->city;
+
+        return response()->json([
+            'employee_city'   => $employeeCity,
+            'responsible_city'=> $responsibleCity,
+            'match'           => $employeeCity && $responsibleCity && $employeeCity === $responsibleCity,
+        ]);
+    }
+
     // Добавление планшета к сотруднику через страницу планшета
     public function assignEmployee2(Request $request, Tablet $tablet)
     {

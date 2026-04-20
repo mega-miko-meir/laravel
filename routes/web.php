@@ -206,3 +206,5 @@ Route::get('/clients', [ClientController::class, 'index'])->name('clients.index'
 Route::post('/clients/export', [ClientController::class, 'export'])
     ->name('export.onekey');
 
+
+Route::get('/api/city-check', [EmployeeTabletController::class, 'cityCheck']);

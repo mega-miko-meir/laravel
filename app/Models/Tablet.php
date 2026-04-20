@@ -17,7 +17,8 @@ class Tablet extends Model
         'old_employee_id',
         'employee_id',
         'pdf_path',
-        'unassign_pdf'
+        'unassign_pdf',
+        'responsible_id'
     ];
 
     public function employee(){
@@ -78,12 +79,9 @@ class Tablet extends Model
             });
     }
 
-
-
-
-    // public function currentAssignment()
-    // {
-    //     return $this->hasOne(Assignment::class)->latestOfMany();
-    // }
+    public function responsible()
+    {
+        return $this->belongsTo(Employee::class, 'responsible_id');
+    }
 
 }

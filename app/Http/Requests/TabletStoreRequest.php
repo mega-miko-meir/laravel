@@ -20,6 +20,7 @@ class TabletStoreRequest extends FormRequest
             'serial_number' => 'required',
             'imei' => 'nullable',
             'beeline_number' => 'nullable',
+            'responsible_id' => 'nullable|exists:employees,id',
         ];
     }
 }

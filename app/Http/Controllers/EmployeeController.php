@@ -67,6 +67,7 @@ class EmployeeController extends Controller
         $availableTablets = \App\Models\Tablet::free()->with('oldEmployee')->get();
         $availableTerritories = \App\Models\Territory::whereNull('employee_id')->with('oldEmployee')->get();
 
+
         $lastTerritory = $employee->employee_territory()->latest('assigned_at')->first();
         $lastTablet = $employee->employee_tablet()->withPivot('assigned_at', 'returned_at')->orderByDesc('assigned_at')->first();
 

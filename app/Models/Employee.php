@@ -31,6 +31,11 @@ class Employee extends Model
                     ->withTimestamps();
     }
 
+    public function employeeTerritoryRecords()
+    {
+        return $this->hasMany(EmployeeTerritory::class, 'employee_id');
+    }
+
     public function getCurrentTerritoryAttribute()
     {
         return $this->employee_territory()

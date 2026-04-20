@@ -16,6 +16,7 @@
 
             <x-tablet-form
                 :tablet="$tablet ?? null"
+                :responsibles="$responsibles"
                 action="{{ $isEdit ? route('tablet.update', $tablet->id) : route('tablet.store') }}"
                 method="{{ $isEdit ? 'PUT' : 'POST' }}"
             />

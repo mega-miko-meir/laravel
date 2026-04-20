@@ -3,6 +3,7 @@
     'method' => 'POST',
     'tablet' => null,
     'employees' => null, // список сотрудников, если нужно выбрать владельца
+    'responsibles'
 ])
 
 <x-flash-message />
@@ -108,6 +109,22 @@
                 value="{{ old('beeline_number', $tablet->beeline_number ?? '') }}"
                 class="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
+        </div>
+        <div>
+            <label for="responsible_id" class="block text-sm font-medium text-gray-700">Ответственное лицо</label>
+            <select
+                name="responsible_id"
+                id="responsible_id"
+                class="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                <option value="">— Не выбрано —</option>
+                @foreach($responsibles as $employee)
+                    <option value="{{ $employee->id }}"
+                        {{ old('responsible_id', $tablet->responsible_id ?? '') == $employee->id ? 'selected' : '' }}>
+                        {{ $employee->full_name }}
+                    </option>
+                @endforeach
+            </select>
         </div>
     </div>
 

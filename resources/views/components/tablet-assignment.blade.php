@@ -66,24 +66,74 @@
         @else
             <p class="text-lg text-gray-600">Нет назначенных планшетов</p>
 
-            <form action="/assign-tablet/{{$employee->id}}" method="POST" class="mt-3 space-y-2">
-                @csrf
-                <label for="tablet" class="block text-sm font-medium text-gray-600">Назначить</label>
-                <select id="tablet" name="tablet_id" class="w-full p-2 border rounded-lg text-sm">
-                    <option value="">No Tablet</option>
-                    @foreach ($availableTablets as $tablet)
-                        <option value="{{ $tablet->id }}">
-                            {{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->employees->first()->full_name ?? '' }}
-                        </option>
-                    @endforeach
-                </select>
+            <div x-data="{
+                showModal: false,
+                employeeCity: '',
+                responsibleCity: '',
+                async checkAndSubmit(e) {
+                    e.preventDefault();
+                    const tabletId   = document.getElementById('tablet').value;
+                    const employeeId = {{ $employee->id }};
+                    if (!tabletId) { e.target.submit(); return; }
 
-                <input type="date" name="assigned_at" id="assigned_at" value="{{ now()->format('Y-m-d') }}" class="w-full p-2 border rounded-lg text-sm">
+                    const res  = await fetch(`/api/city-check?employee_id=${employeeId}&tablet_id=${tabletId}`);
+                    const data = await res.json();
 
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">
-                    Назначить
-                </button>
-            </form>
+                    if (!data.match && data.responsible_city) {
+                        this.employeeCity   = data.employee_city ?? '—';
+                        this.responsibleCity= data.responsible_city ?? '—';
+                        this.showModal = true;
+                    } else {
+                        e.target.submit();
+                    }
+                }
+            }">
+                <form action="/assign-tablet/{{ $employee->id }}" method="POST"
+                    class="mt-3 space-y-2" @submit="checkAndSubmit($event)">
+                    @csrf
+                    <label for="tablet" class="block text-sm font-medium text-gray-600">Назначить</label>
+                    <select id="tablet" name="tablet_id" class="w-full p-2 border rounded-lg text-sm">
+                        <option value="">No Tablet</option>
+                        @foreach ($availableTablets as $tablet)
+                            <option value="{{ $tablet->id }}">
+                                {{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->latestAssignment?->employee?->sh_name ?? 'Не был использован' }}
+                                <td class="px-4 py-3 text-gray-700">
+
+                                    </td>
+                            </option>
+                        @endforeach
+                    </select>
+                    <input type="date" name="assigned_at" id="assigned_at"
+                        value="{{ now()->format('Y-m-d') }}" class="w-full p-2 border rounded-lg text-sm">
+                    <button type="submit"
+                            class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">
+                        Назначить
+                    </button>
+                </form>
+
+                {{-- Модальное окно --}}
+                <div x-show="showModal" x-cloak
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full mx-4">
+                        <p class="text-sm font-semibold text-gray-800 mb-2">Города не совпадают</p>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Город сотрудника: <strong x-text="employeeCity"></strong><br>
+                            Город планшета (ответственного): <strong x-text="responsibleCity"></strong><br><br>
+                            Вы хотите привязать планшет к этому сотруднику?
+                        </p>
+                        <div class="flex gap-3 justify-end">
+                            <button @click="showModal = false"
+                                    class="px-4 py-2 text-sm rounded border text-gray-600 hover:bg-gray-100">
+                                Отмена
+                            </button>
+                            <button @click="showModal = false; $nextTick(() => document.querySelector('form').submit())"
+                                    class="px-4 py-2 text-sm rounded bg-blue-500 text-white hover:bg-blue-600">
+                                Привязать
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endif
 
 
