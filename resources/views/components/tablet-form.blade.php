@@ -24,7 +24,7 @@
             </ul>
         </div>
     @endif
-
+    // коммент
     <div class="grid gap-6 md:grid-cols-2">
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700">Статус планшета</label>
