@@ -30,13 +30,14 @@
             <label for="status" class="block text-sm font-medium text-gray-700">Статус планшета</label>
             @php
                 $statuses = [
+                    'new' => 'Новый',
                     'active' => 'Активен',
                     'lost' => 'Потерян',
                     'damaged' => 'Повреждён',
                     'written-off' => 'Списан',
                     'admin' => 'Админ',
                 ];
-                $currentStatus = old('status', $tablet->status ?? 'active');
+                $currentStatus = old('status', $tablet->status ?? 'new');
             @endphp
             <select
                 name="status"
