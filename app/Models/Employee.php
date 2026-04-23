@@ -39,8 +39,9 @@ class Employee extends Model
     public function getCurrentTerritoryAttribute()
     {
         return $this->employee_territory()
+            // ->with('territory') // важно!
             ->latest('assigned_at')
-            ->value('territory');
+            ->first()?->territory;
     }
 
     public function getCurrentTeamAttribute()

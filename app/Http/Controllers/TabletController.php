@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use App\Models\EmployeeTablet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Services\TabletExportService;
 
 class TabletController extends Controller
 {
@@ -155,6 +156,11 @@ class TabletController extends Controller
         $count = $availableEmployees->count();
 
         return view('tablets', compact('tablets', 'query', 'freeTablets', 'availableEmployees', 'count'));
+    }
+
+    public function exportToExcel(Request $request)
+    {
+        return app(TabletExportService::class)->exportToExcel($request);
     }
 
     public function showTablet(Tablet $tablet)

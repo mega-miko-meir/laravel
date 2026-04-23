@@ -208,3 +208,5 @@ Route::post('/clients/export', [ClientController::class, 'export'])
 
 
 Route::get('/api/city-check', [EmployeeTabletController::class, 'cityCheck']);
+
+Route::post('/export/tablets', [TabletController::class, 'exportToExcel'])->name('export.tablets');
