@@ -1,116 +1,132 @@
 @props(['employee' => null, 'bricks', 'selectedBricks', 'territory'])
 
-<div class="relative inline-block text-left">
-    <!-- Кнопка для отображения выпадающего списка -->
-    <button id="toggle-dropdown" type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
-        Добавить брики
-    </button>
-    <br>
+<div x-data="{
+    open: false,
+    search: '',
+    get filtered() {
+        return this.search
+            ? {{ Js::from($bricks->pluck('description', 'code')) }}.filter
+                ? null
+                : null
+            : null;
+    }
+}" style="margin-top:4px;">
 
-    <!-- Выпадающий список -->
-    <div id="dropdown-menu" class="hidden whitespace-nowrap absolute right-100 mt-2 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-        <!-- Поисковая строка -->
-        <div class="p-2">
-            <input id="search-bricks" type="text" placeholder="Поиск..." class="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+    {{-- Текущие брики --}}
+    <div style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;">
+                Брики ({{ $selectedBricks->count() }})
+            </p>
+            <button @click="open = !open"
+                    style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
+                           background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:7px;
+                           font-size:11px;font-weight:600;cursor:pointer;"
+                    onmouseover="this.style.background='#f9fafb';"
+                    onmouseout="this.style.background='#fff';">
+                <svg style="width:11px;height:11px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Добавить
+            </button>
         </div>
 
-        <!-- Список с чекбоксами -->
-        @if (isset($territory) && is_null(optional($territory->pivot)->unassigned_at))
+        @if($selectedBricks->isNotEmpty())
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                @foreach($selectedBricks as $brick)
+                    <div style="display:flex;align-items:center;justify-content:space-between;
+                                padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;
+                                border-radius:7px;font-size:12px;">
+                        <span style="color:#374151;">{{ $brick->description }}</span>
+                        @if(isset($territory))
+                            <form action="{{ route('assign.bricks', [$territory->id, $brick->id]) }}"
+                                  method="POST"
+                                  x-data x-on:submit.prevent="if(confirm('Удалить брик?')) $el.submit()">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+                                               background:none;border:none;cursor:pointer;color:#d1d5db;border-radius:4px;flex-shrink:0;"
+                                        onmouseover="this.style.color='#ef4444';this.style.background='#fef2f2';"
+                                        onmouseout="this.style.color='#d1d5db';this.style.background='none';">
+                                    <svg style="width:12px;height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <p style="font-size:12px;color:#9ca3af;font-style:italic;">Нет привязанных бриков</p>
+        @endif
+    </div>
+
+    {{-- Dropdown добавления бриков --}}
+    <div x-show="open" x-cloak
+         style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+                box-shadow:0 4px 16px rgba(0,0,0,.08);overflow:hidden;">
+
+        @if(isset($territory) && is_null(optional($territory->pivot)->unassigned_at))
             <form action="{{ route('assign.bricks', [$territory->id]) }}" method="POST">
                 @csrf
-                <div id="brick-list" class="max-h-48 overflow-y-auto">
+
+                {{-- Поиск --}}
+                <div style="padding:10px;border-bottom:1px solid #f0f0f0;">
+                    <input type="text" x-model="search" placeholder="Поиск брика..."
+                           id="brick-search-{{ $territory->id }}"
+                           style="width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;
+                                  font-size:12px;outline:none;box-sizing:border-box;"
+                           oninput="filterBricks_{{ $territory->id }}(this.value)">
+                </div>
+
+                {{-- Список чекбоксов --}}
+                <div id="brick-list-{{ $territory->id }}"
+                     style="max-height:200px;overflow-y:auto;padding:6px 0;">
                     @foreach($bricks as $brick)
-                        <label class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                            <input type="checkbox" name="bricks[]" value="{{ $brick->code }}" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-                            <span class="ml-2">{{ $brick->description }}</span>
+                        <label id="brick-item-{{ $territory->id }}-{{ $brick->id }}"
+                               style="display:flex;align-items:center;gap:8px;padding:7px 12px;
+                                      cursor:pointer;font-size:12px;color:#374151;"
+                               onmouseover="this.style.background='#f8fafc';"
+                               onmouseout="this.style.background='none';">
+                            <input type="checkbox" name="bricks[]" value="{{ $brick->code }}"
+                                   style="width:14px;height:14px;accent-color:#2563eb;flex-shrink:0;">
+                            <span>{{ $brick->description }}</span>
                         </label>
                     @endforeach
                 </div>
-                <button type="submit" id="submit-bricks" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none">
-                    Добавить выбранные
-                </button>
+
+                {{-- Кнопки --}}
+                <div style="padding:10px;border-top:1px solid #f0f0f0;display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" @click="open = false"
+                            style="padding:6px 14px;font-size:12px;color:#374151;background:#fff;
+                                   border:1px solid #e5e7eb;border-radius:7px;cursor:pointer;">
+                        Отмена
+                    </button>
+                    <button type="submit"
+                            style="padding:6px 14px;font-size:12px;font-weight:600;color:#fff;
+                                   background:#2563eb;border:none;border-radius:7px;cursor:pointer;"
+                            onmouseover="this.style.background='#1d4ed8';"
+                            onmouseout="this.style.background='#2563eb';">
+                        Добавить
+                    </button>
+                </div>
             </form>
         @else
-            <p class="text-gray-500 p-4">Нет доступных территорий для назначения бриков.</p>
+            <p style="padding:14px;font-size:12px;color:#9ca3af;">Нет доступных территорий для назначения бриков.</p>
         @endif
     </div>
-</div>
 
-<div class="territory-info">
-    <!-- Таблица с бриками -->
-    <table id="bricks-list" class="w-full max-w-md border rounded-lg shadow-sm divide-y divide-gray-200">
-        <thead id="table-head" class="bg-gray-100 text-gray-700 text-sm uppercase font-semibold cursor-pointer">
-            <tr>
-                <th class="px-4 py-3 text-left tracking-wider">Брики</th>
-                <th id="action-column" class="px-4 py-3 text-left tracking-wider"></th>
-            </tr>
-        </thead>
-        <tbody id="table-body" class="hidden bg-white divide-y divide-gray-200">
-            @if($selectedBricks->isNotEmpty())
-                @foreach($selectedBricks as $brick)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900">
-                            {{ $brick->description }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-600">
-                            @if(isset($territory))
-                                <form action="{{ route('assign.bricks', [$territory->id, $brick->id]) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот brick?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-500 hover:text-red-700 font-medium">Удалить</button>
-                                </form>
-                            @else
-                                <span class="text-gray-500 italic">Нет доступных территорий</span>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
-            @else
-                <tr>
-                    <td colspan="2" class="px-4 py-3 text-sm text-gray-500 text-center">
-                        Нет привязанных бриков.
-                    </td>
-                </tr>
-            @endif
-        </tbody>
-    </table>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const toggleDropdown = document.getElementById('toggle-dropdown');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-        const searchBricks = document.getElementById('search-bricks');
-        const brickList = document.getElementById('brick-list');
-
-        // Открыть/закрыть выпадающий список
-        toggleDropdown.addEventListener('click', () => {
-            dropdownMenu.classList.toggle('hidden');
-        });
-
-        // Фильтрация списка
-        searchBricks.addEventListener('input', () => {
-            const searchTerm = searchBricks.value.toLowerCase();
-            const labels = brickList.querySelectorAll('label');
-
-            labels.forEach((label) => {
-                const text = label.textContent.toLowerCase();
-                label.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-            });
-        });
+function filterBricks_{{ $territory->id }}(term) {
+    const list = document.getElementById('brick-list-{{ $territory->id }}');
+    if (!list) return;
+    list.querySelectorAll('label').forEach(label => {
+        const match = label.textContent.toLowerCase().includes(term.toLowerCase());
+        label.style.display = match ? 'flex' : 'none';
     });
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const tbody = document.getElementById('table-body');
-        const thead = document.getElementById('table-head');
-
-        // Устанавливаем начальное состояние из localStorage
-        tbody.classList.toggle('hidden', localStorage.getItem('tableExpanded') !== 'true');
-
-        // Переключение видимости при клике
-        thead.addEventListener('click', function() {
-            const isHidden = tbody.classList.toggle('hidden');
-            localStorage.setItem('tableExpanded', !isHidden);
-        });
-    });
+}
 </script>

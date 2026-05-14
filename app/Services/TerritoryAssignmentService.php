@@ -31,9 +31,6 @@ class TerritoryAssignmentService {
                 ['unassigned_at' => $unassignedAt]
             );
 
-            $territory->old_employee_id = $employee->full_name;
-            $territory->save();
-
             return 'unassigned';
         }
     }

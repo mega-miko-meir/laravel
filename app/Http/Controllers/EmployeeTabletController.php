@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Services;
 use App\Models\Tablet;
 use App\Models\Employee;
-use App\Models\Territory;
 use Illuminate\Http\Request;
 use App\Models\EmployeeTablet;
-
-use App\Services\PdfUploadService;
 use Illuminate\Support\Facades\DB;
-use App\Services\AssignmentService;
 use App\Services\TabletAssignmentService;
 
 class EmployeeTabletController extends Controller
@@ -69,20 +64,39 @@ class EmployeeTabletController extends Controller
         ]);
     }
 
-    // Добавление планшета к сотруднику через страницу планшета
+    // Добавление/переназначение планшета через страницу планшета
     public function assignEmployee2(Request $request, Tablet $tablet)
     {
-        // Найти сотрудника по переданному ID
-        $employee = Employee::findOrFail($request->input('employee_id'));
+        $employee   = Employee::findOrFail($request->input('employee_id'));
+        $assignedAt = $request->input('assigned_at', now()->format('Y-m-d'));
 
-        // Привязать сотрудника к территории
+        // Находим текущего активного сотрудника планшета
+        $currentPivot = DB::table('employee_tablet')
+            ->where('tablet_id', $tablet->id)
+            ->whereNull('returned_at')
+            ->orderByDesc('id')
+            ->first();
+
+        // Снимаем его через сервис — логика та же что и при обычном снятии:
+        // не подтверждена → удаляет запись, подтверждена → ставит returned_at
+        if ($currentPivot) {
+            $currentEmployee = Employee::find($currentPivot->employee_id);
+            if ($currentEmployee) {
+                $this->tabletAssignmentService->unassignTablet(
+                    $currentEmployee,
+                    $tablet,
+                    $assignedAt
+                );
+            }
+        }
+
+        // Привязываем нового сотрудника
         $tablet->employee()->associate($employee);
         $tablet->save();
 
-        // Запись в таблицу `employee_territory`
-        $employee->employee_tablet  ()->attach($tablet->id, ['assigned_at' => $request->input('assigned_at')]);
+        $employee->employee_tablet()->attach($tablet->id, ['assigned_at' => $assignedAt]);
 
-        return redirect()->back()->with('success', 'Employee successfully assigned to the tablet.');
+        return redirect()->back()->with('success', 'Планшет переназначен.');
     }
 
 
@@ -114,33 +128,16 @@ class EmployeeTabletController extends Controller
 
     public function printAct(Employee $employee, Tablet $tablet)
     {
-        // Получаем PDF для планшета
-        $pdfAssignment = DB::table('employee_tablet')
-            ->where('employee_id', $employee->id)
-            ->where('tablet_id', $tablet->id)
-            ->select('id', 'pdf_path', 'confirmed')
-            ->orderByDesc('id')
-            ->first();
-
-        // Проверка наличия pdfAssignment
-        $hasPdf = $pdfAssignment && $pdfAssignment->pdf_path;
-        $tabletConf = $pdfAssignment && $pdfAssignment->confirmed;
-
-        // Данные, которые будут переданы в представление
-        return view('print-act', [
-            'employee' => $employee,
-            'tablet' => $tablet,
-            'hasPdf' => $hasPdf, // Флаг для наличия pdf
-            'pdfAssignment' => $pdfAssignment, // Для использования в компоненте
-            'tabletConf' => $tabletConf,
-            'showHeader' => false,
-            'printPadding' => 1
-        ]);
+        return $this->renderAct($employee, $tablet, 'print-act');
     }
 
     public function printAct2(Employee $employee, Tablet $tablet)
     {
-        // Получаем PDF для планшета
+        return $this->renderAct($employee, $tablet, 'print-act2');
+    }
+
+    private function renderAct(Employee $employee, Tablet $tablet, string $view): \Illuminate\View\View
+    {
         $pdfAssignment = DB::table('employee_tablet')
             ->where('employee_id', $employee->id)
             ->where('tablet_id', $tablet->id)
@@ -148,19 +145,14 @@ class EmployeeTabletController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        // Проверка наличия pdfAssignment
-        $hasPdf = $pdfAssignment && $pdfAssignment->pdf_path;
-        $tabletConf = $pdfAssignment && $pdfAssignment->confirmed;
-
-        // Данные, которые будут переданы в представление
-        return view('print-act2', [
-            'employee' => $employee,
-            'tablet' => $tablet,
-            'hasPdf' => $hasPdf, // Флаг для наличия pdf
-            'pdfAssignment' => $pdfAssignment, // Для использования в компоненте
-            'tabletConf' => $tabletConf,
-            'showHeader' => false,
-            'printPadding' => 1
+        return view($view, [
+            'employee'      => $employee,
+            'tablet'        => $tablet,
+            'hasPdf'        => (bool) ($pdfAssignment?->pdf_path),
+            'pdfAssignment' => $pdfAssignment,
+            'tabletConf'    => (bool) ($pdfAssignment?->confirmed),
+            'showHeader'    => false,
+            'printPadding'  => 1,
         ]);
     }
 

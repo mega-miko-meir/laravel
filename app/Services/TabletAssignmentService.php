@@ -6,6 +6,7 @@ use App\Models\Tablet;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -54,7 +55,6 @@ class TabletAssignmentService
 
         // отвязываем в таблице tablets
         $tablet->employee()->dissociate();
-        $tablet->old_employee_id = $employee->full_name;
         $tablet->save();
 
         // если запись не найдена — всё равно отвязывание должно произойти
@@ -95,20 +95,36 @@ class TabletAssignmentService
 
     public function assignTabletWithPdf(?UploadedFile $file, Employee $employee, Tablet $tablet, ?string $assignedAt): ?string
     {
-        // Генерация имени файла
-        $filename = "Передача_{$employee->first_name}_{$employee->last_name}_{$tablet->serial_number}_{$assignedAt}.pdf";
+        // Находим последнюю запись этого назначения
+        $pivot = DB::table('employee_tablet')
+            ->where('employee_id', $employee->id)
+            ->where('tablet_id', $tablet->id)
+            ->orderByDesc('id')
+            ->first();
 
-        // Сохранение файла
-        $path = $file ? $file->storeAs('uploads/assign', $filename, 'public') : null;
+        $path = null;
 
-        // Обновление записи в связующей таблице
-        $employee->employee_tablet()->updateExistingPivot($tablet->id, [
-            'confirmed' => true,
-            'pdf_path' => $path,
-            'assigned_at' => $assignedAt,
-        ]);
+        if ($file) {
+            // Удаляем старый файл если он есть (независимо от даты в имени)
+            if ($pivot?->pdf_path) {
+                Storage::disk('public')->delete($pivot->pdf_path);
+            }
 
-        // Возврат пути
-        return $path;
+            $filename = "Передача_{$employee->first_name}_{$employee->last_name}_{$tablet->serial_number}_{$assignedAt}.pdf";
+            $path = $file->storeAs('uploads/assign', $filename, 'public');
+        }
+
+        // Обновляем конкретную запись по id (не по foreign keys — чтобы не задеть другие назначения)
+        if ($pivot) {
+            DB::table('employee_tablet')
+                ->where('id', $pivot->id)
+                ->update([
+                    'confirmed'   => true,
+                    'pdf_path'    => $path ?? $pivot->pdf_path,
+                    'assigned_at' => $assignedAt,
+                ]);
+        }
+
+        return $path ?? $pivot?->pdf_path;
     }
 }

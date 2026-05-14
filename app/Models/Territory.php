@@ -35,6 +35,15 @@ class Territory extends Model
         return $this->belongsTo(Employee::class, 'old_employee_id');
     }
 
+    public function lastAssignedEmployee(): ?Employee
+    {
+        return $this->employeeTerritories()
+            ->with('employee')
+            ->latest('assigned_at')
+            ->first()
+            ?->employee;
+    }
+
     public function employees(){
         return $this->belongsToMany(Employee::class, 'employee_territory')
                     ->withPivot('assigned_at', 'unassigned_at', 'confirmed')

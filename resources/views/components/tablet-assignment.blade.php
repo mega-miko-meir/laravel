@@ -1,70 +1,116 @@
 @props(['employee', 'availableTablets', 'tabletHistories', 'lastTablet'])
 
+@php $tablet = $tabletHistories->first(); @endphp
 
-<div class="space-y-6">
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        {{-- <h2 class="text-xl font-semibold text-gray-800">Tablet Assignment</h2> --}}
-        @php
-            // dd($lastTablet, $tabletHistories->last())
-            $tablet = $tabletHistories->first();
-        @endphp
-        {{-- @if($employee->tablets->isNotEmpty()) --}}
-        {{-- @if ($lastTablet && is_null(optional($lastTablet->pivot)->returned_at)) --}}
-        @if ($tablet && is_null($tablet->returned_at))
-            <div class="mt-4">
-                <p class="text-lg text-gray-800 font-medium mb-2">Планшет:</p>
-                <ul class="space-y-3">
-                    <li class="flex flex-col gap-2 text-sm text-gray-700 p-3 rounded-lg shadow-sm">
+<div style="background:#fff;border-radius:12px;border:1px solid #f0f0f0;
+            box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;">
 
-                        <!-- Верхняя строка: информация о планшете -->
-                        <div class="flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                                <a href="{{ route('tablets.show', $lastTablet->id) }}" class="text-blue-600 hover:underline font-medium">
-                                    {{ $lastTablet->invent_number }} - {{ $lastTablet->serial_number}}
-                                </a><span>- {{ \Carbon\Carbon::parse($lastTablet->latestAssignment->assigned_at)->format('d.m.Y') }}</span>
-                            </div>
+    {{-- Заголовок секции --}}
+    <div style="padding:16px 20px;border-bottom:1px solid #f5f5f5;display:flex;align-items:center;gap:8px;">
+        <svg style="width:16px;height:16px;color:#6b7280;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+        <span style="font-size:14px;font-weight:600;color:#1f2937;">Планшет</span>
+    </div>
 
-                            <div class="flex flex-wrap gap-2">
-                                <!-- Кнопки печати -->
-                                <form action="/print-act/{{$employee->id}}/{{$tablet->tablet_id}}" method="POST">
-                                    @csrf
-                                    <button class="bg-blue-400 hover:bg-blue-500 text-white text-xs font-semibold py-1 px-2 rounded transition-all">
-                                        🖨️ Print
-                                    </button>
-                                </form>
+    <div style="padding:16px 20px;">
 
-                                <form action="/print-act2/{{$employee->id}}/{{$tablet->tablet_id}}" method="POST">
-                                    @csrf
-                                    <button class="bg-blue-400 hover:bg-blue-500 text-white text-xs font-semibold py-1 px-2 rounded transition-all">
-                                        🖨️ Print2
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+        @if($tablet && is_null($tablet->returned_at))
+            {{-- ── Текущий планшет ── --}}
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
 
-                        <!-- Нижняя строка: действия -->
-                        <div class="flex flex-wrap items-center gap-2">
-                            <x-pdf-upload-form :employee="$employee" :tablet="$tablet->tablet"/>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+                                  color:#9ca3af;margin-bottom:4px;">Текущий планшет</p>
+                        <a href="{{ route('tablets.show', $lastTablet->id) }}"
+                           style="font-size:14px;font-weight:600;color:#2563eb;text-decoration:none;"
+                           onmouseover="this.style.textDecoration='underline';"
+                           onmouseout="this.style.textDecoration='none';">
+                            {{ $lastTablet->invent_number }} — {{ $lastTablet->serial_number }}
+                        </a>
+                        <p style="font-size:11px;color:#9ca3af;margin-top:2px;">
+                            с {{ \Carbon\Carbon::parse($lastTablet->latestAssignment->assigned_at)->format('d.m.Y') }}
+                        </p>
+                    </div>
 
-                            <x-unassign-tablet-button :employee="$employee" :tablet="$tablet->tablet"/>
+                    {{-- Статус подтверждения --}}
+                    @if($tablet->confirmed)
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+                                     background:#dcfce7;color:#15803d;border-radius:9999px;font-size:11px;font-weight:600;">
+                            <svg style="width:11px;height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Подтверждён
+                        </span>
+                    @endif
+                </div>
 
-                            @if (!$tablet->confirmed)
-                                <form action="{{ route('confirm.tablet', [$employee->id, $tablet->tablet_id]) }}" method="POST">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="bg-green-400 hover:bg-green-500 text-white text-xs font-semibold py-1 px-2 rounded transition-all">
-                                        ✅ Confirm
-                                    </button>
-                                </form>
-                            @else
-                                <span class="text-green-600 text-xs font-medium">✔️ Confirmed</span>
-                            @endif
-                        </div>
-                    </li>
-                </ul>
+                {{-- Кнопки действий --}}
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;
+                            padding-top:12px;border-top:1px solid #e5e7eb;">
+
+                    {{-- Печать --}}
+                    <form action="/print-act/{{ $employee->id }}/{{ $tablet->tablet_id }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                                style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;
+                                       background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:7px;
+                                       font-size:11px;font-weight:600;cursor:pointer;"
+                                onmouseover="this.style.background='#f9fafb';"
+                                onmouseout="this.style.background='#fff';">
+                            <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                            </svg>
+                            Акт 1
+                        </button>
+                    </form>
+
+                    <form action="/print-act2/{{ $employee->id }}/{{ $tablet->tablet_id }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                                style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;
+                                       background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:7px;
+                                       font-size:11px;font-weight:600;cursor:pointer;"
+                                onmouseover="this.style.background='#f9fafb';"
+                                onmouseout="this.style.background='#fff';">
+                            <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                            </svg>
+                            Акт 2
+                        </button>
+                    </form>
+
+                    <x-pdf-upload-form :employee="$employee" :tablet="$tablet->tablet" :record="$tablet"/>
+
+                    <x-unassign-tablet-button :employee="$employee" :tablet="$tablet->tablet"/>
+
+                    @if(!$tablet->confirmed)
+                        <form action="{{ route('confirm.tablet', [$employee->id, $tablet->tablet_id]) }}" method="POST">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit"
+                                    style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;
+                                           background:#fff;color:#16a34a;border:1px solid #86efac;border-radius:7px;
+                                           font-size:11px;font-weight:600;cursor:pointer;"
+                                    onmouseover="this.style.background='#f0fdf4';"
+                                    onmouseout="this.style.background='#fff';">
+                                <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Подтвердить
+                            </button>
+                        </form>
+                    @endif
+                </div>
             </div>
+
         @else
-            <p class="text-lg text-gray-600">Нет назначенных планшетов</p>
+            {{-- ── Форма назначения ── --}}
+            <p style="font-size:13px;color:#9ca3af;margin-bottom:12px;">Нет назначенного планшета</p>
 
             <div x-data="{
                 showModal: false,
@@ -72,16 +118,13 @@
                 responsibleCity: '',
                 async checkAndSubmit(e) {
                     e.preventDefault();
-                    const tabletId   = document.getElementById('tablet').value;
-                    const employeeId = {{ $employee->id }};
+                    const tabletId = document.getElementById('tablet_select_{{ $employee->id }}').value;
                     if (!tabletId) { e.target.submit(); return; }
-
-                    const res  = await fetch(`/api/city-check?employee_id=${employeeId}&tablet_id=${tabletId}`);
+                    const res  = await fetch('/api/city-check?employee_id={{ $employee->id }}&tablet_id=' + tabletId);
                     const data = await res.json();
-
                     if (!data.match && data.responsible_city) {
-                        this.employeeCity   = data.employee_city ?? '—';
-                        this.responsibleCity= data.responsible_city ?? '—';
+                        this.employeeCity    = data.employee_city ?? '—';
+                        this.responsibleCity = data.responsible_city ?? '—';
                         this.showModal = true;
                     } else {
                         e.target.submit();
@@ -89,45 +132,67 @@
                 }
             }">
                 <form action="/assign-tablet/{{ $employee->id }}" method="POST"
-                    class="mt-3 space-y-2" @submit="checkAndSubmit($event)">
+                      style="display:flex;flex-direction:column;gap:8px;"
+                      @submit="checkAndSubmit($event)">
                     @csrf
-                    <label for="tablet" class="block text-sm font-medium text-gray-600">Назначить</label>
-                    <select id="tablet" name="tablet_id" class="w-full p-2 border rounded-lg text-sm">
-                        <option value="">No Tablet</option>
-                        @foreach ($availableTablets as $tablet)
-                            <option value="{{ $tablet->id }}">
-                                {{ $tablet->invent_number }} - {{ $tablet->serial_number }} - {{ $tablet->latestAssignment?->employee?->sh_name ?? 'Не был использован' }}
-                                <td class="px-4 py-3 text-gray-700">
 
-                                    </td>
-                            </option>
-                        @endforeach
-                    </select>
-                    <input type="date" name="assigned_at" id="assigned_at"
-                        value="{{ now()->format('Y-m-d') }}" class="w-full p-2 border rounded-lg text-sm">
+                    <div>
+                        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
+                                      letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Планшет</label>
+                        <select id="tablet_select_{{ $employee->id }}" name="tablet_id"
+                                style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                                       font-size:13px;outline:none;background:#fff;color:#374151;">
+                            <option value="">— выберите планшет —</option>
+                            @foreach($availableTablets as $t)
+                                <option value="{{ $t->id }}">
+                                    {{ $t->invent_number }} — {{ $t->serial_number }}
+                                    ({{ $t->latestAssignment?->employee?->sh_name ?? 'новый' }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
+                                      letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Дата назначения</label>
+                        <input type="date" name="assigned_at" value="{{ now()->format('Y-m-d') }}"
+                               style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;">
+                    </div>
+
                     <button type="submit"
-                            class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-4 rounded text-sm">
+                            style="padding:8px 18px;background:#2563eb;color:#fff;border:none;
+                                   border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;align-self:flex-start;"
+                            onmouseover="this.style.background='#1d4ed8';"
+                            onmouseout="this.style.background='#2563eb';">
                         Назначить
                     </button>
                 </form>
 
-                {{-- Модальное окно --}}
+                {{-- Модал города --}}
                 <div x-show="showModal" x-cloak
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full mx-4">
-                        <p class="text-sm font-semibold text-gray-800 mb-2">Города не совпадают</p>
-                        <p class="text-sm text-gray-600 mb-4">
-                            Город сотрудника: <strong x-text="employeeCity"></strong><br>
-                            Город планшета (ответственного): <strong x-text="responsibleCity"></strong><br><br>
-                            Вы хотите привязать планшет к этому сотруднику?
+                     style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;
+                            justify-content:center;background:rgba(0,0,0,.45);">
+                    <div @click.outside="showModal=false"
+                         style="background:#fff;border-radius:14px;padding:24px;max-width:340px;
+                                width:100%;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+                        <p style="font-size:14px;font-weight:700;color:#111827;margin-bottom:8px;">
+                            Города не совпадают
                         </p>
-                        <div class="flex gap-3 justify-end">
-                            <button @click="showModal = false"
-                                    class="px-4 py-2 text-sm rounded border text-gray-600 hover:bg-gray-100">
+                        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:20px;">
+                            Сотрудник: <strong x-text="employeeCity" style="color:#374151;"></strong><br>
+                            Ответственный: <strong x-text="responsibleCity" style="color:#374151;"></strong><br>
+                            Привязать всё равно?
+                        </p>
+                        <div style="display:flex;gap:10px;justify-content:flex-end;">
+                            <button @click="showModal=false"
+                                    style="padding:8px 16px;font-size:13px;color:#374151;background:#fff;
+                                           border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;">
                                 Отмена
                             </button>
-                            <button @click="showModal = false; $nextTick(() => document.querySelector('form').submit())"
-                                    class="px-4 py-2 text-sm rounded bg-blue-500 text-white hover:bg-blue-600">
+                            <button @click="showModal=false;$nextTick(()=>document.querySelector('form[action*=assign-tablet]').submit())"
+                                    style="padding:8px 16px;font-size:13px;font-weight:600;color:#fff;
+                                           background:#2563eb;border:none;border-radius:8px;cursor:pointer;">
                                 Привязать
                             </button>
                         </div>
@@ -136,75 +201,65 @@
             </div>
         @endif
 
-
-        <!-- Tablet Assign Form -->
-        {{-- <form action="/assign-tablet/{{$employee->id}}" method="GET" class="mt-4">
-            @csrf
-            <label for="tablet_search" class="block text-sm font-medium text-gray-600">Search Tablet</label>
-            <input type="text" id="tablet_search" name="search" class="w-full p-3 border rounded-lg mt-2" placeholder="Search by serial or invent number" value="{{ request('search') }}">
-
-            <button type="submit" class="btn-primary mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Search</button>
-        </form> --}}
-
-        <div class="bg-white mt-6">
-            <button onclick="toggleHistory()" class="w-full text-left font-semibold text-lg text-gray-700 border-b pb-2 mb-3 flex justify-between items-center">
-                История
-                <svg id="arrowIcon" class="w-5 h-5 transition-transform transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        {{-- История планшетов --}}
+        <div x-data="{ open: false }" style="margin-top:16px;">
+            <button x-on:click="open = !open"
+                    style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                           padding:10px 0;background:none;border:none;border-top:1px solid #f5f5f5;
+                           cursor:pointer;">
+                <span style="font-size:13px;font-weight:600;color:#374151;">История планшетов</span>
+                <svg :class="{ 'rotate-180': open }"
+                     style="width:16px;height:16px;color:#9ca3af;transition:transform .2s;"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
             </button>
 
-            <ul id="historyList" class="text-sm text-gray-600 space-y-2">
-                @foreach($tabletHistories as $history)
-                    <li class="flex justify-between items-center border-b py-2">
+            <ul x-show="open" x-cloak style="margin:0;padding:0;list-style:none;">
+                @forelse($tabletHistories as $history)
+                    <li style="display:flex;align-items:center;justify-content:space-between;
+                               padding:10px 0;border-bottom:1px solid #f9fafb;flex-wrap:wrap;gap:8px;">
                         <div>
-                            {{-- <span class="font-medium text-gray-800">
-                                {{ $history->id }}
-                            </span> --}}
-                            <span class="font-medium text-gray-800">
-                                <a href="{{route('tablets.show', $history->tablet->id)}}" class="text-blue-500 hover:underline" >{{ $history->tablet ? $history->tablet->serial_number : 'Неизвестный планшет' }}</a>
-                            </span>
-                            <span class="text-sm text-gray-500 ml-2">
-                                {{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }} -
-                                {{ $history->returned_at ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y') : 'Текущий пользователь' }}
-                            </span>
+                            <a href="{{ route('tablets.show', $history->tablet->id) }}"
+                               style="font-size:13px;color:#2563eb;text-decoration:none;font-weight:500;"
+                               onmouseover="this.style.textDecoration='underline';"
+                               onmouseout="this.style.textDecoration='none';">
+                                {{ $history->tablet?->serial_number ?? 'Неизвестный планшет' }}
+                            </a>
+                            <p style="font-size:11px;color:#9ca3af;margin-top:2px;">
+                                {{ \Carbon\Carbon::parse($history->assigned_at)->format('d.m.Y') }}
+                                —
+                                {{ $history->returned_at
+                                    ? \Carbon\Carbon::parse($history->returned_at)->format('d.m.Y')
+                                    : 'сейчас' }}
+                            </p>
                         </div>
-                        <div class="space-x-3">
+                        <div style="display:flex;gap:8px;">
                             @if($history->pdf_path)
-                                <a href="{{ asset('storage/' . $history->pdf_path) }}" target="_blank" class="text-blue-500 hover:underline">PDF1</a>
-                            @else
-                                <form action="/upload"></form>
+                                <a href="{{ asset('storage/'.$history->pdf_path) }}" target="_blank"
+                                   style="font-size:11px;color:#2563eb;text-decoration:none;font-weight:600;"
+                                   onmouseover="this.style.textDecoration='underline';"
+                                   onmouseout="this.style.textDecoration='none';">
+                                    Акт выдачи
+                                </a>
                             @endif
                             @if($history->unassign_pdf)
-                                <a href="{{ asset('storage/' . $history->unassign_pdf) }}" target="_blank" class="text-blue-500 hover:underline">PDF2</a>
+                                <a href="{{ asset('storage/'.$history->unassign_pdf) }}" target="_blank"
+                                   style="font-size:11px;color:#2563eb;text-decoration:none;font-weight:600;"
+                                   onmouseover="this.style.textDecoration='underline';"
+                                   onmouseout="this.style.textDecoration='none';">
+                                    Акт возврата
+                                </a>
                             @endif
                         </div>
                     </li>
-                @endforeach
+                @empty
+                    <li style="padding:12px 0;font-size:13px;color:#9ca3af;text-align:center;">
+                        Нет истории
+                    </li>
+                @endforelse
             </ul>
         </div>
 
     </div>
-
-
 </div>
-
-<script>
-    function toggleHistory() {
-        let list = document.getElementById("historyList");
-        let arrow = document.getElementById("arrowIcon");
-
-        list.classList.toggle("hidden");
-        arrow.classList.toggle("rotate-180");
-    }
-</script>
-
-
-
-
-<script>
-    document.getElementById('toggle-bricks-btn').addEventListener('click', function () {
-        const bricksList = document.getElementById('bricks-list');
-        bricksList.classList.toggle('hidden'); // Показываем или скрываем список
-    });
-</script>

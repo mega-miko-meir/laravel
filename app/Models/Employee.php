@@ -18,8 +18,9 @@ class Employee extends Model
         'hiring_date',
         'firing_date',
         'position',
-        'status'
-        ];
+        'status',
+        'photo_path',
+    ];
 
     public function territories(){
         return $this->hasMany(Territory::class, 'employee_id');
@@ -185,6 +186,16 @@ class Employee extends Model
     public function latestEvent()
     {
         return $this->hasOne(EmployeeEvent::class)->latestOfMany('event_date');
+    }
+
+    public function latestTerritory(): ?Territory
+    {
+        return $this->employee_territory()->latest('assigned_at')->first();
+    }
+
+    public function latestTablet(): ?Tablet
+    {
+        return $this->employee_tablet()->orderByDesc('assigned_at')->first();
     }
 
     protected static function boot(){

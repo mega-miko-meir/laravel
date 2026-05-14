@@ -13,9 +13,12 @@ use App\Models\EmployeeTablet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Services\TabletExportService;
+use App\Services\AvailableResourcesService;
 
 class TabletController extends Controller
 {
+    public function __construct(private AvailableResourcesService $available) {}
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -131,28 +134,7 @@ class TabletController extends Controller
 
         $freeTablets = Tablet::free()->get();
 
-        $availableEmployees = Employee::whereHas('events', function ($q) {
-                $q->whereIn('event_type', ['new', 'hired'])
-                ->whereRaw('event_date = (
-                    SELECT MAX(event_date)
-                    FROM employee_events
-                    WHERE employee_events.employee_id = employees.id
-                )');
-            })
-            ->where(function ($q) {
-                $q->whereDoesntHave('employee_tablet')
-                ->orWhereHas('employee_tablet', function ($subQuery) {
-                    $subQuery->whereNotNull('returned_at')
-                            ->whereRaw('assigned_at = (
-                                SELECT MAX(assigned_at)
-                                FROM employee_tablet
-                                WHERE employee_tablet.employee_id = employees.id
-                            )');
-                });
-            })
-            ->orderBy('full_name')
-            ->get();
-
+        $availableEmployees = $this->available->getAvailableForTablet();
         $count = $availableEmployees->count();
 
         return view('tablets', compact('tablets', 'query', 'freeTablets', 'availableEmployees', 'count'));
@@ -177,27 +159,7 @@ class TabletController extends Controller
             ->orderByDesc('assigned_at')
             ->first();
 
-        $availableEmployees = Employee::whereHas('events', function ($query) {
-                $query->whereIn('event_type', ['new', 'hired'])
-                      ->whereRaw('event_date = (
-                          SELECT MAX(event_date)
-                          FROM employee_events
-                          WHERE employee_events.employee_id = employees.id
-                      )');
-            })
-            ->where(function ($query) {
-                $query->whereDoesntHave('employee_tablet')
-                      ->orWhereHas('employee_tablet', function ($subQuery) {
-                          $subQuery->whereNotNull('returned_at')
-                                   ->whereRaw('assigned_at = (
-                                       SELECT MAX(assigned_at)
-                                       FROM employee_tablet
-                                       WHERE employee_tablet.employee_id = employees.id
-                                   )');
-                      });
-            })
-            ->orderBy('full_name')
-            ->get();
+        $availableEmployees = $this->available->getAvailableForTablet();
 
         return view('show-tablet', compact('tablet', 'previousUsers', 'lastTablet', 'availableEmployees'));
     }

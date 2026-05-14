@@ -59,45 +59,27 @@ class EmployeeController extends Controller
      * @param int $id
      * @return \Illuminate\View\View
      */
-    public function showEmployee($id)
+    public function showEmployee(int $id)
     {
         $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials', 'events'])->findOrFail($id);
-        $bricks = \App\Models\Brick::all();
-        $selectedBricks = $employee->employee_territory()->latest('assigned_at')->first()->bricks ?? collect();
-        $availableTablets = \App\Models\Tablet::free()->with('oldEmployee')->get();
-        $availableTerritories = \App\Models\Territory::whereNull('employee_id')->with('oldEmployee')->get();
 
+        $lastTerritory  = $employee->employee_territory()->latest('assigned_at')->first();
+        $lastTablet     = $employee->employee_tablet()->withPivot('assigned_at', 'returned_at')->orderByDesc('assigned_at')->first();
 
-        $lastTerritory = $employee->employee_territory()->latest('assigned_at')->first();
-        $lastTablet = $employee->employee_tablet()->withPivot('assigned_at', 'returned_at')->orderByDesc('assigned_at')->first();
-
-        $territoriesHistory = $employee->employee_territory()->withPivot('assigned_at', 'unassigned_at', 'id')->orderByDesc('assigned_at')->get();
-        $tabletHistories = \App\Models\EmployeeTablet::where('employee_id', $employee->id)->with(['tablet'])->orderByDesc('assigned_at')->get();
-
-        $territories = $employee->employee_territory()->latest('assigned_at')->get()->map(function ($territory) use ($employee) {
-            $territory->assignmentToRemove = \Illuminate\Support\Facades\DB::table('employee_territory')
-                ->where('employee_id', $employee->id)
-                ->where('territory_id', $territory->id)
-                ->where('confirmed', 0)
-                ->orderByDesc('id')
-                ->first();
-            return $territory;
-        });
-
-        $tablets = $employee->tablets->map(function ($tablet) use ($employee) {
-            $tablet->pdfAssignment = \Illuminate\Support\Facades\DB::table('employee_tablet')
-                ->where('employee_id', $employee->id)
-                ->where('tablet_id', $tablet->id)
-                ->select('id', 'pdf_path')
-                ->orderByDesc('id')
-                ->first();
-            return $tablet;
-        });
-
-        $latestEvent = $employee->events()->latest('event_date')->first();
-        $currentStatus = $latestEvent ? $latestEvent->event_type : null;
-
-        return view('employee', compact('employee', 'availableTablets', 'availableTerritories', 'bricks', 'selectedBricks', 'territoriesHistory', 'tabletHistories', 'lastTerritory', 'lastTablet', 'currentStatus'));
+        return view('employee', [
+            'employee'             => $employee,
+            'lastTerritory'        => $lastTerritory,
+            'lastTablet'           => $lastTablet,
+            'selectedBricks'       => $lastTerritory?->bricks ?? collect(),
+            'bricks'               => \App\Models\Brick::all(),
+            'availableTablets'     => \App\Models\Tablet::free()->with('oldEmployee')->get(),
+            'availableTerritories' => \App\Models\Territory::whereNull('employee_id')
+                ->with(['employeeTerritories' => fn($q) => $q->with('employee')->latest('assigned_at')])
+                ->get(),
+            'territoriesHistory'   => $employee->employee_territory()->withPivot('assigned_at', 'unassigned_at', 'id')->orderByDesc('assigned_at')->get(),
+            'tabletHistories'      => \App\Models\EmployeeTablet::where('employee_id', $employee->id)->with('tablet')->orderByDesc('assigned_at')->get(),
+            'currentStatus'        => $employee->events()->latest('event_date')->value('event_type'),
+        ]);
     }
 
     /**
@@ -283,6 +265,22 @@ class EmployeeController extends Controller
      * @param int $id
      * @return \Illuminate\Http\RedirectResponse
      */
+    public function uploadPhoto(\Illuminate\Http\Request $request, Employee $employee)
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:3072',
+        ]);
+
+        if ($employee->photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($employee->photo_path);
+        }
+
+        $path = $request->file('photo')->store('employees/photos', 'public');
+        $employee->update(['photo_path' => $path]);
+
+        return back()->with('success', 'Фото обновлено.');
+    }
+
     public function updateCredentials(EmployeeCredentialsUpdateRequest $request, $id)
     {
         $employee = Employee::findOrFail($id);

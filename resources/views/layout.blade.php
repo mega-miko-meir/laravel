@@ -27,13 +27,14 @@
 
         <!-- Боковое меню -->
         @if (!isset($showHeader))
-            <aside class="w-64 bg-blue-800 text-white h-full flex-shrink-0">
+            <aside class="w-64 text-white h-full flex-shrink-0" style="background:#1e3a8a;">
                 <x-side-menu class="col-span-2" />
             </aside>
         @endif
 
         <!-- Основной контент -->
         <main class="flex-1 p-8 overflow-auto">
+            <br>
 
             @if (!isset($showHeader))
                 <x-header class="mb-6" />

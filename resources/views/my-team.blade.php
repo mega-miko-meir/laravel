@@ -1,7 +1,6 @@
 @extends('layout')
 
 @section('content')
-<br>
 <h2 class="text-xl font-bold mb-6">
     Полевая команда
 </h2>
@@ -227,11 +226,11 @@
 
 
                     @if($lastTerritory && $lastTerritory->children->isNotEmpty())
-                        <div x-data="{ open: false }" class="flex flex-wrap gap-4">
+                        <div x-data="{ open: false }" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.75rem">
 
                             @foreach($lastTerritory->children->sortBy('city') as $child)
 
-                                <div class="w-64 bg-white rounded-xl shadow p-2">
+                                <div class="w-full bg-white rounded-xl shadow p-2">
                                     @php
                                         $allPlaces = 0;
                                         $occupiedPlaces = 0;
@@ -381,7 +380,7 @@
             </div>
         </div>
         <div x-show="viewMode === 'team'" x-cloak>
-            <div x-show="open2" class="flex flex-wrap gap-4">
+            <div x-show="open2">
                 @php
                     $repTerritories = collect();
 
@@ -400,7 +399,7 @@
                         ->groupBy('team');
                 @endphp
 
-                <div class="flex flex-wrap gap-4">
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.75rem">
                     @foreach($groupedByTeam as $teamName => $teamTerritories)
                         @php
                             $teamTerritories = $teamTerritories
@@ -421,7 +420,7 @@
                             }
                         @endphp
 
-                        <div class="w-64 bg-white rounded-xl shadow p-2">
+                        <div class="w-full bg-white rounded-xl shadow p-2">
 
                             <div class="relative flex justify-between items-center p-3">
                                 <div>
@@ -545,7 +544,8 @@
                 </span>
             </div>
 
-            <div x-show="open" class="flex flex-wrap gap-4">
+            <div x-show="open">
+            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.75rem">
 
                 @foreach($groupedByTeam as $teamName => $teamTerritories)
 
@@ -563,7 +563,7 @@
                         }
                     @endphp
 
-                    <div class="w-64 bg-white rounded-xl shadow p-2">
+                    <div class="w-full bg-white rounded-xl shadow p-2">
 
                         <div class="relative flex justify-between items-center p-3">
                             <div>
@@ -639,6 +639,7 @@
 
                 @endforeach
 
+            </div>
             </div>
 
         </div>

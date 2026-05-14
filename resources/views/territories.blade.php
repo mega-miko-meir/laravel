@@ -1,167 +1,202 @@
 @extends('layout')
 
 @section('content')
-    @auth
-        <x-container class="container mx-auto py-6">
-            <!-- Боковое меню -->
-            {{-- <x-side-menu class="col-span-2" /> --}}
+@auth
 
-            <!-- Основной контент -->
-            <div class="col-span-10 relative">
-                <!-- Включение шапки -->
-                <x-header class="mb-6" />
+<br>
+{{-- Тулбар --}}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
 
-                <!-- Сообщение об успехе -->
-                <x-flash-message />
+    <h1 style="font-size:20px;font-weight:700;color:#111827;">
+        Территории
+        <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $territories->count() }}</span>
+    </h1>
 
-                <!-- Кнопка для создания сотрудника -->
-                <div class="absolute top-0 right-0 mt-4 mr-4">
-                    <x-create-territory-button />
-                </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 
+        {{-- Сотрудники без территории --}}
+        <div x-data="{ open: false }" style="position:relative;">
+            <button @click="open = !open"
+                    style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                           background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;
+                           font-size:13px;font-weight:500;cursor:pointer;"
+                    onmouseover="this.style.background='#f9fafb';"
+                    onmouseout="this.style.background='#fff';">
+                <span style="display:inline-flex;align-items:center;justify-content:center;
+                             width:20px;height:20px;background:#fef3c7;color:#b45309;
+                             border-radius:50%;font-size:11px;font-weight:700;">
+                    {{ $availableEmployees->count() }}
+                </span>
+                Без территории
+                <svg style="width:14px;height:14px;color:#9ca3af;" :class="{ 'rotate-180': open }"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
 
-
-                <div class="">
-                    {{-- <h2 class="text-xl font-bold mb-3">Сотрудники без планшета</h2> --}}
-
-                    <div x-data="{ open: false }" class="relative">
-                        <!-- Кнопка раскрытия -->
-                        <button @click="open = !open" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all focus:outline-none">
-                            Сотрудники без территории ({{ $availableEmployees->count() }})
-                        </button>
-
-                        <!-- Выпадающий список -->
-                        <div
-                            x-show="open"
-                            @click.away="open = false"
-                            x-cloak
-                            class="absolute left-0 mt-2 w-80 bg-white shadow-lg rounded-lg border border-gray-200 z-50 max-h-64 overflow-y-auto"
-                        >
-                            <ul>
-                                @forelse($availableEmployees as $employee)
-                                    <li class="px-4 py-2 hover:bg-gray-100 border-b border-gray-100">
-                                        <a href="{{ route('employees.show', $employee->id) }}" class="text-blue-600 hover:underline font-medium">
-                                            {{ $employee->full_name }}
-                                        </a>
-                                    </li>
-                                @empty
-                                    <li class="px-4 py-2 text-gray-500">Нет сотрудников без планшета</li>
-                                @endforelse
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-
-
-
-
-                <!-- Компонент поиска -->
-                {{-- <x-search class="mb-6" action="{{route('tablets.search')}}" /> --}}
-                <x-search class="mb-6" :action="route('territories.search')" />
-
-                <!-- Заголовок с количеством сотрудников -->
-                <h2 class="text-2xl font-bold mb-4 mt-6">
-                    Список всех территории ({{ $territories->count() }})
-                </h2>
-
-                <!-- Список планшетов -->
-                <div class="overflow-x-auto bg-white shadow rounded-lg mt-6 p-4">
-                    <table class="w-full border-collapse text-sm text-gray-700">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
-                                <th class="px-4 py-3 text-left">
-                                    <a href="{{ route('territories.search', [
-                                        'sort' => 'territory_name',
-                                        'order' => request('order') === 'asc' ? 'desc' : 'asc'
-                                    ]) }}">
-                                        Территория
-                                        @if($sort === 'territory_name')
-                                            {!! $order === 'asc' ? '↑' : '↓' !!}
-                                        @endif
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 text-left">Позиция</th>
-                                <th class="px-4 py-3 text-left">Группа</th>
-                                <th class="px-4 py-3 text-left">Департамент</th>
-                                <th class="px-4 py-3 text-left">Сотрудник</th>
-                                <th class="px-4 py-3 text-left">Город</th>
-                                <th class="px-4 py-3 text-left">Менеджер</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach($territories as $territory)
-                                <tr class="border-b hover:bg-gray-50 transition">
-                                    {{-- Территория --}}
-                                    <td class="px-4 py-3 text-gray-900 font-medium">
-                                        <a href="{{ route('territories.show', $territory->id) }}"
-                                            class="text-blue-500 hover:underline">
-                                            {{ $territory->territory_name }}
-                                        </a>
-                                    </td>
-
-                                    {{-- Позиция --}}
-                                    <td class="px-4 py-3 text-gray-900 font-medium">
-                                        <a href="{{ route('territories.show', $territory->id) }}"
-                                        class="text-blue-500 hover:underline">
-                                            {{ $territory->role }}
-                                        </a>
-                                    </td>
-
-                                    {{-- Группа --}}
-                                    <td class="px-4 py-3 text-gray-700">
-                                        {{ $territory->team ?? '-' }}
-                                    </td>
-
-                                    {{-- Департамент --}}
-                                    <td class="px-4 py-3 text-gray-700">
-                                        {{ $territory->department ?? '-' }}
-                                    </td>
-
-                                    {{-- Сотрудник --}}
-                                    <td class="px-4 py-3 text-gray-700">
-                                        @php
-                                            $employeeTerritory = \App\Models\EmployeeTerritory::where('territory_id', $territory->id)
-                                                ->whereNull('unassigned_at')
-                                                ->latest('assigned_at')
-                                                ->first();
-
-                                            $employee = $employeeTerritory?->employee;
-                                        @endphp
-
-                                        @if ($employee)
-                                            <a href="{{ route('employees.show', $employee->id) }}"
-                                            class="text-blue-500 hover:underline">
-                                                {{ $employee->sh_name }}
-                                            </a>
-                                        @else
-                                            <span class="text-gray-400 italic">Не назначен</span>
-                                        @endif
-                                    </td>
-
-                                    {{-- Группа --}}
-                                    <td class="px-4 py-3 text-gray-700">
-                                        {{ $territory->city ?? '-' }}
-                                    </td>
-
-                                    {{-- Менеджер --}}
-                                    <td class="px-4 py-3 text-gray-700">
-                                        {{ $territory->parent->employee->full_name ?? '-' }}
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-
-
+            <div x-show="open" @click.away="open = false" x-cloak
+                 style="position:absolute;right:0;top:calc(100% + 6px);width:280px;
+                        background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+                        box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:50;
+                        max-height:260px;overflow-y:auto;">
+                <ul style="margin:0;padding:4px 0;list-style:none;">
+                    @forelse($availableEmployees as $employee)
+                        <li>
+                            <a href="{{ route('employees.show', $employee->id) }}"
+                               style="display:block;padding:9px 14px;font-size:13px;color:#374151;text-decoration:none;"
+                               onmouseover="this.style.background='#f9fafb';"
+                               onmouseout="this.style.background='none';">
+                                {{ $employee->full_name }}
+                            </a>
+                        </li>
+                    @empty
+                        <li style="padding:12px 14px;font-size:13px;color:#9ca3af;">Все сотрудники с территориями</li>
+                    @endforelse
+                </ul>
             </div>
-        </x-container>
-    @else
-        <x-auth-container />
-    @endauth
+        </div>
 
-    <script src="{{ asset('js/search.js') }}"></script>
+        @can('editor')
+            <a href="/create-territory"
+               style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                      background:#2563eb;color:#fff;border:none;border-radius:8px;
+                      font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;"
+               onmouseover="this.style.background='#1d4ed8';"
+               onmouseout="this.style.background='#2563eb';">
+                <svg style="width:15px;height:15px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Добавить
+            </a>
+        @endcan
+    </div>
+</div>
+
+{{-- Поиск --}}
+<form action="{{ route('territories.search') }}" method="GET"
+      style="margin-bottom:16px;">
+    <div style="display:flex;gap:8px;max-width:520px;">
+        <div style="position:relative;flex:1;">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                        width:16px;height:16px;color:#9ca3af;pointer-events:none;"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" name="search" value="{{ request('search') }}"
+                   placeholder="Поиск по территории, городу, группе..."
+                   style="width:100%;padding:8px 12px 8px 34px;border:1px solid #e5e7eb;
+                          border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;background:#fff;"
+                   onfocus="this.style.borderColor='#2563eb';"
+                   onblur="this.style.borderColor='#e5e7eb';">
+        </div>
+        <button type="submit"
+                style="padding:8px 18px;background:#2563eb;color:#fff;border:none;
+                       border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;"
+                onmouseover="this.style.background='#1d4ed8';"
+                onmouseout="this.style.background='#2563eb';">
+            Поиск
+        </button>
+    </div>
+</form>
+
+{{-- Таблица --}}
+<div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+            <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
+                <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;
+                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">
+                    <a href="{{ route('territories.search', ['sort' => 'territory_name', 'order' => request('order') === 'asc' ? 'desc' : 'asc', 'search' => request('search')]) }}"
+                       style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"
+                       onmouseover="this.style.color='#374151';" onmouseout="this.style.color='#6b7280';">
+                        Территория
+                        @if($sort === 'territory_name')
+                            <span>{{ $order === 'asc' ? '↑' : '↓' }}</span>
+                        @endif
+                    </a>
+                </th>
+                @foreach(['Роль','Группа','Департамент','Сотрудник','Город','Менеджер'] as $col)
+                    <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;
+                               text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">
+                        {{ $col }}
+                    </th>
+                @endforeach
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($territories as $territory)
+                @php
+                    $emp = \App\Models\EmployeeTerritory::where('territory_id', $territory->id)
+                        ->whereNull('unassigned_at')->latest('assigned_at')->first()?->employee;
+
+                    $roleColors = [
+                        'Rep'     => ['bg'=>'#dcfce7','color'=>'#15803d'],
+                        'RM'      => ['bg'=>'#dbeafe','color'=>'#1d4ed8'],
+                        'FFM'     => ['bg'=>'#ede9fe','color'=>'#6d28d9'],
+                        'Product' => ['bg'=>'#fce7f3','color'=>'#9d174d'],
+                        'Marketing'=> ['bg'=>'#fef3c7','color'=>'#b45309'],
+                    ];
+                    $rc = $roleColors[$territory->role] ?? ['bg'=>'#f3f4f6','color'=>'#374151'];
+                @endphp
+                <tr style="border-bottom:1px solid #f9fafb;"
+                    onmouseover="this.style.background='#fafafa';"
+                    onmouseout="this.style.background='none';">
+
+                    <td style="padding:11px 16px;">
+                        <a href="{{ route('territories.show', $territory->id) }}"
+                           style="color:#2563eb;text-decoration:none;font-weight:500;"
+                           onmouseover="this.style.textDecoration='underline';"
+                           onmouseout="this.style.textDecoration='none';">
+                            {{ $territory->territory_name }}
+                        </a>
+                    </td>
+
+                    <td style="padding:11px 16px;">
+                        @if($territory->role)
+                            <span style="display:inline-block;padding:2px 8px;border-radius:9999px;
+                                         font-size:11px;font-weight:600;
+                                         background:{{ $rc['bg'] }};color:{{ $rc['color'] }};">
+                                {{ $territory->role }}
+                            </span>
+                        @else
+                            <span style="color:#d1d5db;">—</span>
+                        @endif
+                    </td>
+
+                    <td style="padding:11px 16px;color:#374151;">{{ $territory->team ?? '—' }}</td>
+                    <td style="padding:11px 16px;color:#374151;">{{ $territory->department ?? '—' }}</td>
+
+                    <td style="padding:11px 16px;">
+                        @if($emp)
+                            <a href="{{ route('employees.show', $emp->id) }}"
+                               style="color:#2563eb;text-decoration:none;"
+                               onmouseover="this.style.textDecoration='underline';"
+                               onmouseout="this.style.textDecoration='none';">
+                                {{ $emp->sh_name }}
+                            </a>
+                        @else
+                            <span style="color:#d1d5db;font-style:italic;">Не назначен</span>
+                        @endif
+                    </td>
+
+                    <td style="padding:11px 16px;color:#374151;">{{ $territory->city ?? '—' }}</td>
+
+                    <td style="padding:11px 16px;color:#374151;">
+                        {{ $territory->parent->employee->full_name ?? '—' }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="7" style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">
+                        Территории не найдены
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
+@endauth
 @endsection

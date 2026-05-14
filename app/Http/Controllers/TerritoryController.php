@@ -8,14 +8,14 @@ use App\Models\Brick;
 use App\Models\Employee;
 use App\Models\Territory;
 use Illuminate\Http\Request;
-use App\Models\EmployeeEvent;
 use App\Models\EmployeeTerritory;
-use Illuminate\Support\Facades\DB;
+use App\Services\AvailableResourcesService;
 use App\Services\TerritoryAssignmentService;
-use App\View\Components\territory as ComponentsTerritory;
 
 class TerritoryController extends Controller
 {
+    public function __construct(private AvailableResourcesService $available) {}
+
     public function unassignTerritory(Employee $employee, Territory $territory, Request $request, TerritoryAssignmentService $service)
     {
         $result = $service->unassign(
@@ -133,19 +133,7 @@ class TerritoryController extends Controller
             ->orderBy($sort, $order)
             ->get();
 
-        $availableEmployees = Employee::whereHas('events', function ($query) {
-            $query->whereIn('event_type', ['new', 'hired'])
-                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
-        })
-        ->where(function ($query) {
-            $query->whereDoesntHave('employee_territory') // Нет записей в employee_territory
-                  ->orWhereHas('employee_territory', function ($subQuery) {
-                      $subQuery->whereNotNull('unassigned_at')
-                               ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
-                  });
-        })
-        ->orderBy('full_name', 'asc')
-        ->get();
+        $availableEmployees = $this->available->getAvailableForTerritory();
 
         return view('territories', compact('territories', 'query', 'sort', 'order', 'availableEmployees'));
     }
@@ -181,19 +169,7 @@ class TerritoryController extends Controller
         ->first();
 
 
-        $availableEmployees = Employee::whereHas('events', function ($query) {
-            $query->whereIn('event_type', ['new', 'hired'])
-                  ->whereRaw('event_date = (SELECT MAX(event_date) FROM employee_events WHERE employee_events.employee_id = employees.id)');
-        })
-        ->where(function ($query) {
-            $query->whereDoesntHave('employee_territory') // Нет записей в employee_territory
-                  ->orWhereHas('employee_territory', function ($subQuery) {
-                      $subQuery->whereNotNull('unassigned_at')
-                               ->whereRaw('assigned_at = (SELECT MAX(assigned_at) FROM employee_territory WHERE employee_territory.employee_id = employees.id)');
-                  });
-        })
-        ->orderBy('full_name', 'asc')
-        ->get();
+        $availableEmployees = $this->available->getAvailableForTerritory();
 
         // $availableEmployees = Employee::whereIn('status', ['active', 'new']) // Статус "active" или "new"
         // ->where(function ($query) {
