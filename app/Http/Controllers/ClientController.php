@@ -6,9 +6,6 @@ use App\Http\Requests\ClientExportRequest;
 use App\Http\Requests\ClientIndexRequest;
 use App\Models\Client;
 use Illuminate\Http\Request;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class ClientController extends Controller
 {
@@ -80,42 +77,29 @@ class ClientController extends Controller
         $query = Client::query();
         $this->applyFilters($query, $request);
         $columns = $this->sanitizeColumns($request->input('columns', ['full_name']));
+        $labels  = array_map(fn($col) => $this->clientLabels($col), $columns);
+        $fileName = 'clients_export_' . now()->format('Y-m-d_H-i') . '.csv';
 
-        $data = $query->get($columns);
+        return response()->streamDownload(function () use ($query, $columns, $labels) {
+            $out = fopen('php://output', 'w');
 
-        // создаем Excel
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+            // BOM для корректного открытия в Excel
+            fputs($out, "\xEF\xBB\xBF");
+            fputcsv($out, $labels, ';');
 
-        // заголовки
-        foreach ($columns as $index => $column) {
-            $letter = Coordinate::stringFromColumnIndex($index + 1);
-            $sheet->setCellValue($letter . '1', $this->clientLabels($column));
-        }
+            // чанки по 500 строк — память не растёт с размером таблицы
+            $query->chunk(500, function ($rows) use ($out, $columns) {
+                foreach ($rows as $row) {
+                    fputcsv($out, array_map(fn($col) => $row->$col ?? '', $columns), ';');
+                }
+                ob_flush();
+                flush();
+            });
 
-
-        // данные
-        foreach ($data as $rowIndex => $row) {
-            foreach ($columns as $colIndex => $column) {
-
-                $letter = Coordinate::stringFromColumnIndex($colIndex + 1);
-                $cell = $letter . ($rowIndex + 2);
-
-                $sheet->setCellValue($cell, $row->$column);
-            }
-        }
-
-        // имя файла
-        $fileName = 'clients_export_' . now()->format('Y-m-d_H-i') . '.xlsx';
-
-        // writer
-        $writer = new Xlsx($spreadsheet);
-
-        // отдаём файл в браузер
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
+            fclose($out);
         }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ]);
     }
 

@@ -22,7 +22,6 @@
 @endphp
 
 
-<br>
 {{-- Тулбар --}}
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
     <h1 style="font-size:20px;font-weight:700;color:#111827;">

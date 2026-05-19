@@ -1,20 +1,98 @@
 @extends('layout')
 @section('content')
 
+{{-- Тулбар --}}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;margin-top:24px;">
+    <h1 style="font-size:20px;font-weight:700;color:#111827;">
+        База OneKey
+        <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $clients->total() }}</span>
+    </h1>
 
-<form method="GET" class="flex flex-col gap-4 mt-10 w-full">
+    {{-- Выгрузить --}}
+    <div x-data="{ open: false }" style="position:relative;">
+        <button @click="open = !open"
+                style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                       background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;
+                       font-size:13px;font-weight:500;cursor:pointer;"
+                onmouseover="this.style.background='#f9fafb';"
+                onmouseout="this.style.background='#fff';">
+            <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Выгрузить
+            <svg style="width:13px;height:13px;color:#9ca3af;" :class="{'rotate-180':open}"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
 
-    <div class="flex flex-wrap gap-4">
+        <div x-show="open" @click.away="open=false" x-cloak
+             style="position:absolute;right:0;top:calc(100% + 6px);width:280px;
+                    background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+                    box-shadow:0 4px 20px rgba(0,0,0,.1);z-index:50;padding:16px;">
+            <form action="{{ route('export.onekey') }}" method="POST">
+                @csrf
+                <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">Выберите колонки:</p>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;max-height:260px;overflow-y:auto;">
+                    @foreach([
+                        ['full_name',          'ФИО',               true],
+                        ['organization_type',  'Тип клиента',        true],
+                        ['specialty',          'Специальность',      true],
+                        ['specialty2',         'Спец. 2',            false],
+                        ['parent_organization','Род. организация',   false],
+                        ['workplace',          'Место работы',       true],
+                        ['primary_address',    'Адрес',              true],
+                        ['onekey_id',          'OneKey ID',          true],
+                        ['brick_label',        'Регион',             true],
+                        ['city',               'Город',              true],
+                        ['brick_name',         'Brick',              false],
+                        ['coordinates',        'Координаты',         false],
+                    ] as [$val, $lbl, $chk])
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" name="columns[]" value="{{ $val }}" {{ $chk ? 'checked' : '' }}
+                                   style="width:14px;height:14px;accent-color:#2563eb;">
+                            {{ $lbl }}
+                        </label>
+                    @endforeach
+
+                    <input type="hidden" name="full_name"          value="{{ request('full_name') }}">
+                    <input type="hidden" name="organization_type"  value="{{ request('organization_type') }}">
+                    @foreach(request('specialty',   []) as $item)
+                        <input type="hidden" name="specialty[]"   value="{{ $item }}">
+                    @endforeach
+                    @foreach(request('city',        []) as $item)
+                        <input type="hidden" name="city[]"        value="{{ $item }}">
+                    @endforeach
+                    @foreach(request('brick_label', []) as $item)
+                        <input type="hidden" name="brick_label[]" value="{{ $item }}">
+                    @endforeach
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+                    <button type="submit"
+                            style="padding:6px 16px;background:#2563eb;color:#fff;border:none;
+                                   border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;"
+                            onmouseover="this.style.background='#1d4ed8';"
+                            onmouseout="this.style.background='#2563eb';">
+                        Скачать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Фильтры (оригинальные) --}}
+<form method="GET" class="w-full">
+
+    <div style="display:flex;flex-wrap:nowrap;align-items:flex-end;gap:12px;padding-bottom:4px;">
 
         <div x-data="{ selected: '{{ request('organization_type') }}' }" class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Тип клиента</label>
 
-            @php
-                $types = ['Специалист', 'Аптека'];
-            @endphp
+            @php $types = ['Специалист', 'Аптека']; @endphp
 
             <div class="inline-flex rounded-lg bg-gray-100 p-1">
-
                 @foreach($types as $type)
                     <button type="button"
                         @click="selected = '{{ $type }}'"
@@ -22,14 +100,11 @@
                             ? 'bg-white shadow text-blue-600'
                             : 'text-gray-500 hover:text-gray-700'"
                         class="px-3 py-1.5 text-sm font-medium rounded-md transition">
-
                         {{ $type }}
                     </button>
                 @endforeach
-
             </div>
 
-            <!-- скрытое поле -->
             <input type="hidden" name="organization_type" :value="selected">
         </div>
 
@@ -40,13 +115,11 @@
 
             <label class="text-sm font-medium text-gray-700 block">Регион</label>
 
-            <!-- Контейнер -->
             <div class="rounded-lg min-h-[32px] flex flex-col gap-1 cursor-text focus-within:ring-2 focus-within:ring-blue-400"
                 @click="open = true">
 
-                <!-- Теги -->
                 <template x-for="item in selected" :key="item">
-                    <div class="flex items-center justify-between border border-purple-300 px-2 py-1 rounded text-sm w-full" >
+                    <div class="flex items-center justify-between border border-purple-300 px-2 py-1 rounded text-sm w-full">
                         <span class="truncate" x-text="item"></span>
                         <button type="button" @click.stop="remove(item)"
                                 class="text-purple-600 hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">
@@ -55,7 +128,6 @@
                     </div>
                 </template>
 
-                <!-- Поиск -->
                 <input type="text"
                     x-model="search"
                     @input="filter()"
@@ -63,9 +135,8 @@
                     class="outline-none text-sm px-2 py-2 mt-1 border border-gray-200 rounded w-full">
             </div>
 
-            <!-- Dropdown -->
             <div x-show="open"
-                class="absolute bg-white border border-gray-300 mt-1 w-full max-h-60 overflow-y-auto z-10 rounded shadow-lg">
+                class="absolute bg-white border border-gray-300 mt-1 w-full overflow-y-auto z-10 rounded shadow-lg" style="max-height:360px;">
                 <template x-for="item in filtered" :key="item">
                     <label class="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-xs">
                         <input type="checkbox"
@@ -78,11 +149,9 @@
                 </template>
             </div>
 
-            <!-- hidden -->
             <template x-for="item in selected">
                 <input type="hidden" name="brick_label[]" :value="item">
             </template>
-
         </div>
 
         <!-- Город -->
@@ -92,11 +161,9 @@
 
             <label class="text-sm font-medium text-gray-700 block">Город</label>
 
-            <!-- Контейнер тегов + поиск -->
             <div class="rounded-lg min-h-[32px] flex flex-col gap-1 cursor-text focus-within:ring-2 focus-within:ring-blue-400"
                 @click="open = true">
 
-                <!-- Теги в столбик -->
                 <template x-for="item in selected" :key="item">
                     <div class="flex items-center justify-between bg-green-100 text-green-800 border border-green-300 px-2 py-1 rounded text-sm w-full">
                         <span class="truncate" x-text="item"></span>
@@ -107,7 +174,6 @@
                     </div>
                 </template>
 
-                <!-- Input поиска под тегами -->
                 <input type="text"
                     x-model="search"
                     @input="filter()"
@@ -115,9 +181,8 @@
                     class="outline-none text-sm px-2 py-2 mt-1 border border-gray-200 rounded w-full">
             </div>
 
-            <!-- Dropdown -->
             <div x-show="open"
-                class="absolute bg-white border border-gray-300 mt-1 w-full max-h-60 overflow-y-auto z-10 rounded shadow-lg">
+                class="absolute bg-white border border-gray-300 mt-1 w-full overflow-y-auto z-10 rounded shadow-lg" style="max-height:360px;">
                 <template x-for="item in filtered" :key="item">
                     <label class="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-xs">
                         <input type="checkbox"
@@ -130,11 +195,9 @@
                 </template>
             </div>
 
-            <!-- скрытые поля для формы -->
             <template x-for="item in selected">
                 <input type="hidden" name="city[]" :value="item">
             </template>
-
         </div>
 
         <!-- Специальность -->
@@ -147,7 +210,6 @@
             <div class="rounded-lg min-h-[32px] flex flex-col gap-1 cursor-text focus-within:ring-2 focus-within:ring-blue-400"
                  @click="open = true">
 
-                <!-- Теги в столбик -->
                 <template x-for="item in selected" :key="item">
                     <div class="flex items-center justify-between bg-blue-100 text-blue-800 border border-blue-300 px-2 py-1 rounded text-sm w-full">
                         <span class="truncate" x-text="item"></span>
@@ -158,7 +220,6 @@
                     </div>
                 </template>
 
-                <!-- Input поиска под тегами -->
                 <input type="text"
                        x-model="search"
                        @input="filter()"
@@ -166,9 +227,8 @@
                        class="outline-none text-sm px-2 py-2 mt-1 border border-gray-200 rounded">
             </div>
 
-            <!-- Dropdown -->
             <div x-show="open"
-                 class="absolute bg-white border border-gray-300 mt-1 w-full max-h-60 overflow-y-auto z-10 rounded shadow-lg">
+                 class="absolute bg-white border border-gray-300 mt-1 w-full overflow-y-auto z-10 rounded shadow-lg" style="max-height:360px;">
                 <template x-for="item in filtered" :key="item">
                     <label class="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer">
                         <input type="checkbox"
@@ -181,16 +241,14 @@
                 </template>
             </div>
 
-            <!-- скрытые поля -->
             <template x-for="item in selected">
                 <input type="hidden" name="specialty[]" :value="item">
             </template>
-
         </div>
 
         <!-- ФИО -->
         <div x-data="{ search: '{{ request('full_name') }}' }"
-             class="flex flex-col gap-1 w-64">
+             class="flex flex-col gap-1" style="flex-shrink:0;width:200px;">
 
             <label class="text-sm font-medium text-gray-700">ФИО/Название</label>
 
@@ -201,223 +259,91 @@
                    class="outline-none text-sm px-2 py-2 mt-1 border border-gray-200 rounded w-full">
         </div>
 
+        <!-- Кнопка -->
+        <div style="flex-shrink:0;padding-bottom:1px;">
+            <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 text-sm font-medium rounded-md shadow-sm transition-all duration-200"
+                    style="white-space:nowrap;">
+                Найти
+            </button>
+        </div>
+
     </div>
-
-    <!-- Кнопка Фильтр -->
-    <div class="flex justify-start mt-2">
-        <button type="submit"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 text-sm font-medium rounded-md shadow-sm transition-all duration-200">
-            Фильтр
-        </button>
-    </div>
-
-
-
 
 </form>
 
-
-<!-- БЛОК ВЫГРУЗКИ -->
-<div x-data="{ open: false }" class="absolute right-5 inline-block">
-
-    <!-- КНОПКА -->
-    <button type="button"
-            @click="open = !open"
-            class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 text-sm font-medium rounded-md shadow-sm transition">
-        Выгрузить
-    </button>
-
-    <!-- DROPDOWN -->
-    <div x-show="open"
-            @click.outside="open = false"
-            class="absolute top-0 right-0 mt-1 bg-white border rounded-lg shadow-lg p-4 w-72 z-50">
-
-        <form action="{{ route('export.onekey') }}" method="POST">
-            @csrf
-
-            <p class="font-semibold mb-2 text-sm">Выберите колонки:</p>
-
-            <div class="space-y-1 text-sm max-h-60 overflow-y-auto">
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="full_name" checked class="mr-2">
-                    ФИО
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="organization_type" checked class="mr-2">
-                    Тип клиента
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="specialty" checked class="mr-2">
-                    Специальность
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="specialty2" class="mr-2">
-                    Спец. 2
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="parent_organization" class="mr-2">
-                    Род. организация
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="workplace" checked class="mr-2">
-                    Место работы
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="primary_address" checked class="mr-2">
-                    Адрес
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="onekey_id" checked class="mr-2">
-                    OneKey ID
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="brick_label" checked class="mr-2">
-                    Регион
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="city" checked class="mr-2">
-                    Город
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="brick_name" class="mr-2">
-                    Brick
-                </label>
-
-                <label class="flex items-center">
-                    <input type="checkbox" name="columns[]" value="coordinates"class="mr-2">
-                    Координаты
-                </label>
-
-                <input type="hidden" name="full_name" value="{{ request('full_name') }}">
-                @foreach(request('specialty', []) as $item)
-                    <input type="hidden" name="specialty[]" value="{{ $item }}">
-                @endforeach
-
-                @foreach(request('city', []) as $item)
-                    <input type="hidden" name="city[]" value="{{ $item }}">
-                @endforeach
-
-                @foreach(request('brick_label', []) as $item)
-                    <input type="hidden" name="brick_label[]" value="{{ $item }}">
-                @endforeach
-
-                <input type="hidden" name="organization_type" value="{{ request('organization_type') }}">
-                <div class="mt-3 flex justify-end">
-                    <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded">
-                        Скачать
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script>
-    function filterComponent(name, options, selectedInit) {
-        return {
-            open: false,
-            search: '',
-            options: options,
-            filtered: options,
-            selected: selectedInit,
+function filterComponent(name, options, selectedInit) {
+    return {
+        open: false,
+        search: '',
+        options: options,
+        filtered: options,
+        selected: selectedInit,
 
-            filter() {
-                this.filtered = this.options.filter(i =>
-                    i.toLowerCase().includes(this.search.toLowerCase())
-                );
-            },
+        filter() {
+            this.filtered = this.options.filter(i =>
+                i.toLowerCase().includes(this.search.toLowerCase())
+            );
+        },
 
-            toggle(item) {
+        toggle(item) {
             if (this.selected.includes(item)) {
                 this.selected = this.selected.filter(i => i !== item);
             } else {
                 this.selected.push(item);
             }
-
-            this.submitForm();
         },
 
         remove(item) {
             this.selected = this.selected.filter(i => i !== item);
-            this.submitForm();
         },
-
-        // submitForm() {
-        //     this.$nextTick(() => {
-        //         this.$root.closest('form').submit();
-        //     });
-        // }
-
-
-            // toggle(item) {
-            //     if (this.selected.includes(item)) {
-            //         this.selected = this.selected.filter(i => i !== item);
-            //     } else {
-            //         this.selected.push(item);
-            //     }
-            // },
-
-            // remove(item) {
-            //     this.selected = this.selected.filter(i => i !== item);
-            // }
-        }
     }
+}
 </script>
 
-<!-- Блок с количеством найденных клиентов -->
-<div class="text-xs text-gray-500 mt-2 mb-2 flex items-center justify-between">
-    <div>
-        Найдено:
-        <span class="font-bold text-blue-600">{{ $clients->total() }}</span>
-    </div>
+{{-- Найдено --}}
+<div style="font-size:12px;color:#6b7280;margin-top:12px;margin-bottom:12px;">
+    Найдено: <span style="font-weight:700;color:#2563eb;">{{ $clients->total() }}</span>
 </div>
 
-<table class="min-w-full text-sm mt-4 border">
-    <thead class="bg-gray-100">
-        <tr>
-            <th class="p-2 text-left">ФИО</th>
-            <th class="p-2 text-left">Специальность</th>
-            <th class="p-2 text-left">ЛПУ</th>
-            <th class="p-2 text-left">Регион</th>
-            <th class="p-2 text-left">Город</th>
-            <th class="p-2 text-left">Брик</th>
-        </tr>
-    </thead>
-    <tbody class="text-xs">
-        @forelse($clients as $client)
-            <tr class="border-t hover:bg-gray-50 text-xs">
-                <td class="p-2">{{ $client->full_name }}</td>
-                <td class="p-2">{{ $client->specialty }}</td>
-                <td class="p-2">{{ $client->workplace }}</td>
-                <td class="p-2">{{ $client->brick_label }}</td>
-                <td class="p-2">{{ $client->city }}</td>
-                <td class="p-2">{{ $client->brick_name }}</td>
+{{-- Таблица --}}
+<div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+            <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
+                @foreach(['ФИО', 'Специальность', 'ЛПУ', 'Регион', 'Город', 'Брик'] as $col)
+                    <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:600;
+                               text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">{{ $col }}</th>
+                @endforeach
             </tr>
-        @empty
-            <tr>
-                <td colspan="5" class="text-center p-4 text-gray-500">
-                    Нет данных
-                </td>
-            </tr>
-        @endforelse
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @forelse($clients as $client)
+                <tr style="border-top:1px solid #f5f5f5;"
+                    onmouseover="this.style.background='#fafafa';"
+                    onmouseout="this.style.background='none';">
+                    <td style="padding:9px 14px;color:#111827;font-weight:500;">{{ $client->full_name }}</td>
+                    <td style="padding:9px 14px;color:#6b7280;">{{ $client->specialty }}</td>
+                    <td style="padding:9px 14px;color:#374151;">{{ $client->workplace }}</td>
+                    <td style="padding:9px 14px;color:#6b7280;">{{ $client->brick_label }}</td>
+                    <td style="padding:9px 14px;color:#374151;">{{ $client->city }}</td>
+                    <td style="padding:9px 14px;color:#6b7280;">{{ $client->brick_name }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="6" style="text-align:center;padding:32px 14px;color:#9ca3af;font-size:13px;">
+                        Нет данных
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
 
-<div class="mt-4">
+<div style="margin-top:16px;">
     {{ $clients->appends(request()->query())->links() }}
 </div>
-
-
 
 @endsection

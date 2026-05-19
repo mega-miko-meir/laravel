@@ -19,7 +19,7 @@
     ];
     $sc = $statusColors[$tablet->status] ?? ['bg' => '#f3f4f6', 'color' => '#374151', 'label' => $tablet->status];
 @endphp
-<br>
+
 <div style="display:flex;flex-wrap:wrap;gap:20px;padding:8px 0;">
 
     {{-- ═══ Левая колонка: информация о планшете ═══ --}}
