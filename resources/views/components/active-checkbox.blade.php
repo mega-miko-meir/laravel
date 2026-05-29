@@ -34,16 +34,11 @@ document.addEventListener("DOMContentLoaded", function () {
     checkbox.checked = activeOnly === 1;
     updateUI(activeOnly === 1);
 
-    // 3️⃣ при изменении
+    // 3️⃣ при изменении — только UI и localStorage, без перезагрузки
     checkbox.addEventListener('change', function () {
         const value = checkbox.checked ? 1 : 0;
-
         localStorage.setItem('active_only', value);
         updateUI(checkbox.checked);
-
-        const url = new URL(window.location.href);
-        url.searchParams.set('active_only', value);
-        window.location.href = url.href;
     });
 
     function updateUI(enabled) {

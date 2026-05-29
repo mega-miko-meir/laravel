@@ -107,35 +107,35 @@
 </div>
 
 {{-- Поиск --}}
-<form action="{{ route('employees.search') }}" method="GET" style="margin-bottom:16px;">
-    <input type="hidden" name="active_only" value="{{ request('active_only', 1) }}">
-    <input type="hidden" name="sort"        value="{{ request('sort', 'latest_event_date') }}">
-    <input type="hidden" name="order"       value="{{ request('order', 'desc') }}">
-
-    <div style="display:flex;gap:8px;max-width:520px;">
-        <div style="position:relative;flex:1;">
-            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
-                        width:16px;height:16px;color:#9ca3af;pointer-events:none;"
-                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+<div style="margin-bottom:16px;">
+    <div style="position:relative;max-width:520px;">
+        <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                    width:16px;height:16px;color:#9ca3af;pointer-events:none;"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input id="live-search"
+               type="text"
+               value="{{ request('search') }}"
+               placeholder="Имя, email, группа, город..."
+               autocomplete="off"
+               style="width:100%;padding:8px 36px 8px 34px;border:1px solid #e5e7eb;
+                      border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;background:#fff;"
+               onfocus="this.style.borderColor='#2563eb';"
+               onblur="this.style.borderColor='#e5e7eb';">
+        {{-- Кнопка очистки --}}
+        <button id="search-clear"
+                onclick="clearSearch()"
+                style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                       background:none;border:none;cursor:pointer;color:#9ca3af;padding:0;line-height:1;"
+                title="Очистить">
+            <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
-            <input type="text" name="search" value="{{ request('search') }}"
-                   placeholder="Имя, email, группа, город..."
-                   style="width:100%;padding:8px 12px 8px 34px;border:1px solid #e5e7eb;
-                          border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;background:#fff;"
-                   onfocus="this.style.borderColor='#2563eb';"
-                   onblur="this.style.borderColor='#e5e7eb';">
-        </div>
-        <button type="submit"
-                style="padding:8px 18px;background:#2563eb;color:#fff;border:none;
-                       border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;"
-                onmouseover="this.style.background='#1d4ed8';"
-                onmouseout="this.style.background='#2563eb';">
-            Поиск
         </button>
     </div>
-</form>
+</div>
 
 {{-- Таблица сотрудников --}}
 <div id="employees-container">
@@ -143,27 +143,72 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const checkbox = document.getElementById("ticker");
-    const container = document.getElementById("employees-container");
-    const counter = document.getElementById("employee-count");
-    if (!checkbox) return;
+(function () {
+    let searchTimer = null;
+    let currentSort  = '{{ request('sort', 'latest_event_date') }}';
+    let currentOrder = '{{ request('order', 'desc') }}';
 
-    checkbox.addEventListener("change", async () => {
-        const activeOnly = checkbox.checked ? 1 : 0;
-        try {
-            const html = await fetch(`/employees?active_only=${activeOnly}`, {
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            }).then(r => r.text());
+    const input     = document.getElementById('live-search');
+    const clearBtn  = document.getElementById('search-clear');
+    const container = document.getElementById('employees-container');
+    const counter   = document.getElementById('employee-count');
+
+    function getActiveOnly() {
+        const cb = document.getElementById('ticker');
+        return cb ? (cb.checked ? 1 : 0) : 1;
+    }
+
+    function updateCounter() {
+        const rows = container.querySelectorAll('tbody tr');
+        // Если одна строка с colspan — это «не найдено», показываем 0
+        const isEmpty = rows.length === 1 && rows[0].querySelector('td[colspan]');
+        counter.textContent = isEmpty ? 0 : rows.length;
+    }
+
+    function doSearch() {
+        const params = new URLSearchParams({
+            search:      input.value,
+            active_only: getActiveOnly(),
+            sort:        currentSort,
+            order:       currentOrder,
+        });
+
+        fetch('/?' + params.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.text())
+        .then(html => {
             container.innerHTML = html;
-            counter.textContent = container.querySelectorAll("tbody tr").length;
-        } catch(e) { console.error(e); }
-    });
-});
-</script>
+            updateCounter();
+        })
+        .catch(console.error);
+    }
 
-<script src="{{ asset('js/search.js') }}" defer></script>
-<script src="{{ asset('js/employees.js') }}" defer></script>
+    // Живой поиск с дебаунсом 300 мс
+    input.addEventListener('input', function () {
+        clearBtn.style.display = this.value ? 'block' : 'none';
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(doSearch, 300);
+    });
+
+    // Очистка
+    window.clearSearch = function () {
+        input.value = '';
+        clearBtn.style.display = 'none';
+        doSearch();
+        input.focus();
+    };
+
+    // Переключатель «Активные»
+    const checkbox = document.getElementById('ticker');
+    if (checkbox) {
+        checkbox.addEventListener('change', doSearch);
+    }
+
+    // Показать кнопку очистки если поиск уже введён при загрузке
+    if (input.value) clearBtn.style.display = 'block';
+})();
+</script>
 
 @else
     <x-auth-container />

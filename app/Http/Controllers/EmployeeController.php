@@ -222,7 +222,7 @@ class EmployeeController extends Controller
         );
 
         if ($request->ajax()) {
-            return view('components.employee-card', compact('employees'))->render();
+            return view('components.employee-card', compact('employees', 'sort', 'order'))->render();
         }
 
         return view('home', [
