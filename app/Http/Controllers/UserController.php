@@ -7,7 +7,6 @@ use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
@@ -106,6 +105,18 @@ class UserController extends Controller
             // 'action' => url("/edit/$user->id"),
             // 'method' => 'PUT',
             'user' => $user
+        ]);
+    }
+
+    public function resetPassword($id)
+    {
+        $user     = User::findOrFail($id);
+        $password = substr(str_shuffle('abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$'), 0, 12);
+        $user->update(['password' => bcrypt($password)]);
+
+        return response()->json([
+            'login'    => $user->email,
+            'password' => $password,
         ]);
     }
 

@@ -2,50 +2,93 @@
 
 namespace App\Http\Controllers;
 
-use OpenAI\Client;
-use League\Uri\Http;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotController extends Controller
 {
+    private const SESSION_KEY = 'chatbot_history';
+    private const MAX_HISTORY  = 20;
+
+    private string $systemPrompt = 'Ты AI-ассистент компании Nobel (фармацевтическая компания Казахстана). '
+        . 'Помогай сотрудникам с рабочими и общими вопросами. '
+        . 'Будь профессиональным, дружелюбным и лаконичным. '
+        . 'Отвечай на том языке, на котором написан вопрос (русский или казахский по умолчанию).';
+
+    public function index(Request $request)
+    {
+        $history = $request->session()->get(self::SESSION_KEY, []);
+        return view('chatbot', compact('history'));
+    }
+
     public function handle(Request $request)
     {
-        $userMessage = $request->input('message');
+        $userMessage = trim($request->input('message', ''));
 
-        if (!$userMessage) {
-            return response()->json(['reply' => 'Пожалуйста, введите сообщение.']);
+        if ($userMessage === '') {
+            return response()->json(['error' => 'Сообщение не может быть пустым.'], 422);
         }
 
-        // Запрос к OpenAI API
-        $botReply = $this->getBotReply($userMessage);
+        $history   = $request->session()->get(self::SESSION_KEY, []);
+        $history[] = ['role' => 'user', 'content' => $userMessage];
 
-        // Логируем ответ от OpenAI
-        Log::info('Ответ от OpenAI:', ['reply' => $botReply]);
+        $botReply  = $this->callGemini($history);
+        $history[] = ['role' => 'assistant', 'content' => $botReply];
+
+        if (count($history) > self::MAX_HISTORY) {
+            $history = array_slice($history, -self::MAX_HISTORY);
+        }
+
+        $request->session()->put(self::SESSION_KEY, $history);
 
         return response()->json(['reply' => $botReply]);
     }
 
-    private function getBotReply($message)
+    public function clearHistory(Request $request)
     {
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-        ])->post('https://api.openai.com/v1/chat/completions', [
-            'model' => 'gpt-4',
-            'messages' => [
-                ['role' => 'user', 'content' => $message],
-            ],
-        ]);
-
-        // Логируем весь ответ
-        Log::info('Ответ от OpenAI:', $response->json());
-
-        if ($response->failed()) {
-            Log::error('Ошибка при запросе к OpenAI:', $response->json());
-            return 'Ошибка при запросе к OpenAI. Попробуйте позже.';
-        }
-
-        return $response->json('choices.0.message.content');
+        $request->session()->forget(self::SESSION_KEY);
+        return response()->json(['status' => 'ok']);
     }
 
+    private function callGemini(array $history): string
+    {
+        // Конвертируем историю из формата OpenAI в формат Gemini
+        $contents = array_map(fn($msg) => [
+            'role'  => $msg['role'] === 'assistant' ? 'model' : 'user',
+            'parts' => [['text' => $msg['content']]],
+        ], $history);
+
+        $apiKey = config('services.gemini.key');
+        $model  = config('services.gemini.model');
+
+        try {
+            $response = Http::timeout(30)->post(
+                "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
+                [
+                    'systemInstruction' => [
+                        'parts' => [['text' => $this->systemPrompt]],
+                    ],
+                    'contents'          => $contents,
+                    'generationConfig'  => [
+                        'maxOutputTokens' => 1000,
+                    ],
+                ]
+            );
+
+            if ($response->failed()) {
+                Log::error('Gemini API error', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
+                return 'Не удалось получить ответ. Попробуйте позже.';
+            }
+
+            return $response->json('candidates.0.content.parts.0.text') ?? 'Нет ответа.';
+
+        } catch (\Exception $e) {
+            Log::error('Gemini exception', ['message' => $e->getMessage()]);
+            return 'Ошибка соединения с AI. Попробуйте позже.';
+        }
+    }
 }

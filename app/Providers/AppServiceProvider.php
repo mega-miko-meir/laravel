@@ -3,10 +3,8 @@
 namespace App\Providers;
 
 use App\Services\QuoteService;
-use App\Services\WeatherService;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,9 +14,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(QuoteService::class, function ($app) {
-            return new QuoteService();
-        });
+        $this->app->singleton(QuoteService::class, fn() => new QuoteService());
     }
 
     /**
@@ -26,6 +22,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Удаляем устаревший hot-файл если Vite dev-сервер не отвечает
+        $hotFile = public_path('hot');
+        if (file_exists($hotFile)) {
+            $url = rtrim(file_get_contents($hotFile));
+            $ctx = stream_context_create(['http' => ['timeout' => 1], 'https' => ['timeout' => 1]]);
+            $alive = @file_get_contents($url . '/@vite/client', false, $ctx) !== false;
+            if (!$alive) {
+                @unlink($hotFile);
+            }
+        }
+
         // 1. Админ может всё (Super Admin bypass)
         // Эта проверка сработает перед всеми остальными
         Gate::before(function (User $user) {

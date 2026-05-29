@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @vite('resources/css/app.css')
 
@@ -49,20 +50,37 @@
 
 @else
 
-    <div id="auth-container" class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-        <h1 id="auth-title" class="text-2xl font-semibold mb-6">Login</h1>
+    <div style="min-height:100vh; display:flex; align-items:center; justify-content:center;
+                background:linear-gradient(135deg, #0f2460 0%, #1e3a8a 45%, #1d4ed8 100%);
+                padding:16px;">
 
-        <div id="auth-content" class="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-            <x-login />
+        <div style="width:100%; max-width:380px;">
+
+            {{-- Карточка --}}
+            <div style="background:#fff; border-radius:20px; overflow:hidden;
+                        box-shadow:0 25px 60px rgba(0,0,0,0.35);">
+
+                {{-- Шапка --}}
+                <div style="background:linear-gradient(135deg, #1e3a8a, #2563eb);
+                            padding:36px 32px 28px; text-align:center;">
+                    <img src="/images/nobel-logo.png" alt="Nobel"
+                         style="height:38px; width:auto; margin:0 auto 20px; display:block;">
+                    <p style="color:rgba(255,255,255,0.75); font-size:13px; margin:0; letter-spacing:0.02em;">
+                        Система управления персоналом
+                    </p>
+                </div>
+
+                {{-- Форма --}}
+                <div style="padding:32px;">
+                    <x-login />
+                </div>
+            </div>
+
+            {{-- Подпись --}}
+            <p style="text-align:center; color:rgba(255,255,255,0.35); font-size:11px; margin-top:20px;">
+                © {{ date('Y') }} Nobel · Все права защищены
+            </p>
         </div>
-
-        <button
-            id="auth-toggle"
-            onclick="toggleAuth()"
-            class="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-        >
-            Registration
-        </button>
     </div>
 
 @endauth

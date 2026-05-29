@@ -1,39 +1,173 @@
 @extends('layout')
-
 @section('content')
 
-<div id="auth-content" class="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-    <div>
-        <div class="p-6 bg-gray-100 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold mb-4">Register</h2>
-            <form action="/register" method="POST" class="space-y-4">
-                @csrf
-                <input name="full_name" type="text" placeholder="Full name" value="{{old('full_name')}}" class="w-full p-2 border rounded">
-                <input name="first_name" type="text" placeholder="First name" value="{{old('first_name')}}" class="w-full p-2 border rounded">
-                <input name="last_name" type="text" placeholder="Last name" value="{{old('last_name')}}" class="w-full p-2 border rounded">
-                <input name="position" type="text" placeholder="Position" value="{{old('position')}}" class="w-full p-2 border rounded">
-                <input name="email" type="email" placeholder="Email" value="{{old('email')}}" class="w-full p-2 border rounded">
-                <div class="mt-4">
-                    {{-- <label for="role_id" class="block text-sm font-medium text-gray-700">Выберите роль</label> --}}
-                    <select name="role_id" id="role_id" required
-                            class="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500">
-                        <option value="" disabled {{ old('role_id') ? '' : 'selected' }}>Выберите роль...</option>
-                        @foreach(App\Models\Role::all() as $role)
-                            <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
-                                {{ ucfirst($role->name) }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('role_id')
-                        <span class="text-red-500 text-xs">{{ $message }}</span>
-                    @enderror
-                </div>
-                <input name="password" type="password" placeholder="Password" required class="w-full p-2 border rounded">
-                <input name="password_confirmation" type="password" placeholder="Password confirmation" required class="w-full p-2 border rounded">
-                <button class="btn-primary bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Submit</button>
-            </form>
-        </div>
+<div style="max-width:600px;margin:32px auto 0;">
+
+    {{-- Заголовок --}}
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <a href="/users"
+           style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+                  border-radius:8px;color:#6b7280;text-decoration:none;border:1px solid #e5e7eb;"
+           onmouseover="this.style.background='#f9fafb';"
+           onmouseout="this.style.background='#fff';">
+            <svg style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <h1 style="font-size:20px;font-weight:700;color:#111827;margin:0;">Новый пользователь</h1>
     </div>
+
+    @if($errors->any())
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
+            @foreach($errors->all() as $error)
+                <p style="color:#dc2626;font-size:13px;margin:0;">{{ $error }}</p>
+            @endforeach
+        </div>
+    @endif
+
+    <form action="/register" method="POST">
+        @csrf
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;
+                    box-shadow:0 1px 3px rgba(0,0,0,.05);">
+
+            {{-- Личные данные --}}
+            <div style="padding:20px 24px;border-bottom:1px solid #f0f0f0;">
+                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                           color:#9ca3af;margin:0 0 16px;">Личные данные</p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+                    <div style="grid-column:span 2;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Полное ФИО
+                        </label>
+                        <input name="full_name" type="text" value="{{ old('full_name') }}"
+                               placeholder="Иванов Иван Иванович"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Имя
+                        </label>
+                        <input name="first_name" type="text" value="{{ old('first_name') }}"
+                               placeholder="Иван"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Фамилия
+                        </label>
+                        <input name="last_name" type="text" value="{{ old('last_name') }}"
+                               placeholder="Иванов"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Должность
+                        </label>
+                        <input name="position" type="text" value="{{ old('position') }}"
+                               placeholder="Менеджер"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Роль <span style="color:#dc2626;">*</span>
+                        </label>
+                        <select name="role_id" required
+                                style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                       font-size:13px;outline:none;background:#fff;box-sizing:border-box;"
+                                onfocus="this.style.borderColor='#2563eb';"
+                                onblur="this.style.borderColor='#e5e7eb';">
+                            <option value="">— выберите —</option>
+                            @foreach(App\Models\Role::all() as $role)
+                                <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                                    {{ ucfirst($role->name) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div style="grid-column:span 2;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Email <span style="color:#dc2626;">*</span>
+                        </label>
+                        <input name="email" type="email" value="{{ old('email') }}"
+                               placeholder="email@nobel.kz"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+                </div>
+            </div>
+
+            {{-- Пароль --}}
+            <div style="padding:20px 24px;">
+                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                           color:#9ca3af;margin:0 0 16px;">Пароль</p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Пароль <span style="color:#dc2626;">*</span>
+                        </label>
+                        <input name="password" type="password" required
+                               placeholder="Минимум 6 символов"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                            Подтверждение
+                        </label>
+                        <input name="password_confirmation" type="password" required
+                               placeholder="Повторите пароль"
+                               style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;box-sizing:border-box;"
+                               onfocus="this.style.borderColor='#2563eb';"
+                               onblur="this.style.borderColor='#e5e7eb';">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Кнопки --}}
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+            <a href="/users"
+               style="padding:9px 20px;background:#fff;color:#374151;border:1px solid #e5e7eb;
+                      border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;"
+               onmouseover="this.style.background='#f9fafb';"
+               onmouseout="this.style.background='#fff';">
+                Отмена
+            </a>
+            <button type="submit"
+                    style="padding:9px 20px;background:#2563eb;color:#fff;border:none;
+                           border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
+                    onmouseover="this.style.background='#1d4ed8';"
+                    onmouseout="this.style.background='#2563eb';">
+                Создать пользователя
+            </button>
+        </div>
+    </form>
 </div>
 
 @endsection

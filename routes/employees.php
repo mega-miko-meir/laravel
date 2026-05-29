@@ -7,9 +7,12 @@ use App\Http\Controllers\EmployeeEventController;
 use App\Http\Controllers\EmployeeTerritoryController;
 
 Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.search');
-Route::get('/employees', [EmployeeController::class, 'index']);
-Route::get('/employee/{id}', [EmployeeController::class, 'showEmployee'])->name('employees.show');
-Route::get('/my-team', [EmployeeController::class, 'myTeam'])->name('employees.my-team');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::get('/employee/{id}', [EmployeeController::class, 'showEmployee'])->name('employees.show');
+    Route::get('/my-team', [EmployeeController::class, 'myTeam'])->name('employees.my-team');
+});
 
 Route::middleware(['auth', 'can:editor'])->group(function () {
     Route::get('/create-employee', [EmployeeController::class, 'createEmployeeForm']);

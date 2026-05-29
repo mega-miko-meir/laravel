@@ -1,124 +1,139 @@
-{{-- @extends('layouts.app')
-
-@section('content')
-<div class="container">
-    <h1>Мои задачи</h1>
-    <a href="{{ route('tasks.create') }}" class="btn btn-primary mb-3">Создать задачу</a>
-
-    @foreach($tasks as $task)
-        <div class="card mb-2">
-            <div class="card-body">
-                <h5>{{ $task->title }}</h5>
-                <p>{{ $task->description }}</p>
-                <p>Статус: {{ $task->status }} | Дедлайн: {{ $task->deadline }}</p>
-                <a href="{{ route('tasks.edit', $task) }}" class="btn btn-sm btn-secondary">Редактировать</a>
-
-                <form action="{{ route('tasks.destroy', $task) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('DELETE')
-                    <button class="btn btn-sm btn-danger" onclick="return confirm('Удалить?')">Удалить</button>
-                </form>
-            </div>
-        </div>
-    @endforeach
-</div>
-@endsection --}}
-
-
 @extends('layout')
-
 @section('content')
-<div class="max-w-7xl mx-auto px-4">
 
-    <div class="flex items-center justify-between mb-6 mt-10">
-        <h1 class="text-2xl font-bold">
-            Статистика активности
-        </h1>
+{{-- Тулбар --}}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;margin-top:24px;">
 
-        <div x-data="{ open: false }" class="relative">
-            <button
-                @click="open = !open"
-                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
-            >
-                📥 Выгрузить
-            </button>
+    <h1 style="font-size:20px;font-weight:700;color:#111827;margin:0;">
+        Активность
+        <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $logs->total() }}</span>
+    </h1>
 
-            {{-- popup --}}
-            <div x-show="open" x-cloak
-                class="absolute right-0 mt-2 bg-white border rounded-lg shadow p-4 w-64 z-50">
+    {{-- Выгрузить --}}
+    <div x-data="{ open: false }" style="position:relative;">
+        <button @click="open = !open"
+                style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                       background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;
+                       font-size:13px;font-weight:500;cursor:pointer;"
+                onmouseover="this.style.background='#f9fafb';"
+                onmouseout="this.style.background='#fff';">
+            <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Выгрузить
+            <svg style="width:13px;height:13px;color:#9ca3af;" :class="{'rotate-180':open}"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
 
-                <form method="GET" action="{{ route('activity.export') }}" class="space-y-3">
-                    <div>
-                        <label class="text-xs text-gray-500">Дата начала</label>
-                        <input type="date" name="from"
-                            class="w-full border rounded px-2 py-1 text-sm" required>
-                    </div>
+        <div x-show="open" @click.away="open=false" x-cloak
+             style="position:absolute;right:0;top:calc(100% + 6px);width:260px;
+                    background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+                    box-shadow:0 4px 20px rgba(0,0,0,.1);z-index:50;padding:16px;">
+            <form method="GET" action="{{ route('activity.export') }}">
+                <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;">Период выгрузки</p>
 
-                    <div>
-                        <label class="text-xs text-gray-500">Дата окончания</label>
-                        <input type="date" name="to"
-                            class="w-full border rounded px-2 py-1 text-sm" required>
-                    </div>
+                <div style="margin-bottom:10px;">
+                    <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
+                                  letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Дата начала</label>
+                    <input type="date" name="from" required
+                           style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                                  font-size:13px;outline:none;box-sizing:border-box;">
+                </div>
 
-                    <button
-                        type="submit"
-                        class="w-full bg-blue-600 text-white py-2 rounded hover:bg-green-700 text-sm mt-2"
-                    >
-                        Скачать Excel
-                    </button>
-                </form>
-            </div>
+                <div style="margin-bottom:14px;">
+                    <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
+                                  letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Дата окончания</label>
+                    <input type="date" name="to" required
+                           style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                                  font-size:13px;outline:none;box-sizing:border-box;">
+                </div>
+
+                <button type="submit"
+                        style="width:100%;padding:8px;background:#2563eb;color:#fff;border:none;
+                               border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
+                        onmouseover="this.style.background='#1d4ed8';"
+                        onmouseout="this.style.background='#2563eb';">
+                    Скачать Excel
+                </button>
+            </form>
         </div>
     </div>
-
-
-    <div class="inline-block bg-white shadow rounded-lg">
-        <table class="min-w-full text-sm">
-            <thead class="bg-gray-300 text-gray-700">
-                <tr>
-                    <th class="px-4 py-3 text-left">Пользователь</th>
-                    <th class="px-4 py-3 text-left">URL</th>
-                    <th class="px-4 py-3">Метод</th>
-                    <th class="px-4 py-3">IP</th>
-                    <th class="px-4 py-3">Дата</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($logs as $log)
-                    <tr class="border-t hover:bg-gray-50">
-                        <td class="px-4 py-2">
-                            {{ $log->user?->full_name ?? 'Гость' }}
-                        </td>
-                        <td class="px-4 py-2 text-gray-600">
-                            {{ $log->url }}
-                        </td>
-                        <td class="px-4 py-2 text-center">
-                            <span class="px-2 py-1 rounded text-xs
-                                {{ $log->method === 'GET' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }}">
-                                {{ $log->method }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-2">
-                            {{ $log->ip }}
-                        </td>
-                        <td class="px-4 py-2 text-gray-500">
-                            {{ $log->created_at->format('d.m.Y H:i') }}
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" class="text-center py-6 text-gray-500">
-                            Данных пока нет
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mt-4">
-        {{ $logs->links() }}
-    </div>
-
 </div>
+
+{{-- Таблица --}}
+<div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+            <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
+                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
+                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Пользователь</th>
+                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
+                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">URL</th>
+                <th style="padding:10px 16px;text-align:center;font-size:10px;font-weight:600;
+                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Метод</th>
+                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
+                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">IP</th>
+                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
+                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Дата</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($logs as $log)
+                <tr style="border-top:1px solid #f5f5f5;"
+                    onmouseover="this.style.background='#fafafa';"
+                    onmouseout="this.style.background='none';">
+
+                    <td style="padding:9px 16px;color:#111827;font-weight:500;">
+                        {{ $log->user?->full_name ?? '—' }}
+                    </td>
+
+                    <td style="padding:9px 16px;color:#6b7280;max-width:320px;
+                               overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        {{ $log->url }}
+                    </td>
+
+                    <td style="padding:9px 16px;text-align:center;">
+                        @php
+                            $methodColors = [
+                                'GET'    => 'background:#eff6ff;color:#2563eb;',
+                                'POST'   => 'background:#f0fdf4;color:#16a34a;',
+                                'PUT'    => 'background:#fffbeb;color:#d97706;',
+                                'PATCH'  => 'background:#fffbeb;color:#d97706;',
+                                'DELETE' => 'background:#fef2f2;color:#dc2626;',
+                            ];
+                            $style = $methodColors[$log->method] ?? 'background:#f3f4f6;color:#374151;';
+                        @endphp
+                        <span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;
+                                     letter-spacing:.04em;{{ $style }}">
+                            {{ $log->method }}
+                        </span>
+                    </td>
+
+                    <td style="padding:9px 16px;color:#6b7280;font-family:monospace;font-size:11px;">
+                        {{ $log->ip }}
+                    </td>
+
+                    <td style="padding:9px 16px;color:#9ca3af;white-space:nowrap;">
+                        {{ $log->created_at->format('d.m.Y H:i') }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5" style="text-align:center;padding:40px 16px;color:#9ca3af;font-size:13px;">
+                        Нет данных
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top:16px;">
+    {{ $logs->links() }}
+</div>
+
 @endsection

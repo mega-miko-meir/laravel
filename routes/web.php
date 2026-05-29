@@ -16,32 +16,35 @@ Route::post('/logout', [UserController::class, 'logout']);
 Route::post('/login', [UserController::class, 'login']);
 Route::get('/login', fn() => redirect('/'))->name('login');
 
-// Dashboard
-Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
-Route::get('employees/list/{type}', [DashboardController::class, 'filteredList'])->name('employees.filtered');
-
-// Tasks
 Route::middleware('auth')->group(function () {
+    // Tasks
     Route::resource('tasks', TaskController::class);
+
+    // Chatbot
+    Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot');
+    Route::post('/chatbot', [ChatbotController::class, 'handle']);
+    Route::delete('/chatbot/history', [ChatbotController::class, 'clearHistory'])->name('chatbot.clear');
+
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
+    Route::get('employees/list/{type}', [DashboardController::class, 'filteredList'])->name('employees.filtered');
+
+    // Exports
+    Route::post('/export-excel', [EmployeeDataController::class, 'exportToExcel'])->name('export.excel');
+    Route::post('/clients/export', [ClientController::class, 'export'])->name('export.onekey');
+
+    // Clients
+    Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+
+    // Feedback
+    Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 });
 
-// Misc
-Route::get('/chatbot', fn() => view('chatbot'));
-Route::post('/chatbot', [ChatbotController::class, 'handle']);
+// Dev/misc
 Route::get('/print', fn() => view('print'));
 Route::get('/upload', fn() => view('upload'));
 Route::get('/alpine', fn() => view('alpine-for-practice', ['employees' => Employee::select('id', 'full_name')->get()]));
 Route::get('/daily-quote', fn(QuoteService $quoteService) => $quoteService->getDailyQuote(true));
-
-// Exports
-Route::post('/export-excel', [EmployeeDataController::class, 'exportToExcel'])->name('export.excel');
-Route::post('/clients/export', [ClientController::class, 'export'])->name('export.onekey');
-
-// Clients
-Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
-
-// Feedback
-Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 
 // Route files grouped by domain
 require __DIR__ . '/employees.php';

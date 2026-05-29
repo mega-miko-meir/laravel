@@ -7,10 +7,10 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 
-Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
-Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-
 Route::middleware(['auth', 'can:admin'])->group(function () {
+    Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/register', [UserController::class, 'showRegister']);
     Route::post('/register', [UserController::class, 'register']);
@@ -18,6 +18,7 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
     Route::get('/users/{id}', [UserController::class, 'show'])->name('users.show');
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword'])->name('users.resetPassword');
 
     Route::get('/activity', [ActivityLogController::class, 'index'])->name('activity.logs');
     Route::get('/activity/export', [ActivityLogController::class, 'export'])->name('activity.export');

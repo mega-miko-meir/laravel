@@ -5,12 +5,14 @@ use App\Http\Controllers\ExcelDataUploadController;
 use App\Http\Controllers\TabletController;
 use App\Http\Controllers\EmployeeTabletController;
 
-Route::get('/tablets', [TabletController::class, 'searchTablet'])->name('tablets.search');
-Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('tablets.show');
+Route::middleware('auth')->group(function () {
+    Route::get('/tablets', [TabletController::class, 'searchTablet'])->name('tablets.search');
+    Route::get('/tablets/{tablet}', [TabletController::class, 'showTablet'])->name('tablets.show');
 
-Route::post('/print-act/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct']);
-Route::post('/print-act2/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct2']);
-Route::get('/api/city-check', [EmployeeTabletController::class, 'cityCheck']);
+    Route::post('/print-act/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct']);
+    Route::post('/print-act2/{employee}/{tablet}', [EmployeeTabletController::class, 'printAct2']);
+    Route::get('/api/city-check', [EmployeeTabletController::class, 'cityCheck']);
+});
 
 Route::middleware(['auth', 'can:editor'])->group(function () {
     Route::get('/create-tablet', [TabletController::class, 'createTabletForm'])->name('tablet.create');
@@ -42,4 +44,4 @@ Route::middleware(['auth', 'can:editor'])->group(function () {
     Route::post('/upload-tablets-assignment', [ExcelDataUploadController::class, 'uploadTabletsAssignment']);
 });
 
-Route::post('/export/tablets', [TabletController::class, 'exportToExcel'])->name('export.tablets');
+Route::middleware('auth')->post('/export/tablets', [TabletController::class, 'exportToExcel'])->name('export.tablets');
