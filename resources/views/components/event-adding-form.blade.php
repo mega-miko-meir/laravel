@@ -1,37 +1,77 @@
 @props(['employee'])
 
-<!-- Форма обновления статуса (изначально скрыта) -->
-
 @php
-    $latestEventDate = optional($employee->events()->latest('event_date')->first())->event_date;
     $lastEventType = optional($employee->events()->latest('event_date')->first())->event_type;
+    $events = [
+        'hired'             => 'Принят',
+        'dismissed'         => 'Уволен',
+        'return_from_leave' => 'Вернулся из отпуска',
+        'maternity_leave'   => 'Декретный отпуск',
+        'change_position'   => 'Смена должности',
+        'long_vacation'     => 'Длительный отпуск',
+    ];
 @endphp
 
-<form action="{{ route('employees.updateStatusAndEvent', $employee->id) }}" method="POST" id="editForm" class="bg-gray-50 p-4 rounded-lg shadow-sm hidden"
-    onsubmit="return confirm('Are you sure you want to add an event and change the status?');">
-    @csrf
-    @method('PUT')
-    <label for="event_type" class="block text-sm font-medium mb-1">Выберите событие:</label>
-    <select name="event_type" id="event_type" class="w-full p-2 border rounded text-sm">
-        {{-- <option value="new" {{$lastEventType === 'new' ? 'selected' : ''}}>New</option> --}}
-        <option value="hired" {{$lastEventType === 'hired' ? 'selected' : ''}}>Hired</option>
-        <option value="dismissed" {{$lastEventType === 'dismissed' ? 'selected' : ''}}>Dismissed</option>
-        <option value="return_from_leave" {{$lastEventType === 'return_from_leave' ? 'selected' : ''}}>Return from leave</option>
-        <option value="maternity_leave" {{$lastEventType === 'maternity_leave' ? 'selected' : ''}}>Maternity leave</option>
-        <option value="change_position" {{$lastEventType === 'changed_position' ? 'selected' : ''}}>Changed position</option>
-        <option value="long_vacation" {{$lastEventType === 'long_vacation' ? 'selected' : ''}}>Long vacation</option>
-    </select>
-    <label for="event_date" class="block text-sm font-medium mt-2">Event date:</label>
-    <input type="date" name="event_date" id="event_date" class="w-full p-2 border rounded text-sm"
-        {{-- value="{{ now()->format('Y-m-d') }}"> --}}
-        {{-- value="{{ $latestEventDate ? \Carbon\Carbon::parse($latestEventDate)->format('Y-m-d') : '' }}" --}}
-        value="{{now()->format("Y-m-d")}}"
-        >
+<div id="editForm"
+     style="display:none;margin-top:10px;padding:14px;border-radius:10px;
+            background:#f9fafb;border:1px solid #e5e7eb;">
 
-    <div class="flex justify-end mt-3">
-        <button type="button" onclick="toggleEditForm()" class="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-100 mr-2">Отмена</button>
-        <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-            Обновить
-        </button>
-    </div>
-</form>
+    <form action="{{ route('employees.updateStatusAndEvent', $employee->id) }}" method="POST"
+          onsubmit="return confirm('Добавить событие и обновить статус?');">
+        @csrf
+        @method('PUT')
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+            <div>
+                <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;
+                               text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                    Событие
+                </label>
+                <select name="event_type"
+                        style="width:100%;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:7px;
+                               font-size:12px;outline:none;background:#fff;color:#374151;box-sizing:border-box;"
+                        onfocus="this.style.borderColor='#2563eb';"
+                        onblur="this.style.borderColor='#e5e7eb';">
+                    @foreach($events as $val => $lbl)
+                        <option value="{{ $val }}" {{ $lastEventType === $val ? 'selected' : '' }}>
+                            {{ $lbl }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;
+                               text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                    Дата
+                </label>
+                <input type="date" name="event_date"
+                       value="{{ now()->format('Y-m-d') }}"
+                       style="width:100%;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:7px;
+                              font-size:12px;outline:none;color:#374151;box-sizing:border-box;"
+                       onfocus="this.style.borderColor='#2563eb';"
+                       onblur="this.style.borderColor='#e5e7eb';">
+            </div>
+
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+            <button type="button" onclick="toggleEditForm()"
+                    style="padding:6px 14px;font-size:12px;font-weight:500;background:#fff;
+                           color:#374151;border:1px solid #e5e7eb;border-radius:7px;cursor:pointer;"
+                    onmouseover="this.style.background='#f3f4f6';"
+                    onmouseout="this.style.background='#fff';">
+                Отмена
+            </button>
+            <button type="submit"
+                    style="padding:6px 14px;font-size:12px;font-weight:600;background:#2563eb;
+                           color:#fff;border:none;border-radius:7px;cursor:pointer;"
+                    onmouseover="this.style.background='#1d4ed8';"
+                    onmouseout="this.style.background='#2563eb';">
+                Сохранить
+            </button>
+        </div>
+
+    </form>
+</div>

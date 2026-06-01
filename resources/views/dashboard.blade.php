@@ -1,7 +1,7 @@
 @extends('layout')
 @section('content')
 
-{{-- Chart.js CDN временно скрыт вместе с графиками --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <h1 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:16px;">Дашборд</h1>
 
@@ -82,10 +82,9 @@
     @endforeach
 </div>
 
-@if(false)
-{{-- Фильтр + все графики временно скрыты --}}
 
 {{-- Фильтр по должности (глобальный) --}}
+{{--
 @if(count($allRoles) > 0)
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;
             background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;
@@ -101,6 +100,7 @@
 @endif
 
 {{-- Линейный чарт + Donut --}}
+{{--
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;margin-top:24px;max-width:1000px;">
     <div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
         <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 2px;">Динамика найма и увольнений</p>
@@ -116,6 +116,7 @@
 </div>
 
 {{-- Накопительный + Города --}}
+{{--
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;max-width:1000px;">
     <div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
         <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 2px;">Численность персонала</p>
@@ -239,7 +240,6 @@
     document.querySelectorAll('.role-btn[data-role]').forEach(btn => { btn.addEventListener('click', () => { const r = btn.dataset.role; selectedRoles.has(r) ? selectedRoles.delete(r) : selectedRoles.add(r); syncButtons(); refreshAll(); }); });
 })();
 </script>
-
-@endif {{-- конец временно скрытого блока --}}
+--}}
 
 @endsection

@@ -289,6 +289,6 @@
 <script>
 function toggleEditForm() {
     const el = document.getElementById('editForm');
-    if (el) el.classList.toggle('hidden');
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>

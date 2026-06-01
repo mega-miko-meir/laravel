@@ -1,25 +1,32 @@
 @extends('layout')
 
 @section('content')
-<x-back-button />
-    <div class="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 px-4 py-10 sm:px-6 lg:px-8">
-        <div class="mx-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-2xl shadow-slate-200/40 backdrop-blur-sm">
-            @php $isEdit = isset($tablet); @endphp
-            <div class="mb-8 rounded-3xl bg-slate-50 p-6 shadow-sm ring-1 ring-slate-200">
-                <h1 class="text-3xl font-semibold tracking-tight text-slate-900">
-                    {{ $isEdit ? 'Редактировать планшет' : 'Добавить планшет' }}
-                </h1>
-                <p class="mt-3 text-sm leading-6 text-slate-600">
-                    {{ $isEdit ? 'Измените данные планшета и сохраните изменения.' : 'Заполните форму, чтобы добавить новый планшет в систему.' }}
-                </p>
-            </div>
 
-            <x-tablet-form
-                :tablet="$tablet ?? null"
-                :responsibles="$responsibles"
-                action="{{ $isEdit ? route('tablet.update', $tablet->id) : route('tablet.store') }}"
-                method="{{ $isEdit ? 'PUT' : 'POST' }}"
-            />
-        </div>
+<div style="max-width:640px;margin:32px auto 0;">
+
+    {{-- Заголовок --}}
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <a href="/tablets"
+           style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+                  border-radius:8px;color:#6b7280;text-decoration:none;border:1px solid #e5e7eb;background:#fff;"
+           onmouseover="this.style.background='#f9fafb';"
+           onmouseout="this.style.background='#fff';">
+            <svg style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <h1 style="font-size:20px;font-weight:700;color:#111827;margin:0;">
+            {{ isset($tablet) ? 'Редактировать планшет' : 'Добавить планшет' }}
+        </h1>
     </div>
+
+    <x-tablet-form
+        :tablet="$tablet ?? null"
+        :responsibles="$responsibles"
+        action="{{ isset($tablet) ? route('tablet.update', $tablet->id) : route('tablet.store') }}"
+        method="{{ isset($tablet) ? 'PUT' : 'POST' }}"
+    />
+
+</div>
+
 @endsection

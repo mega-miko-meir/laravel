@@ -1,133 +1,198 @@
 @props([
     'action',
-    'method' => 'POST',
-    'territory' => null,
-    'parentTerritories' => null,
-    'role' => collect(config('constants.roles'))->sort()->reverse()->toArray(),
-    'department' => collect(config('constants.departments'))->sort()->toArray(),
-    'cities' => collect(config('constants.cities'))->sort()->toArray(),
-    'teams' => collect(config('constants.teams'))->sort()->toArray()
+    'method'           => 'POST',
+    'territory'        => null,
+    'parentTerritories'=> null,
+    'role'             => collect(config('constants.roles'))->sort()->reverse()->toArray(),
+    'department'       => collect(config('constants.departments'))->sort()->toArray(),
+    'cities'           => collect(config('constants.cities'))->sort()->toArray(),
+    'teams'            => collect(config('constants.teams'))->sort()->toArray(),
 ])
 
-{{-- @if(session('error'))
-    <div class="alert alert-danger">
-        {{ session('error') }}
+@if($errors->any())
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
+        @foreach($errors->all() as $error)
+            <p style="color:#dc2626;font-size:13px;margin:0 0 2px;">{{ $error }}</p>
+        @endforeach
     </div>
 @endif
 
-@if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
-@endif --}}
-
-<x-flash-message />
-
-<form action="{{ $action }}" method="POST" class="space-y-4">
+<form action="{{ $action }}" method="POST">
     @csrf
     @if($method !== 'POST')
         @method($method)
     @endif
 
-    <div>
-        <label for="territory" class="block text-sm font-medium text-gray-600">Territory</label>
-        <input name="territory" type="text" placeholder="Territory" value="{{ old('territory', $territory->territory ?? '') }}"
-               class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </div>
-    <div>
-        <label for="territory_name" class="block text-sm font-medium text-gray-600">Territory name</label>
-        <input name="territory_name" id="territory_name" type="text" placeholder="Territory Name" value="{{ old('territory_name', $territory->territory_name ?? '') }}"
-               class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </div>
-    <div>
-        <label for="department" class="block text-sm font-medium text-gray-600">Department</label>
-        <select name="department" id="department" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            @foreach ($department as $dep)
-                <option value="{{ $dep }}" {{ old('department', $territory->department ?? '') == $dep ? 'selected' : '' }}>
-                    {{ $dep }}
-                </option>
-            @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="team" class="block text-sm font-medium text-gray-600">Team</label>
-        <select name="team" id="team" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value=""
-            {{-- {{ old('team', $territory->territory_name ?? null) ? '' : 'selected' }} --}}
-            >
-                No Team
-            </option>
-            {{-- <option value="">No Team</option> --}}
-            @foreach ($teams as $team)
-                <option value="{{ $team }}" {{ old('team', $territory->team ?? '') == $team ? 'selected' : '' }}>
-                    {{ $team }}
-                </option>
-            @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="role" class="block text-sm font-medium text-gray-600">Role</label>
-        <select name="role" id="role"
-                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            @foreach($role as $role)
-                <option value="{{ $role }}" {{ old('role', $territory->role ?? '') === $role ? 'selected' : '' }}>
-                    {{ $role }}
-                </option>
-            @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="city" class="block text-sm font-medium text-gray-600">City</label>
-        <select name="city" id="city" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            @foreach ($cities as $city)
-                <option value="{{ $city }}" {{ old('city', $territory->city ?? '') == $city ? 'selected' : '' }}>
-                    {{ $city }}
-                </option>
-            @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="parent_territory_id" class="block text-sm font-medium text-gray-600">Parent Territory</label>
-        <select name="parent_territory_id" id="parent_territory_id" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">No Parent Territory</option>
-            @foreach ($parentTerritories as $parentTerritory)
-                <option value="{{ $parentTerritory->id }}" {{ old('parent_territory_id', $territory->parent_territory_id ?? '') == $parentTerritory->id ? 'selected' : '' }}>
-                    {{ $parentTerritory->territory_name }} - {{ $parentTerritory->employee ? $parentTerritory->employee->first_name . ' ' . $parentTerritory->employee->last_name : 'No employee'}}
-                </option>
-            @endforeach
-        </select>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;
+                box-shadow:0 1px 3px rgba(0,0,0,.05);">
+
+        {{-- Основная информация --}}
+        <div style="padding:20px 24px;border-bottom:1px solid #f0f0f0;">
+            <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                       color:#9ca3af;margin:0 0 16px;">Основная информация</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+                <div style="grid-column:span 2;">
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                        Название территории <span style="color:#dc2626;">*</span>
+                    </label>
+                    <input name="territory_name" type="text"
+                           value="{{ old('territory_name', $territory->territory_name ?? '') }}"
+                           placeholder="Например: Алматы Север"
+                           style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                  font-size:13px;outline:none;box-sizing:border-box;"
+                           onfocus="this.style.borderColor='#2563eb';"
+                           onblur="this.style.borderColor='#e5e7eb';">
+                </div>
+
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                        Код территории
+                    </label>
+                    <input name="territory" type="text"
+                           value="{{ old('territory', $territory->territory ?? '') }}"
+                           placeholder="ALM-N-01"
+                           style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                  font-size:13px;outline:none;box-sizing:border-box;"
+                           onfocus="this.style.borderColor='#2563eb';"
+                           onblur="this.style.borderColor='#e5e7eb';">
+                </div>
+
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                        Роль
+                    </label>
+                    <select name="role"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                   font-size:13px;outline:none;background:#fff;box-sizing:border-box;color:#374151;"
+                            onfocus="this.style.borderColor='#2563eb';"
+                            onblur="this.style.borderColor='#e5e7eb';">
+                        <option value="">— выберите —</option>
+                        @foreach($role as $r)
+                            <option value="{{ $r }}" {{ old('role', $territory->role ?? '') === $r ? 'selected' : '' }}>
+                                {{ $r }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                        Департамент
+                    </label>
+                    <select name="department"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                   font-size:13px;outline:none;background:#fff;box-sizing:border-box;color:#374151;"
+                            onfocus="this.style.borderColor='#2563eb';"
+                            onblur="this.style.borderColor='#e5e7eb';">
+                        <option value="">— выберите —</option>
+                        @foreach($department as $dep)
+                            <option value="{{ $dep }}" {{ old('department', $territory->department ?? '') === $dep ? 'selected' : '' }}>
+                                {{ $dep }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        {{-- Расположение --}}
+        <div style="padding:20px 24px;border-bottom:1px solid #f0f0f0;">
+            <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                       color:#9ca3af;margin:0 0 16px;">Расположение</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                        Город
+                    </label>
+                    <select name="city"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                   font-size:13px;outline:none;background:#fff;box-sizing:border-box;color:#374151;"
+                            onfocus="this.style.borderColor='#2563eb';"
+                            onblur="this.style.borderColor='#e5e7eb';">
+                        <option value="">— выберите —</option>
+                        @foreach($cities as $city)
+                            <option value="{{ $city }}" {{ old('city', $territory->city ?? '') === $city ? 'selected' : '' }}>
+                                {{ $city }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                        Группа
+                    </label>
+                    <select name="team"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                                   font-size:13px;outline:none;background:#fff;box-sizing:border-box;color:#374151;"
+                            onfocus="this.style.borderColor='#2563eb';"
+                            onblur="this.style.borderColor='#e5e7eb';">
+                        <option value="">— без группы —</option>
+                        @foreach($teams as $team)
+                            <option value="{{ $team }}" {{ old('team', $territory->team ?? '') === $team ? 'selected' : '' }}>
+                                {{ $team }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        {{-- Родительская территория --}}
+        <div style="padding:20px 24px;">
+            <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                       color:#9ca3af;margin:0 0 16px;">Иерархия</p>
+
+            <div>
+                <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">
+                    Родительская территория
+                </label>
+                <select name="parent_territory_id"
+                        style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;
+                               font-size:13px;outline:none;background:#fff;box-sizing:border-box;color:#374151;"
+                        onfocus="this.style.borderColor='#2563eb';"
+                        onblur="this.style.borderColor='#e5e7eb';">
+                    <option value="">— нет родительской —</option>
+                    @foreach($parentTerritories as $pt)
+                        <option value="{{ $pt->id }}"
+                            {{ old('parent_territory_id', $territory->parent_territory_id ?? '') == $pt->id ? 'selected' : '' }}>
+                            {{ $pt->territory_name }}
+                            @if($pt->employee)
+                                — {{ $pt->employee->first_name }} {{ $pt->employee->last_name }}
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+                <p style="font-size:11px;color:#9ca3af;margin:4px 0 0;">
+                    Оставьте пустым для территорий верхнего уровня (RM, FFM)
+                </p>
+            </div>
+        </div>
+
     </div>
 
-    <div class="flex justify-end">
+    {{-- Кнопки --}}
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+        <a href="/territories"
+           style="padding:9px 20px;background:#fff;color:#374151;border:1px solid #e5e7eb;
+                  border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;"
+           onmouseover="this.style.background='#f9fafb';"
+           onmouseout="this.style.background='#fff';">
+            Отмена
+        </a>
         <button type="submit"
-                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
-            {{ $territory ? 'Edit' : 'Create' }}
+                style="padding:9px 20px;background:#2563eb;color:#fff;border:none;
+                       border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
+                onmouseover="this.style.background='#1d4ed8';"
+                onmouseout="this.style.background='#2563eb';">
+            {{ $territory ? 'Сохранить изменения' : 'Создать территорию' }}
         </button>
     </div>
+
 </form>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const firstNameInput = document.getElementById("first_name");
-        const lastNameInput = document.getElementById("last_name");
-        const emailInput = document.getElementById("email");
-
-        function generateEmail() {
-            if (emailInput.dataset.autoGenerated === "false") return; // Если email изменен вручную, не перезаписываем
-
-            let firstName = firstNameInput.value.trim().toLowerCase();
-            let lastName = lastNameInput.value.trim().toLowerCase();
-
-            if (firstName && lastName) {
-                emailInput.value = `${firstName}.${lastName}@nobel.kz`;
-            }
-        }
-
-        firstNameInput.addEventListener("input", generateEmail);
-        lastNameInput.addEventListener("input", generateEmail);
-
-        emailInput.addEventListener("focus", () => {
-            emailInput.dataset.autoGenerated = "false"; // Если пользователь нажал на поле email, автогенерация отключается
-        });
-    });
-</script>

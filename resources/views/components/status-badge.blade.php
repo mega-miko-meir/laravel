@@ -1,19 +1,18 @@
 @props(['status'])
 
 @php
-    $colors = [
-        'hired' => 'bg-green-500 text-white',
-        'return_from_leave' => 'bg-blue-500 text-white',
-        'dismissed' => 'bg-red-500 text-white',
-        'maternity_leave' => 'bg-yellow-500 text-black',
-        'long_vacation' => 'bg-pink-500 text-black',
-        'changed_position' => 'bg-green-800 text-black'
+    $map = [
+        'hired'             => ['bg' => '#dcfce7', 'text' => '#15803d', 'label' => 'Принят'],
+        'return_from_leave' => ['bg' => '#dbeafe', 'text' => '#1d4ed8', 'label' => 'Вернулся'],
+        'dismissed'         => ['bg' => '#fee2e2', 'text' => '#b91c1c', 'label' => 'Уволен'],
+        'maternity_leave'   => ['bg' => '#fef9c3', 'text' => '#854d0e', 'label' => 'Декрет'],
+        'long_vacation'     => ['bg' => '#fce7f3', 'text' => '#9d174d', 'label' => 'Отпуск'],
+        'changed_position'  => ['bg' => '#d1fae5', 'text' => '#065f46', 'label' => 'Смена роли'],
     ];
-
-    // $class = $colors[$employee->events()->latest('event_date')->first()?->event_type ?? 'unknown'] ?? 'bg-gray-500 text-white';
-    $class = $colors[$status] ?? 'bg-gray-500 text-white';
+    $s = $map[$status] ?? ['bg' => '#f3f4f6', 'text' => '#374151', 'label' => ucfirst(str_replace('_', ' ', $status))];
 @endphp
 
-<span class="px-2 py-1 rounded {{ $class }}">
-    {{ ucfirst(str_replace('_', ' ', $status)) }}
+<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;
+             font-size:11px;font-weight:600;background:{{ $s['bg'] }};color:{{ $s['text'] }};">
+    {{ $s['label'] }}
 </span>

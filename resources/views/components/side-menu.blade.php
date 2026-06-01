@@ -145,7 +145,7 @@
             </a>
         </li>
 
-        {{-- AI Ассистент (временно скрыт)
+        @if(false)
         <li>
             <a href="{{ route('chatbot') }}"
                style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;
@@ -162,7 +162,7 @@
                 AI Ассистент
             </a>
         </li>
-        --}}
+        @endif
 
     </ul>
 

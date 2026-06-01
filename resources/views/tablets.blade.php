@@ -28,19 +28,91 @@
         Планшеты
         <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $totalCount }}</span>
     </h1>
-    @can('editor')
-        <a href="/create-tablet"
-           style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
-                  background:#2563eb;color:#fff;border:none;border-radius:8px;
-                  font-size:13px;font-weight:600;text-decoration:none;"
-           onmouseover="this.style.background='#1d4ed8';"
-           onmouseout="this.style.background='#2563eb';">
-            <svg style="width:15px;height:15px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Добавить
-        </a>
-    @endcan
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+
+        {{-- Экспорт --}}
+        <div x-data="{ exportOpen: false }" style="position:relative;">
+            <button @click="exportOpen = !exportOpen"
+                    style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                           background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;
+                           font-size:13px;font-weight:500;cursor:pointer;"
+                    onmouseover="this.style.background='#f9fafb';"
+                    onmouseout="this.style.background='#fff';">
+                <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Выгрузить
+                <svg style="width:13px;height:13px;color:#9ca3af;" :class="{'rotate-180':exportOpen}"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <div x-show="exportOpen" @click.away="exportOpen=false" x-cloak
+                 style="position:absolute;right:0;top:calc(100% + 6px);width:260px;
+                        background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+                        box-shadow:0 4px 20px rgba(0,0,0,.1);z-index:50;padding:16px;">
+
+                <form action="{{ route('export.tablets') }}" method="POST">
+                    @csrf
+                    <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">Выберите колонки:</p>
+
+                    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;">
+                        @foreach([
+                            ['invent_number',         'Инв. номер',          true],
+                            ['serial_number',         'Серийный номер',      false],
+                            ['model',                 'Модель',              true],
+                            ['imei',                  'IMEI',                false],
+                            ['beeline_number',        'Билайн номер',        false],
+                            ['beeline_number_status', 'Статус Билайн',       false],
+                            ['status',                'Статус планшета',     true],
+                            ['employee_name',         'Сотрудник',           true],
+                            ['position',              'Должность',           false],
+                            ['employee_city',         'Город сотрудника',    true],
+                            ['employee_manager',      'Менеджер',            false],
+                            ['assigned_at',           'Дата привязки',       false],
+                            ['returned_at',           'Дата возврата',       false],
+                            ['responsible_name',      'Ответственное лицо',  false],
+                            ['responsible_city',      'Город ответственного',false],
+                        ] as [$val, $lbl, $chk])
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" name="columns[]" value="{{ $val }}" {{ $chk ? 'checked' : '' }}
+                                       style="width:14px;height:14px;accent-color:#2563eb;">
+                                {{ $lbl }}
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+                        <button type="submit"
+                                style="padding:6px 16px;background:#2563eb;color:#fff;border:none;
+                                       border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;"
+                                onmouseover="this.style.background='#1d4ed8';"
+                                onmouseout="this.style.background='#2563eb';">
+                            Скачать
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @can('editor')
+            <a href="/create-tablet"
+               style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                      background:#2563eb;color:#fff;border:none;border-radius:8px;
+                      font-size:13px;font-weight:600;text-decoration:none;"
+               onmouseover="this.style.background='#1d4ed8';"
+               onmouseout="this.style.background='#2563eb';">
+                <svg style="width:15px;height:15px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Добавить
+            </a>
+        @endcan
+
+    </div>
 </div>
 
 {{-- Статистика --}}

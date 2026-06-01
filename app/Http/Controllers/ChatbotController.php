@@ -33,7 +33,7 @@ class ChatbotController extends Controller
         $history   = $request->session()->get(self::SESSION_KEY, []);
         $history[] = ['role' => 'user', 'content' => $userMessage];
 
-        $botReply  = $this->callGemini($history);
+        $botReply  = $this->callClaude($history);
         $history[] = ['role' => 'assistant', 'content' => $botReply];
 
         if (count($history) > self::MAX_HISTORY) {
@@ -51,43 +51,42 @@ class ChatbotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    private function callGemini(array $history): string
+    private function callClaude(array $history): string
     {
-        // Конвертируем историю из формата OpenAI в формат Gemini
-        $contents = array_map(fn($msg) => [
-            'role'  => $msg['role'] === 'assistant' ? 'model' : 'user',
-            'parts' => [['text' => $msg['content']]],
+        $apiKey = config('services.anthropic.key');
+        $model  = config('services.anthropic.model');
+
+        $messages = array_map(fn($msg) => [
+            'role'    => $msg['role'],
+            'content' => $msg['content'],
         ], $history);
 
-        $apiKey = config('services.gemini.key');
-        $model  = config('services.gemini.model');
-
         try {
-            $response = Http::timeout(30)->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
-                [
-                    'systemInstruction' => [
-                        'parts' => [['text' => $this->systemPrompt]],
-                    ],
-                    'contents'          => $contents,
-                    'generationConfig'  => [
-                        'maxOutputTokens' => 1000,
-                    ],
-                ]
-            );
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'x-api-key'         => $apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type'      => 'application/json',
+                ])
+                ->post('https://api.anthropic.com/v1/messages', [
+                    'model'      => $model,
+                    'max_tokens' => 1024,
+                    'system'     => $this->systemPrompt,
+                    'messages'   => $messages,
+                ]);
 
             if ($response->failed()) {
-                Log::error('Gemini API error', [
+                Log::error('Claude API error', [
                     'status' => $response->status(),
                     'body'   => $response->body(),
                 ]);
                 return 'Не удалось получить ответ. Попробуйте позже.';
             }
 
-            return $response->json('candidates.0.content.parts.0.text') ?? 'Нет ответа.';
+            return $response->json('content.0.text') ?? 'Нет ответа.';
 
         } catch (\Exception $e) {
-            Log::error('Gemini exception', ['message' => $e->getMessage()]);
+            Log::error('Claude exception', ['message' => $e->getMessage()]);
             return 'Ошибка соединения с AI. Попробуйте позже.';
         }
     }
