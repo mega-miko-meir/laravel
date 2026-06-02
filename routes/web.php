@@ -16,9 +16,12 @@ Route::post('/logout', [UserController::class, 'logout']);
 Route::post('/login', [UserController::class, 'login']);
 Route::get('/login', fn() => redirect('/'))->name('login');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'can:editor'])->group(function () {
     // Tasks
     Route::resource('tasks', TaskController::class);
+});
+
+Route::middleware('auth')->group(function () {
 
     // Chatbot
     Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot');

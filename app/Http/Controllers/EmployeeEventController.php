@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use App\Models\EmployeeEvent;
 use App\Services\TabletAssignmentService;
 use App\Services\TerritoryAssignmentService;
-use Symfony\Contracts\EventDispatcher\Event;
 
 class EmployeeEventController extends Controller
 {
@@ -96,7 +95,19 @@ class EmployeeEventController extends Controller
     // }
 
 
-    public function destroy($id){
+    public function update(Request $request, EmployeeEvent $event)
+    {
+        $request->validate([
+            'event_type' => 'required|in:hired,dismissed,return_from_leave,maternity_leave,change_position,long_vacation,new',
+            'event_date' => 'required|date',
+        ]);
+
+        $event->update($request->only(['event_type', 'event_date']));
+
+        return back()->with('success', 'Событие обновлено');
+    }
+
+    public function destroy(int $id){
         EmployeeEvent::findOrFail($id)->delete();
 
         return back()->with('success', 'Событие удалено');

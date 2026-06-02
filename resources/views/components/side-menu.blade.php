@@ -128,6 +128,25 @@
             </a>
         </li>
 
+        @can('editor')
+        <li>
+            <a href="{{ route('tasks.index') }}"
+               style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;
+                      font-size:13px;font-weight:500;text-decoration:none;
+                      {{ request()->is('tasks*') ? 'background:#1d4ed8;color:#fff;' : 'color:#bfdbfe;' }}"
+               @if(!request()->is('tasks*'))
+               onmouseover="this.style.background='#1e40af';this.style.color='#fff';"
+               onmouseout="this.style.background='transparent';this.style.color='#bfdbfe';"
+               @endif>
+                <svg style="width:16px;height:16px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                Задачи
+            </a>
+        </li>
+        @endcan
+
         <li>
             <a href="{{ route('clients.index') }}"
                style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;

@@ -118,13 +118,15 @@
                 @endif
             </div>
 
-            <button onclick="toggleEditForm()"
-                    style="margin-top:6px;font-size:12px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:none;"
-                    onmouseover="this.style.textDecoration='underline';"
-                    onmouseout="this.style.textDecoration='none';">
-                Изменить статус
-            </button>
-            <x-event-adding-form :employee="$employee" />
+            <div style="position:relative;display:inline-block;margin-top:6px;">
+                <button onclick="toggleEditForm()"
+                        style="font-size:12px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"
+                        onmouseover="this.style.textDecoration='underline';"
+                        onmouseout="this.style.textDecoration='none';">
+                    Изменить статус
+                </button>
+                <x-event-adding-form :employee="$employee" />
+            </div>
         </div>
 
         {{-- Кнопка редактирования --}}
@@ -246,32 +248,100 @@
     </button>
 
     <div x-show="open" x-cloak>
+        @php
+            $eventLabels = [
+                'hired'             => 'Принят',
+                'dismissed'         => 'Уволен',
+                'return_from_leave' => 'Вернулся из отпуска',
+                'maternity_leave'   => 'Декретный отпуск',
+                'change_position'   => 'Смена должности',
+                'long_vacation'     => 'Длительный отпуск',
+                'new'               => 'Новый',
+            ];
+        @endphp
         <ul style="padding:0 20px 16px;margin:0;list-style:none;">
             @forelse($employee->events()->orderBy('event_date', 'desc')->get() as $event)
-                <li style="display:flex;align-items:center;justify-content:space-between;
-                           padding:10px 0;border-bottom:1px solid #f9fafb;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-size:11px;color:#9ca3af;width:72px;flex-shrink:0;">
-                            {{ \Carbon\Carbon::parse($event->event_date)->format('d.m.Y') }}
-                        </span>
-                        <x-status-badge :status="$event->event_type" />
+                <li x-data="{ editing: false }"
+                    style="padding:8px 0;border-bottom:1px solid #f9fafb;">
+
+                    {{-- Режим просмотра --}}
+                    <div x-show="!editing" style="display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <span style="font-size:11px;color:#9ca3af;width:72px;flex-shrink:0;">
+                                {{ \Carbon\Carbon::parse($event->event_date)->format('d.m.Y') }}
+                            </span>
+                            <x-status-badge :status="$event->event_type" />
+                        </div>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                            {{-- Редактировать --}}
+                            <button type="button" x-on:click="editing = true"
+                                    style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+                                           border-radius:6px;background:none;border:none;cursor:pointer;color:#d1d5db;"
+                                    onmouseover="this.style.color='#2563eb';this.style.background='#eff6ff';"
+                                    onmouseout="this.style.color='#d1d5db';this.style.background='none';">
+                                <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                            {{-- Удалить --}}
+                            <form action="{{ route('events.destroy', $event->id) }}" method="POST"
+                                  x-on:submit.prevent="if(confirm('Удалить событие?')) $el.submit()">
+                                @csrf @method('DELETE')
+                                <button type="submit"
+                                        style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+                                               border-radius:6px;background:none;border:none;cursor:pointer;color:#d1d5db;"
+                                        onmouseover="this.style.color='#ef4444';this.style.background='#fef2f2';"
+                                        onmouseout="this.style.color='#d1d5db';this.style.background='none';">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <form action="{{ route('events.destroy', $event->id) }}" method="POST"
-                          x-data x-on:submit.prevent="if(confirm('Удалить событие?')) $el.submit()">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;
-                                       border-radius:6px;background:none;border:none;cursor:pointer;color:#d1d5db;"
-                                onmouseover="this.style.color='#ef4444';this.style.background='#fef2f2';"
-                                onmouseout="this.style.color='#d1d5db';this.style.background='none';">
-                            <svg style="width:14px;height:14px;flex-shrink:0;" fill="none"
-                                 viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-                    </form>
+
+                    {{-- Режим редактирования --}}
+                    <div x-show="editing" x-cloak>
+                        <form action="{{ route('events.update', $event->id) }}" method="POST"
+                              onsubmit="return confirm('Сохранить изменения?');">
+                            @csrf @method('PATCH')
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <select name="event_type"
+                                        style="padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;
+                                               font-size:12px;color:#374151;outline:none;background:#fff;"
+                                        onfocus="this.style.borderColor='#2563eb';"
+                                        onblur="this.style.borderColor='#e5e7eb';">
+                                    @foreach($eventLabels as $val => $lbl)
+                                        <option value="{{ $val }}" {{ $event->event_type === $val ? 'selected' : '' }}>
+                                            {{ $lbl }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <input type="date" name="event_date"
+                                       value="{{ \Carbon\Carbon::parse($event->event_date)->format('Y-m-d') }}"
+                                       style="padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;
+                                              font-size:12px;color:#374151;outline:none;"
+                                       onfocus="this.style.borderColor='#2563eb';"
+                                       onblur="this.style.borderColor='#e5e7eb';">
+                                <button type="submit"
+                                        style="padding:4px 10px;font-size:12px;font-weight:600;background:#2563eb;
+                                               color:#fff;border:none;border-radius:6px;cursor:pointer;"
+                                        onmouseover="this.style.background='#1d4ed8';"
+                                        onmouseout="this.style.background='#2563eb';">
+                                    Сохранить
+                                </button>
+                                <button type="button" x-on:click="editing = false"
+                                        style="padding:4px 10px;font-size:12px;background:#fff;color:#6b7280;
+                                               border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;"
+                                        onmouseover="this.style.background='#f3f4f6';"
+                                        onmouseout="this.style.background='#fff';">
+                                    Отмена
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
                 </li>
             @empty
                 <li style="padding:16px 0;font-size:13px;text-align:center;color:#9ca3af;">Нет событий</li>
@@ -291,4 +361,12 @@ function toggleEditForm() {
     const el = document.getElementById('editForm');
     if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
+
+document.addEventListener('click', function (e) {
+    const panel = document.getElementById('editForm');
+    if (!panel || panel.style.display === 'none') return;
+    if (!panel.contains(e.target) && !e.target.closest('button[onclick="toggleEditForm()"]')) {
+        panel.style.display = 'none';
+    }
+});
 </script>

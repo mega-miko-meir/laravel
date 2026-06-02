@@ -25,6 +25,8 @@ Route::middleware(['auth', 'can:editor'])->group(function () {
         ->name('employees.updateStatus');
     Route::put('/employees/{employee}/update-status-event', [EmployeeEventController::class, 'addingEvent'])
         ->name('employees.updateStatusAndEvent');
+    Route::patch('/events/{event}', [EmployeeEventController::class, 'update'])
+        ->name('events.update');
     Route::delete('/events/{id}', [EmployeeEventController::class, 'destroy'])
         ->name('events.destroy');
 

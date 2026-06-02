@@ -7,7 +7,7 @@
             box-shadow:0 1px 0 rgba(255,255,255,.08),0 2px 8px rgba(0,0,0,.18);">
 
     {{-- Логотип --}}
-    <a href="/"
+    <a href="/dashboard"
        style="display:flex;align-items:center;text-decoration:none;opacity:.95;transition:opacity .15s;"
        onmouseover="this.style.opacity='1';"
        onmouseout="this.style.opacity='.95';">

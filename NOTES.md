@@ -11,10 +11,10 @@
 
 | Слой | Технология |
 |---|---|
-| Backend | Laravel (PHP), MySQL |
-| Frontend | Blade + Alpine.js + Tailwind CSS |
+| Backend | Laravel 11 (PHP), MySQL |
+| Frontend | Blade + Alpine.js + inline CSS |
 | Экспорт | PhpSpreadsheet (Excel), fputcsv (CSV-стриминг) |
-| Чатбот | OpenAI API (`OPENAI_API_KEY` в `.env`) |
+| Чатбот | Anthropic Claude API (`ANTHROPIC_API_KEY` в `.env`) |
 | Погода | Weather API (`WEATHER_API_KEY` в `.env`) |
 
 > Локальный запуск через **XAMPP** (`http://localhost/laravel-project/public`)  
@@ -53,7 +53,18 @@
 - Два режима отображения: по группам / по FFM и RM
 
 ### Дашборд (`/dashboard`)
-- Статистика активности сотрудников
+- 4 карточки статистики (активные, нанятые, уволенные, текучесть)
+- Фильтр по ролям — применяется к обоим графикам
+- График найма/увольнений по месяцам
+- График численности персонала (кумулятивный) с фильтром по ролям
+- Данные: `$cumulativeByRole` — 12 месяцев с GROUP BY role
+
+### Чатбот (`/chatbot`)
+- AI-ассистент на базе **Claude API (Anthropic)**
+- Модель по умолчанию: `claude-haiku-4-5-20251001`
+- История диалога хранится в сессии (макс. 20 сообщений)
+- Системный промпт на русском, отвечает на RU/KZ
+- **Сейчас скрыт** в меню (`@if(false)`) — требует `ANTHROPIC_API_KEY` в `.env`
 
 ### Администрирование
 - Пользователи (`/users`) — только `admin`
@@ -98,7 +109,7 @@ Middleware: `can:admin`, `can:editor` в роутах.
 ## Структура роутов
 
 ```
-web.php          — auth, dashboard, chatbot, export, clients
+web.php                — auth, dashboard, chatbot, export, clients
 routes/employees.php   — сотрудники
 routes/tablets.php     — планшеты
 routes/territories.php — территории и брики
@@ -107,10 +118,88 @@ routes/admin.php       — пользователи, роли, логи
 
 ---
 
-## Важные детали
+## Важные детали реализации
 
-- **Экспорт OneKey** — был переведён с PhpSpreadsheet на CSV-стриминг (`chunk(500)`) из-за `memory exhausted` на больших таблицах. Файл `.csv` с UTF-8 BOM, разделитель `;`.
-- **Alpine.js** используется повсеместно для интерактивности без Vue/React.
-- **Inline styles** (не Tailwind) — стиль страниц `home.blade.php` и `tablets.blade.php` используется как эталон для новых страниц.
-- **Chatbot** — `ChatbotController.php` использует OpenAI API через Laravel HTTP-фасад (`Illuminate\Support\Facades\Http`).
-- **Фото сотрудников** — хранятся в `storage/`, добавлены в последней миграции (`2026_05_12`).
+### Стиль UI
+- Весь UI использует **inline CSS** (не Tailwind) для независимости от сборки
+- Эталон стиля: `home.blade.php`, `tablets.blade.php`
+- Форма-шаблон: 3 секции в карточке + кнопки Отмена/Сохранить
+- Фокус на полях: `onfocus="this.style.borderColor='#2563eb'"` / `onblur="...='#e5e7eb'"`
+- Hover на кнопках: `onmouseover` / `onmouseout`
+
+### Комментирование блоков Blade
+- Нельзя использовать `{{-- --}}` для блоков содержащих вложенные `{{-- --}}` — внутренний `--}}` закрывает внешний
+- Использовать `@if(false) ... @endif` для безопасного отключения любых Blade-блоков
+
+### Экспорт OneKey
+- Переведён с PhpSpreadsheet на CSV-стриминг (`chunk(500)`) из-за `memory exhausted`
+- Файл `.csv` с UTF-8 BOM, разделитель `;`
+
+### Дашборд — кумулятивный график по ролям
+- `$cumulativeByRole` — массив `role => [n0..n11]` строится в контроллере через 12 итераций с `GROUP BY role`
+- Алиас `$latestTerrSubEv` использует `ev.employee_id` (не `e.id`) — в запросе нет таблицы `employees`
+- JS: `getCumulativeSeries()` суммирует выбранные роли из `cumulativeByRole`
+
+### Чатбот — переход с Gemini на Claude
+- Gemini давал ошибку 429 `limit: 0` (квота free-tier исчерпана)
+- Переключён на Anthropic API: `POST https://api.anthropic.com/v1/messages`
+- Заголовки: `x-api-key`, `anthropic-version: 2023-06-01`
+- Ответ: `content.0.text`
+- Конфиг: `config/services.php` → `anthropic.key` / `anthropic.model`
+
+---
+
+## Переменные окружения (.env)
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...     # Claude API — для чатбота
+ANTHROPIC_MODEL=claude-haiku-4-5-20251001  # или claude-sonnet-4-6
+WEATHER_API_KEY=...              # Погода на дашборде
+GEMINI_API_KEY=...               # Устарело, не используется
+```
+
+---
+
+## Позиции сотрудников (config/constants.php)
+
+```php
+'roles' => ['Rep', 'RM', 'FFM', 'KAM', 'Product', 'Marketing']
+```
+
+---
+
+## Изменения (хронология)
+
+### Дашборд
+- Убраны карточки «Нанятые в прошлом месяце» и «Уволенные в прошлом месяце»
+- Карточки сжаты в 4-колоночную сетку
+- Фильтр по ролям перенесён ниже карточек, над графиками
+- Добавлена фильтрация графика «Численность персонала» по ролям
+
+### Side menu
+- Полностью переписан с inline-стилями (убрана зависимость от Tailwind)
+- AI Ассистент скрыт через `@if(false)`
+
+### Форма сотрудника
+- Переписана с inline-стилями, 3 секции: Основная информация / Контакты и даты / Должность
+- Email автогенерация: `{имя}.{фамилия}@nobel.kz` при вводе ФИО
+- Добавлена позиция KAM
+
+### Карточка сотрудника
+- Кнопка «Редактировать» — компактная 30×30px с иконкой карандаша
+- Бейджи событий — компактные pill-таблетки с русскими названиями
+- Форма смены статуса — переписана с inline-стилями, 2-колоночная сетка
+
+### Экспорт в Excel
+- Добавлен на страницу планшетов (аналогично странице сотрудников)
+
+### Форма территории
+- Переписана с inline-стилями, 3 секции: Основная информация / Расположение / Иерархия
+
+### Форма планшета
+- Переписана с inline-стилями, 3 секции: Основная информация / Идентификаторы / Ответственный
+
+### AI Ассистент
+- Переключён с Google Gemini на Anthropic Claude API
+- Требует `ANTHROPIC_API_KEY` в `.env`
+- Временно скрыт из навигации
