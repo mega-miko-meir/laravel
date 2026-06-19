@@ -11,6 +11,9 @@
     {{-- Левая колонка --}}
     <div style="flex:0 0 38%;min-width:280px;max-width:420px;">
         <x-employee-info :employee="$employee" :currentStatus="$currentStatus" />
+        @if($visitStats)
+            <x-visit-stats :stats="$visitStats" />
+        @endif
     </div>
 
     {{-- Правая колонка --}}

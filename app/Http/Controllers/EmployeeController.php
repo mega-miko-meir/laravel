@@ -8,6 +8,7 @@ use App\Http\Requests\EmployeeUpdateRequest;
 use App\Models\Employee;
 use App\Models\EmployeeCredential;
 use App\Models\EmployeeEvent;
+use App\Models\Nobel\Call;
 use App\Services\TeamService;
 use Illuminate\Http\Request;
 
@@ -66,6 +67,39 @@ class EmployeeController extends Controller
         $lastTerritory  = $employee->employee_territory()->latest('assigned_at')->first();
         $lastTablet     = $employee->employee_tablet()->withPivot('assigned_at', 'returned_at')->orderByDesc('assigned_at')->first();
 
+        $visitStats = null;
+        if ($employee->crm_employee_id) {
+            $crmId = $employee->crm_employee_id;
+            $base  = Call::where('employee_id', $crmId)
+                ->where('appointment_status', 'Выполнено')
+                ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
+
+            $total     = (clone $base)->count();
+            $avgDur    = (int) ((clone $base)->where('appointment_duration', '>', 0)->avg('appointment_duration') ?? 0);
+            $lastDate  = (clone $base)->max('appointment_Date');
+
+            $thisMonth = (clone $base)->whereYear('appointment_Date', now()->year)->whereMonth('appointment_Date', now()->month)->count();
+            $lastMonth = (clone $base)->whereYear('appointment_Date', now()->subMonth()->year)->whereMonth('appointment_Date', now()->subMonth()->month)->count();
+
+            $monthly = (clone $base)
+                ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
+                ->whereNotNull('appointment_Date')
+                ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+
+            $topSpec = (clone $base)
+                ->selectRaw('customer_spesiality, COUNT(*) as cnt')
+                ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
+                ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
+
+            $doctorVisits   = (clone $base)->where('appointment_type', 'Визит к врачу')->count();
+            $pharmacyVisits = (clone $base)->where('appointment_type', 'Визит в аптеку')->count();
+
+            $visitStats = compact('total', 'avgDur', 'lastDate', 'thisMonth', 'lastMonth', 'monthly', 'topSpec', 'crmId', 'doctorVisits', 'pharmacyVisits');
+        }
+
         return view('employee', [
             'employee'             => $employee,
             'lastTerritory'        => $lastTerritory,
@@ -79,6 +113,7 @@ class EmployeeController extends Controller
             'territoriesHistory'   => $employee->employee_territory()->withPivot('assigned_at', 'unassigned_at', 'id')->orderByDesc('assigned_at')->get(),
             'tabletHistories'      => \App\Models\EmployeeTablet::where('employee_id', $employee->id)->with('tablet')->orderByDesc('assigned_at')->get(),
             'currentStatus'        => $employee->events()->latest('event_date')->value('event_type'),
+            'visitStats'           => $visitStats,
         ]);
     }
 

@@ -4,90 +4,80 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ClientExportRequest;
 use App\Http\Requests\ClientIndexRequest;
-use App\Models\Client;
+use App\Models\Nobel\OnekeyDoctor;
+use App\Models\Nobel\OnekeyPharmacy;
 use Illuminate\Http\Request;
 
 class ClientController extends Controller
 {
-    private const EXPORTABLE_COLUMNS = [
-        'full_name',
-        'organization_type',
-        'specialty',
-        'specialty2',
-        'parent_organization',
-        'workplace',
-        'primary_address',
-        'city',
-        'brick_name',
-        'brick_label',
-        'onekey_id',
-        'coordinates',
+    private const DOCTOR_COLUMNS = [
+        'customer'            => 'ФИО',
+        'customer_spesiality' => 'Специальность',
+        'organization'        => 'Место работы',
+        'organization_address'=> 'Адрес',
+        'town'                => 'Город',
+        'province'            => 'Регион',
+    ];
+
+    private const PHARMACY_COLUMNS = [
+        'organization'        => 'Название',
+        'organization_address'=> 'Адрес',
+        'town'                => 'Город',
+        'province'            => 'Регион',
     ];
 
     public function index(ClientIndexRequest $request)
     {
-        $query = Client::query();
-        $this->applyFilters($query, $request);
+        $isPharmacy = $request->input('organization_type') === 'Аптека';
 
+        $query = $isPharmacy ? OnekeyPharmacy::query() : OnekeyDoctor::query();
+        $this->applyFilters($query, $request, $isPharmacy);
         $clients = $query->paginate(50);
 
-        // Данные для фильтров
-        $specialties = Client::select('specialty')
-        ->distinct()
-        ->whereNotNull('specialty')
-        ->where('specialty', '<>', '')
-        ->orderBy('specialty', 'asc')
-        ->pluck('specialty');
-        $cities = Client::select('city')
-        ->distinct()
-        ->whereNotNull('city')
-        ->where('city', '<>', '')
-        ->orderBy('city', 'asc')
-        ->pluck('city');
-        $types = Client::select('organization_type')->distinct()->pluck('organization_type');
-        $regions = Client::select('brick_label')
-        ->distinct()
-        ->where('brick_label', '<>', '')
-        ->orderBy('brick_label', 'asc')
-        ->pluck('brick_label');
+        $specialties = $isPharmacy
+            ? collect()
+            : OnekeyDoctor::distinct()
+                ->whereNotNull('customer_spesiality')
+                ->where('customer_spesiality', '<>', '')
+                ->orderBy('customer_spesiality')
+                ->pluck('customer_spesiality');
 
-        return view('clients', compact('clients', 'specialties', 'cities', 'types', 'regions'));
-    }
+        $model = $isPharmacy ? new OnekeyPharmacy : new OnekeyDoctor;
 
-    private function clientLabels($key)
-    {
-        return [
-            'full_name' => 'ФИО/Название',
-            'organization_type' => 'Тип клиента',
-            'specialty' => 'Специальность',
-            'specialty2' => 'Доп. специальность',
-            'parent_organization' => 'Родительская организация',
-            'workplace' => 'Место работы',
-            'primary_address' => 'Адрес',
-            'city' => 'Город',
-            'brick_name' => 'Брик',
-            'brick_label' => 'Регион',
-            'onekey_id' => 'OneKey ID',
-            'coordinates' => 'Координаты',
-        ][$key] ?? $key;
+        $cities = $model::distinct()
+            ->whereNotNull('town')->where('town', '<>', '')
+            ->orderBy('town')->pluck('town');
+
+        $regions = $model::distinct()
+            ->whereNotNull('province')->where('province', '<>', '')
+            ->orderBy('province')->pluck('province');
+
+        return view('clients', compact(
+            'clients', 'specialties', 'cities', 'regions', 'isPharmacy'
+        ));
     }
 
     public function export(ClientExportRequest $request)
     {
-        $query = Client::query();
-        $this->applyFilters($query, $request);
-        $columns = $this->sanitizeColumns($request->input('columns', ['full_name']));
-        $labels  = array_map(fn($col) => $this->clientLabels($col), $columns);
-        $fileName = 'clients_export_' . now()->format('Y-m-d_H-i') . '.csv';
+        $isPharmacy = $request->input('organization_type') === 'Аптека';
+        $available  = $isPharmacy ? self::PHARMACY_COLUMNS : self::DOCTOR_COLUMNS;
+
+        $query = $isPharmacy ? OnekeyPharmacy::query() : OnekeyDoctor::query();
+        $this->applyFilters($query, $request, $isPharmacy);
+
+        $requestedCols = $request->input('columns', []);
+        $columns = array_values(array_intersect(array_keys($available), $requestedCols))
+            ?: array_keys($available);
+        $labels  = array_map(fn($col) => $available[$col], $columns);
+
+        $fileName = 'onekey_' . ($isPharmacy ? 'pharmacy' : 'doctors') . '_'
+            . now()->format('Y-m-d_H-i') . '.csv';
 
         return response()->streamDownload(function () use ($query, $columns, $labels) {
             $out = fopen('php://output', 'w');
-
-            // BOM для корректного открытия в Excel
             fputs($out, "\xEF\xBB\xBF");
             fputcsv($out, $labels, ';');
 
-            // чанки по 500 строк — память не растёт с размером таблицы
             $query->chunk(500, function ($rows) use ($out, $columns) {
                 foreach ($rows as $row) {
                     fputcsv($out, array_map(fn($col) => $row->$col ?? '', $columns), ';');
@@ -103,35 +93,24 @@ class ClientController extends Controller
         ]);
     }
 
-    private function applyFilters($query, Request $request): void
+    private function applyFilters($query, Request $request, bool $isPharmacy): void
     {
+        $nameCol = $isPharmacy ? 'organization' : 'customer';
+
         if ($request->filled('full_name')) {
-            $query->where('full_name', 'like', '%' . $request->input('full_name') . '%');
+            $query->where($nameCol, 'like', '%' . $request->input('full_name') . '%');
         }
 
-        if ($request->filled('specialty')) {
-            $query->whereIn('specialty', (array) $request->input('specialty'));
+        if (!$isPharmacy && $request->filled('specialty')) {
+            $query->whereIn('customer_spesiality', (array) $request->input('specialty'));
         }
 
         if ($request->filled('city')) {
-            $query->whereIn('city', (array) $request->input('city'));
+            $query->whereIn('town', (array) $request->input('city'));
         }
 
         if ($request->filled('brick_label')) {
-            $query->whereIn('brick_label', (array) $request->input('brick_label'));
-        }
-
-        if ($request->filled('organization_type')) {
-            $query->where('organization_type', $request->input('organization_type'));
+            $query->whereIn('province', (array) $request->input('brick_label'));
         }
     }
-
-    private function sanitizeColumns(mixed $columns): array
-    {
-        $columns = is_array($columns) ? $columns : [$columns];
-        $columns = array_values(array_intersect($columns, self::EXPORTABLE_COLUMNS));
-
-        return $columns !== [] ? $columns : ['full_name'];
-    }
-
 }

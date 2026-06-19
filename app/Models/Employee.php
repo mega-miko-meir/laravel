@@ -20,6 +20,7 @@ class Employee extends Model
         'position',
         'status',
         'photo_path',
+        'crm_employee_id',
     ];
 
     public function territories(){

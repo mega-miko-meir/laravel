@@ -15,31 +15,21 @@ class ClientExportRequest extends FormRequest
     public function rules(): array
     {
         $exportableColumns = [
-            'full_name',
-            'organization_type',
-            'specialty',
-            'specialty2',
-            'parent_organization',
-            'workplace',
-            'primary_address',
-            'city',
-            'brick_name',
-            'brick_label',
-            'onekey_id',
-            'coordinates',
+            'customer', 'customer_spesiality', 'organization',
+            'organization_address', 'town', 'province',
         ];
 
         return [
-            'full_name' => ['nullable', 'string', 'max:255'],
+            'full_name'         => ['nullable', 'string', 'max:255'],
             'organization_type' => ['nullable', 'string', 'max:255'],
-            'specialty' => ['nullable', 'array'],
-            'specialty.*' => ['string', 'max:255'],
-            'city' => ['nullable', 'array'],
-            'city.*' => ['string', 'max:255'],
-            'brick_label' => ['nullable', 'array'],
-            'brick_label.*' => ['string', 'max:255'],
-            'columns' => ['nullable', 'array'],
-            'columns.*' => ['string', Rule::in($exportableColumns)],
+            'specialty'         => ['nullable', 'array'],
+            'specialty.*'       => ['string', 'max:255'],
+            'city'              => ['nullable', 'array'],
+            'city.*'            => ['string', 'max:255'],
+            'brick_label'       => ['nullable', 'array'],
+            'brick_label.*'     => ['string', 'max:255'],
+            'columns'           => ['nullable', 'array'],
+            'columns.*'         => ['string', Rule::in($exportableColumns)],
         ];
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeDataController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\CallController;
 
 // Auth
 Route::post('/logout', [UserController::class, 'logout']);
@@ -38,6 +39,10 @@ Route::middleware('auth')->group(function () {
 
     // Clients
     Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+
+    // Calls
+    Route::get('/calls', [CallController::class, 'index'])->name('calls.index');
+    Route::post('/calls/export', [CallController::class, 'export'])->name('calls.export');
 
     // Feedback
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');

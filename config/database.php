@@ -42,6 +42,19 @@ return [
             'synchronous' => null,
         ],
 
+        'nobel' => [
+            'driver'    => 'mysql',
+            'host'      => env('NOBEL_DB_HOST', '192.168.33.39'),
+            'port'      => env('NOBEL_DB_PORT', '3306'),
+            'database'  => env('NOBEL_DB_DATABASE', 'nobeldb'),
+            'username'  => env('NOBEL_DB_USERNAME', 'userdb'),
+            'password'  => env('NOBEL_DB_PASSWORD', ''),
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix'    => '',
+            'strict'    => false,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),

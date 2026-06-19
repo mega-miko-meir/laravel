@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\CrmMappingController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -27,5 +28,9 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
         ->name('admin.notifications');
     Route::get('/admin/notifications/{notification}', [NotificationController::class, 'show'])
         ->name('admin.notifications.show');
+
+    Route::get('/admin/crm-mapping', [CrmMappingController::class, 'index'])->name('admin.crm-mapping');
+    Route::post('/admin/crm-mapping/auto-match', [CrmMappingController::class, 'autoMatch'])->name('admin.crm-mapping.auto');
+    Route::post('/admin/crm-mapping/link', [CrmMappingController::class, 'link'])->name('admin.crm-mapping.link');
 
 });
