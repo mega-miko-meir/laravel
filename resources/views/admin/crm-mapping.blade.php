@@ -44,10 +44,42 @@
         </div>
     </div>
 
+    {{-- Данные сотрудников системы — один раз для всех строк --}}
+    <script>
+    const SYS_EMPLOYEES = @json($sysEmployees->map(fn($e) => [
+        'id'    => $e->id,
+        'label' => $e->full_name . ($e->position ? ' (' . $e->position . ')' : ''),
+    ])->values());
+
+    function empPicker(initId, initLabel) {
+        return {
+            selected: initId,
+            query:    initLabel,
+            open:     false,
+            get filtered() {
+                const q = this.query.trim().toLowerCase();
+                if (!q) return SYS_EMPLOYEES.slice(0, 80);
+                return SYS_EMPLOYEES.filter(e => e.label.toLowerCase().includes(q)).slice(0, 80);
+            },
+            choose(emp) {
+                this.selected = emp.id;
+                this.query    = emp.label;
+                this.open     = false;
+            },
+            clear() {
+                this.selected = null;
+                this.query    = '';
+                this.open     = true;
+            },
+        };
+    }
+    </script>
+
     {{-- Table --}}
     <div x-data="{ tab: 'unmapped', search: '' }">
 
         <style>
+            [x-cloak] { display:none !important; }
             .crm-tab { border:1px solid #d1d5db; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:500; cursor:pointer; background:#fff; color:#374151; }
             .crm-tab-blue  { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
             .crm-tab-red   { background:#dc2626; color:#fff; border-color:#dc2626; }
@@ -115,22 +147,52 @@
                         </td>
                         <td style="padding:10px 16px;color:#64748b;font-size:12px;">{{ $crm->employee_position ?? '—' }}</td>
                         <td style="padding:10px 16px;">
+                            @php $initLabel = $linked ? ($linked->full_name . ($linked->position ? ' ('.$linked->position.')' : '')) : '' @endphp
                             <form method="POST" action="{{ route('admin.crm-mapping.link') }}"
-                                  style="display:flex;gap:8px;align-items:center;">
+                                  style="display:flex;gap:6px;align-items:center;">
                                 @csrf
                                 <input type="hidden" name="crm_employee_id" value="{{ $crm->employee_id }}">
-                                <select name="employee_id"
-                                    style="border:1px solid #d1d5db;border-radius:6px;padding:5px 8px;font-size:12px;color:#374151;outline:none;max-width:260px;width:100%;">
-                                    <option value="">— не привязан —</option>
-                                    @foreach($sysEmployees as $emp)
-                                        <option value="{{ $emp->id }}"
-                                            {{ $linked && $linked->id === $emp->id ? 'selected' : '' }}>
-                                            {{ $emp->full_name }}{{ $emp->position ? ' ('.$emp->position.')' : '' }}
-                                        </option>
-                                    @endforeach
-                                </select>
+
+                                {{-- Searchable employee picker --}}
+                                <div x-data="empPicker({{ $linked ? $linked->id : 'null' }}, @js($initLabel))"
+                                     @click.outside="open=false"
+                                     style="position:relative;flex:1;max-width:280px;">
+                                    <div style="position:relative;">
+                                        <input type="text"
+                                               x-model="query"
+                                               @focus="open=true"
+                                               @input="open=true"
+                                               @keydown.escape="open=false"
+                                               autocomplete="off"
+                                               placeholder="Поиск сотрудника..."
+                                               style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:#374151;outline:none;">
+                                        <span x-show="query" @click="clear()"
+                                              style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:15px;line-height:1;user-select:none;">×</span>
+                                    </div>
+                                    <input type="hidden" name="employee_id" :value="selected ?? ''">
+
+                                    <div x-show="open" x-cloak
+                                         style="position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;">
+                                        <div @click="clear()"
+                                             style="padding:6px 10px;font-size:12px;color:#94a3b8;cursor:pointer;border-bottom:1px solid #f1f5f9;"
+                                             onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                                            — не привязан —
+                                        </div>
+                                        <template x-for="emp in filtered" :key="emp.id">
+                                            <div @click="choose(emp)"
+                                                 :style="emp.id===selected ? 'background:#eff6ff;font-weight:500;' : ''"
+                                                 style="padding:6px 10px;font-size:12px;color:#1e293b;cursor:pointer;"
+                                                 onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=this._x_isSelected?'#eff6ff':''">
+                                                <span x-text="emp.label"></span>
+                                            </div>
+                                        </template>
+                                        <div x-show="filtered.length===0"
+                                             style="padding:8px 10px;font-size:12px;color:#94a3b8;">Не найдено</div>
+                                    </div>
+                                </div>
+
                                 <button type="submit"
-                                    style="white-space:nowrap;background:#e0e7ff;color:#3730a3;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">
+                                    style="white-space:nowrap;background:#e0e7ff;color:#3730a3;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;">
                                     Сохранить
                                 </button>
                             </form>
