@@ -56,10 +56,19 @@
             selected: initId,
             query:    initLabel,
             open:     false,
+            pos:      { top: 0, left: 0, width: 280 },
             get filtered() {
                 const q = this.query.trim().toLowerCase();
                 if (!q) return SYS_EMPLOYEES.slice(0, 80);
                 return SYS_EMPLOYEES.filter(e => e.label.toLowerCase().includes(q)).slice(0, 80);
+            },
+            openPicker(event) {
+                const rect = event.currentTarget.getBoundingClientRect();
+                this.pos = { top: rect.bottom + 2, left: rect.left, width: rect.width };
+                this.open = true;
+                // закрыть при скролле
+                const close = () => { this.open = false; };
+                window.addEventListener('scroll', close, { once: true });
             },
             choose(emp) {
                 this.selected = emp.id;
@@ -69,7 +78,6 @@
             clear() {
                 this.selected = null;
                 this.query    = '';
-                this.open     = true;
             },
         };
     }
@@ -160,7 +168,7 @@
                                     <div style="position:relative;">
                                         <input type="text"
                                                x-model="query"
-                                               @focus="open=true"
+                                               @focus="openPicker($event)"
                                                @input="open=true"
                                                @keydown.escape="open=false"
                                                autocomplete="off"
@@ -172,7 +180,7 @@
                                     <input type="hidden" name="employee_id" :value="selected ?? ''">
 
                                     <div x-show="open" x-cloak
-                                         style="position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;">
+                                         :style="`position:fixed;top:${pos.top}px;left:${pos.left}px;width:${pos.width}px;z-index:9999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;`">
                                         <div @click="clear()"
                                              style="padding:6px 10px;font-size:12px;color:#94a3b8;cursor:pointer;border-bottom:1px solid #f1f5f9;"
                                              onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
