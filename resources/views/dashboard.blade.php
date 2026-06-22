@@ -79,6 +79,8 @@
     @endforeach
 </div>
 
+@can('admin')
+
 {{-- Фильтр по должности (глобальный) --}}
 @if(count($allRoles) > 0)
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;
@@ -233,5 +235,7 @@
     document.querySelectorAll('.role-btn[data-role]').forEach(btn => { btn.addEventListener('click', () => { const r = btn.dataset.role; selectedRoles.has(r) ? selectedRoles.delete(r) : selectedRoles.add(r); syncButtons(); refreshAll(); }); });
 })();
 </script>
+
+@endcan
 
 @endsection

@@ -40,12 +40,14 @@ Route::middleware('auth')->group(function () {
     // Clients
     Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
 
-    // Calls
-    Route::get('/calls', [CallController::class, 'index'])->name('calls.index');
-    Route::post('/calls/export', [CallController::class, 'export'])->name('calls.export');
-
     // Feedback
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+});
+
+Route::middleware(['auth', 'can:admin'])->group(function () {
+    // Calls (визиты) — только для админа
+    Route::get('/calls', [CallController::class, 'index'])->name('calls.index');
+    Route::post('/calls/export', [CallController::class, 'export'])->name('calls.export');
 });
 
 // Dev/misc

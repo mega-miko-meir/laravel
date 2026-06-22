@@ -163,6 +163,7 @@
         </li>
         @endcan
 
+        @can('admin')
         <li>
             <a href="{{ route('calls.index') }}"
                style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;
@@ -179,6 +180,7 @@
                 Визиты
             </a>
         </li>
+        @endcan
 
         <li>
             <a href="{{ route('clients.index') }}"
