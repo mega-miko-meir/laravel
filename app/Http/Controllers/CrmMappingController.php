@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class CrmMappingController extends Controller
@@ -11,11 +12,18 @@ class CrmMappingController extends Controller
     // CRM employees: [{employee_id, employee, employee_position}]
     private function getCrmEmployees(): array
     {
-        return DB::connection('nobel')
-            ->select('SELECT DISTINCT employee_id, TRIM(employee) as employee, employee_position
-                      FROM qs_calls
-                      WHERE employee_id IS NOT NULL AND employee IS NOT NULL AND employee <> ""
-                      ORDER BY employee');
+        return Cache::remember('crm_employees_list', 3600, function () {
+            try {
+                return DB::connection('nobel')
+                    ->select('SELECT employee_id, TRIM(employee) as employee, employee_position
+                              FROM qs_calls
+                              WHERE employee_id IS NOT NULL AND employee IS NOT NULL AND employee <> ""
+                              GROUP BY employee_id, employee, employee_position
+                              ORDER BY employee');
+            } catch (\Exception $e) {
+                return [];
+            }
+        });
     }
 
     public function index()

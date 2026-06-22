@@ -4,77 +4,77 @@ namespace App\Http\Controllers;
 
 use App\Models\Nobel\Call;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CallController extends Controller
 {
     public function index(Request $request)
     {
-        // KPI
-        $totalVisits      = $this->filtered($request)->count();
-        $completedVisits  = $this->filtered($request)->where('appointment_status', 'Выполнено')->count();
-        $employeesCount   = $this->filtered($request)->distinct()->whereNotNull('employee')->count('employee');
-        $avgDuration      = (int) ($this->filtered($request)->where('appointment_status', 'Выполнено')->whereNotNull('appointment_duration')->where('appointment_duration', '>', 0)->avg('appointment_duration') ?? 0);
-        $completionRate   = $totalVisits > 0 ? round($completedVisits / $totalVisits * 100, 1) : 0;
-        $visitsPerEmployee = $employeesCount > 0 ? round($totalVisits / $employeesCount, 1) : 0;
+        try {
+            // 1 запрос вместо 6: все KPI-метрики за один SELECT
+            $kpi = $this->filtered($request)
+                ->selectRaw('COUNT(*) as total, COUNT(DISTINCT employee) as employees_count, ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avg_duration, SUM(appointment_type = "Визит к врачу") as doctor_visits, SUM(appointment_type = "Визит в аптеку") as pharmacy_visits')
+                ->first();
 
-        // Monthly trend (last 12 months)
-        $monthlyTrend = $this->filtered($request)
-            ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total, SUM(appointment_status = 'Выполнено') as completed")
-            ->whereNotNull('appointment_Date')
-            ->groupBy('month')
-            ->orderBy('month')
-            ->limit(12)
-            ->get();
+            $totalVisits       = (int) ($kpi->total ?? 0);
+            $employeesCount    = (int) ($kpi->employees_count ?? 0);
+            $avgDuration       = (int) ($kpi->avg_duration ?? 0);
+            $doctorVisits      = (int) ($kpi->doctor_visits ?? 0);
+            $pharmacyVisits    = (int) ($kpi->pharmacy_visits ?? 0);
+            $visitsPerEmployee = $employeesCount > 0 ? round($totalVisits / $employeesCount, 1) : 0;
 
-        // Top 10 regions
-        $topRegions = $this->filtered($request)
-            ->selectRaw('province, COUNT(*) as total')
-            ->whereNotNull('province')->where('province', '<>', '')
-            ->groupBy('province')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get();
+            // Monthly trend (last 12 months)
+            $monthlyTrend = $this->filtered($request)
+                ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total, COUNT(*) as completed")
+                ->whereNotNull('appointment_Date')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->limit(12)
+                ->get();
 
-        // Top specialties
-        $topSpecialties = $this->filtered($request)
-            ->selectRaw('customer_spesiality, COUNT(*) as total')
-            ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
-            ->groupBy('customer_spesiality')
-            ->orderByDesc('total')
-            ->limit(12)
-            ->get();
+            // Top 10 regions
+            $topRegions = $this->filtered($request)
+                ->selectRaw('province, COUNT(*) as total')
+                ->whereNotNull('province')->where('province', '<>', '')
+                ->groupBy('province')
+                ->orderByDesc('total')
+                ->limit(10)
+                ->get();
 
-        // Status breakdown (pie/doughnut data)
-        $statusBreakdown = $this->filtered($request)
-            ->selectRaw('appointment_status, COUNT(*) as total')
-            ->whereNotNull('appointment_status')
-            ->groupBy('appointment_status')
-            ->orderByDesc('total')
-            ->get();
+            // Top specialties
+            $topSpecialties = $this->filtered($request)
+                ->selectRaw('customer_spesiality, COUNT(*) as total')
+                ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
+                ->groupBy('customer_spesiality')
+                ->orderByDesc('total')
+                ->limit(12)
+                ->get();
 
-        // Paginated table with sorting
-        $allowedSorts = ['appointment_Date', 'employee', 'organization', 'province', 'town', 'appointment_status', 'appointment_duration'];
-        $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'appointment_Date';
-        $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+            // Paginated table with sorting
+            $allowedSorts = ['appointment_Date', 'employee', 'organization', 'province', 'town', 'appointment_duration'];
+            $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'appointment_Date';
+            $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $calls = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
+            $calls = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
 
-        // Filter options
-        $provinces   = Call::distinct()->whereNotNull('province')->where('province', '<>', '')->orderBy('province')->pluck('province');
-        $towns       = Call::distinct()->whereNotNull('town')->where('town', '<>', '')->orderBy('town')->pluck('town');
-        $orgTypes    = Call::distinct()->whereNotNull('organization_type')->where('organization_type', '<>', '')->orderBy('organization_type')->pluck('organization_type');
-        $statuses    = Call::distinct()->whereNotNull('appointment_status')->where('appointment_status', '<>', '')->orderBy('appointment_status')->pluck('appointment_status');
-        $specialties = Call::distinct()->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')->orderBy('customer_spesiality')->pluck('customer_spesiality');
-        $departments = Call::distinct()->whereNotNull('employee_department')->where('employee_department', '<>', '')->orderBy('employee_department')->pluck('employee_department');
+            // Опции фильтров — кэшируются на 1 час
+            $base = fn($col) => Call::whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
+                ->where('appointment_status', 'Выполнено')
+                ->distinct()->whereNotNull($col)->where($col, '<>', '')->orderBy($col)->pluck($col);
 
-        $doctorVisits   = $this->filtered($request)->where('appointment_type', 'Визит к врачу')->count();
-        $pharmacyVisits = $this->filtered($request)->where('appointment_type', 'Визит в аптеку')->count();
+            $provinces   = Cache::remember('calls_filter_provinces',   3600, fn() => $base('province'));
+            $towns       = Cache::remember('calls_filter_towns',       3600, fn() => $base('town'));
+            $specialties = Cache::remember('calls_filter_specialties', 3600, fn() => $base('customer_spesiality'));
+            $departments = Cache::remember('calls_filter_departments', 3600, fn() => $base('employee_department'));
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['nobel_db' => 'Nobel CRM недоступна: ' . $e->getMessage()]);
+        }
 
         return view('calls', compact(
-            'calls', 'provinces', 'towns', 'orgTypes', 'statuses', 'specialties', 'departments',
-            'totalVisits', 'completedVisits', 'employeesCount', 'avgDuration',
-            'completionRate', 'visitsPerEmployee',
-            'monthlyTrend', 'topRegions', 'topSpecialties', 'statusBreakdown',
+            'calls', 'provinces', 'towns', 'specialties', 'departments',
+            'totalVisits', 'employeesCount', 'avgDuration', 'visitsPerEmployee',
+            'monthlyTrend', 'topRegions', 'topSpecialties',
             'doctorVisits', 'pharmacyVisits',
             'sortCol', 'sortDir'
         ));

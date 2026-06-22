@@ -69,35 +69,39 @@ class EmployeeController extends Controller
 
         $visitStats = null;
         if ($employee->crm_employee_id) {
-            $crmId = $employee->crm_employee_id;
-            $base  = Call::where('employee_id', $crmId)
-                ->where('appointment_status', 'Выполнено')
-                ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
+            try {
+                $crmId = $employee->crm_employee_id;
+                $base  = Call::where('employee_id', $crmId)
+                    ->where('appointment_status', 'Выполнено')
+                    ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
 
-            $total     = (clone $base)->count();
-            $avgDur    = (int) ((clone $base)->where('appointment_duration', '>', 0)->avg('appointment_duration') ?? 0);
-            $lastDate  = (clone $base)->max('appointment_Date');
+                $total     = (clone $base)->count();
+                $avgDur    = (int) ((clone $base)->where('appointment_duration', '>', 0)->avg('appointment_duration') ?? 0);
+                $lastDate  = (clone $base)->max('appointment_Date');
 
-            $thisMonth = (clone $base)->whereYear('appointment_Date', now()->year)->whereMonth('appointment_Date', now()->month)->count();
-            $lastMonth = (clone $base)->whereYear('appointment_Date', now()->subMonth()->year)->whereMonth('appointment_Date', now()->subMonth()->month)->count();
+                $thisMonth = (clone $base)->whereYear('appointment_Date', now()->year)->whereMonth('appointment_Date', now()->month)->count();
+                $lastMonth = (clone $base)->whereYear('appointment_Date', now()->subMonth()->year)->whereMonth('appointment_Date', now()->subMonth()->month)->count();
 
-            $monthly = (clone $base)
-                ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
-                ->whereNotNull('appointment_Date')
-                ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
-                ->groupBy('month')
-                ->orderBy('month')
-                ->get();
+                $monthly = (clone $base)
+                    ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
+                    ->whereNotNull('appointment_Date')
+                    ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
+                    ->groupBy('month')
+                    ->orderBy('month')
+                    ->get();
 
-            $topSpec = (clone $base)
-                ->selectRaw('customer_spesiality, COUNT(*) as cnt')
-                ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
-                ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
+                $topSpec = (clone $base)
+                    ->selectRaw('customer_spesiality, COUNT(*) as cnt')
+                    ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
+                    ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
 
-            $doctorVisits   = (clone $base)->where('appointment_type', 'Визит к врачу')->count();
-            $pharmacyVisits = (clone $base)->where('appointment_type', 'Визит в аптеку')->count();
+                $doctorVisits   = (clone $base)->where('appointment_type', 'Визит к врачу')->count();
+                $pharmacyVisits = (clone $base)->where('appointment_type', 'Визит в аптеку')->count();
 
-            $visitStats = compact('total', 'avgDur', 'lastDate', 'thisMonth', 'lastMonth', 'monthly', 'topSpec', 'crmId', 'doctorVisits', 'pharmacyVisits');
+                $visitStats = compact('total', 'avgDur', 'lastDate', 'thisMonth', 'lastMonth', 'monthly', 'topSpec', 'crmId', 'doctorVisits', 'pharmacyVisits');
+            } catch (\Exception $e) {
+                // Nobel DB недоступна — показываем карточку без блока визитов
+            }
         }
 
         return view('employee', [
