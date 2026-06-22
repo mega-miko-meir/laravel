@@ -45,22 +45,22 @@
     </div>
 
     {{-- Table --}}
-    <div x-data="{ tab: 'all', search: '' }">
+    <div x-data="{ tab: 'unmapped', search: '' }">
 
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
             <button @click="tab='all'"
-                :style="tab==='all' ? 'background:#1d4ed8;color:#fff;border-color:#1d4ed8;' : 'background:#fff;color:#374151;'"
-                style="border:1px solid #d1d5db;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;">
+                :style="tab==='all' ? 'background:#1d4ed8;color:#fff;border-color:#1d4ed8;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
+                style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;">
                 Все ({{ $crmTotal }})
             </button>
             <button @click="tab='unmapped'"
-                :style="tab==='unmapped' ? 'background:#dc2626;color:#fff;border-color:#dc2626;' : 'background:#fff;color:#374151;'"
-                style="border:1px solid #d1d5db;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;">
+                :style="tab==='unmapped' ? 'background:#dc2626;color:#fff;border-color:#dc2626;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
+                style="background:#dc2626;color:#fff;border:1px solid #dc2626;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;">
                 Не привязано ({{ $crmTotal - $mapped }})
             </button>
             <button @click="tab='mapped'"
-                :style="tab==='mapped' ? 'background:#16a34a;color:#fff;border-color:#16a34a;' : 'background:#fff;color:#374151;'"
-                style="border:1px solid #d1d5db;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;">
+                :style="tab==='mapped' ? 'background:#16a34a;color:#fff;border-color:#16a34a;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
+                style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;">
                 Привязано ({{ $mapped }})
             </button>
             <input x-model="search" type="text" placeholder="Поиск по имени CRM..."
