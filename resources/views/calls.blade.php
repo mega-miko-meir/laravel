@@ -304,8 +304,34 @@
 
         <div class="filter-field">
             <label class="filter-label">Сотрудник</label>
-            <input type="text" name="employee" value="{{ request('employee') }}"
-                   placeholder="Поиск..." class="filter-input" style="width:160px;">
+            @php
+                $selEmp = collect($empList)->firstWhere('value', request('crm_employee_id'));
+                $initEmpLabel = $selEmp ? $selEmp['label'] : '';
+            @endphp
+            <div x-data="callsEmpPicker(@js($empList), @js(request('crm_employee_id')), @js($initEmpLabel))"
+                 style="position:relative;width:180px;">
+                <div style="position:relative;">
+                    <input type="text" x-model="query"
+                           @focus="open=true" @input="open=true" @keydown.escape="open=false"
+                           @click.outside="open=false"
+                           autocomplete="off" placeholder="Поиск..."
+                           class="filter-input" style="width:100%;box-sizing:border-box;padding-right:22px;">
+                    <span x-show="selected" @click="clear($el.closest('form'))"
+                          style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;user-select:none;">×</span>
+                </div>
+                <input type="hidden" name="crm_employee_id" x-ref="hiddenVal"
+                       x-effect="$refs.hiddenVal.value = selected ?? ''">
+                <div x-show="open && filtered.length" x-cloak
+                     style="position:absolute;top:calc(100% + 2px);left:0;width:100%;z-index:999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:200px;overflow-y:auto;">
+                    <template x-for="emp in filtered" :key="emp.value">
+                        <div @click="choose(emp, $el.closest('form'))"
+                             style="padding:7px 10px;font-size:12px;color:#1e293b;cursor:pointer;"
+                             onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+                            <span x-text="emp.label"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
         </div>
 
         <div class="filter-field" style="flex-direction:row;gap:6px;align-items:flex-end;">
@@ -772,6 +798,32 @@ function multiSelect(name, options, init) {
         filter() { this.filtered = this.options.filter(i => i.toLowerCase().includes(this.q.toLowerCase())); },
         toggle(item) { this.selected.includes(item) ? this.selected = this.selected.filter(i => i !== item) : this.selected.push(item); },
         remove(item) { this.selected = this.selected.filter(i => i !== item); },
+    };
+}
+
+function callsEmpPicker(list, initValue, initLabel) {
+    return {
+        list,
+        selected: initValue || null,
+        query:    initLabel || '',
+        open:     false,
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            if (!q) return this.list.slice(0, 80);
+            return this.list.filter(e => e.label.toLowerCase().includes(q)).slice(0, 80);
+        },
+        choose(emp, form) {
+            this.selected = emp.value;
+            this.query    = emp.label;
+            this.open     = false;
+            this.$nextTick(() => form && form.submit());
+        },
+        clear(form) {
+            this.selected = null;
+            this.query    = '';
+            this.open     = false;
+            this.$nextTick(() => form && form.submit());
+        },
     };
 }
 </script>
