@@ -121,15 +121,18 @@ class CallController extends Controller
         set_time_limit(0);
 
         $columns = [
-            'appointment_Date'   => 'Дата',
-            'employee'           => 'Сотрудник',
-            'manager'            => 'Менеджер',
-            'organization'       => 'Организация',
-            'organization_type'  => 'Тип',
-            'town'               => 'Город',
-            'province'           => 'Регион',
-            'appointment_status' => 'Статус',
-            'appointment_type'   => 'Тип визита',
+            'appointment_Date'     => 'Дата',
+            'employee'             => 'Сотрудник',
+            'manager'              => 'Менеджер',
+            'customer'             => 'ФИО врача',
+            'customer_id'          => 'ID клиента',
+            'customer_spesiality'  => 'Специальность',
+            'organization'         => 'Организация',
+            'organization_type'    => 'Тип',
+            'town'                 => 'Город',
+            'province'             => 'Регион',
+            'appointment_status'   => 'Статус',
+            'appointment_type'     => 'Тип визита',
             'appointment_duration' => 'Длительность (мин)',
         ];
 
