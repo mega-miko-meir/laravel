@@ -34,7 +34,7 @@
         {{-- ── HR ── --}}
         <li>
             <div style="padding:4px 12px;margin-top:8px;margin-bottom:2px;display:flex;align-items:center;gap:8px;">
-                <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#60a5fa;">HR</span>
+                <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#60a5fa;">Система</span>
                 <div style="flex:1;height:1px;background:#2563eb;opacity:.5;"></div>
             </div>
         </li>
