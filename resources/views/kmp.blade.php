@@ -109,7 +109,7 @@
                 <select name="year" class="kmp-sel">
                     <option value="">Все годы</option>
                     @foreach($years as $y)
-                        <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        <option value="{{ $y }}" {{ request('year', '2026') == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endforeach
                 </select>
             </div>

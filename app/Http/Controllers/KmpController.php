@@ -18,6 +18,7 @@ class KmpController extends Controller
 
             // Кеш агрегатов по набору фильтров (кроме сортировки и пагинации)
             $filterParams = $request->only(['year', 'date_from', 'date_to', 'employee', 'kmp_employee_name', 'city', 'brand', 'dept']);
+            if (empty($filterParams['year'])) $filterParams['year'] = '2026';
             $aggCacheKey  = 'kmp_agg_' . md5(json_encode($filterParams));
 
             $agg = Cache::remember($aggCacheKey, 1800, function () use ($request) {
@@ -166,7 +167,8 @@ class KmpController extends Controller
     private function filtered(Request $request)
     {
         $q = Kmp::query()->where('Статус заказа', 'Доставлено');
-        if ($request->filled('year'))              $q->where('Год', $request->input('year'));
+        $year = $request->input('year', '2026');
+        if ($year !== '')                          $q->where('Год', $year);
         if ($request->filled('date_from'))         $q->where('Дата', '>=', $request->input('date_from'));
         if ($request->filled('date_to'))           $q->where('Дата', '<=', $request->input('date_to'));
         if ($request->filled('employee'))          $q->where('Медпредставитель', 'like', '%' . $request->input('employee') . '%');
