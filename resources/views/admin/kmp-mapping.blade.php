@@ -27,6 +27,16 @@
             {{ session('success') }}
         </div>
     @endif
+    @if($errors->any())
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#991b1b;font-size:13px;">
+            @foreach($errors->all() as $e) <div>{{ $e }}</div> @endforeach
+        </div>
+    @endif
+    @if(session('error'))
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#991b1b;font-size:13px;">
+            {{ session('error') }}
+        </div>
+    @endif
 
     {{-- Stats --}}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
@@ -166,7 +176,8 @@
                                         <span x-show="query" @click="clear()"
                                               style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:15px;line-height:1;user-select:none;">×</span>
                                     </div>
-                                    <input type="hidden" name="employee_id" :value="selected ?? ''">
+                                    <input type="hidden" name="employee_id" x-ref="hiddenEmpId"
+                                           x-effect="$refs.hiddenEmpId.value = selected ?? ''">
 
                                     <div x-show="open" x-cloak
                                          :style="`position:fixed;top:${pos.top}px;left:${pos.left}px;width:${pos.width}px;z-index:9999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;`">

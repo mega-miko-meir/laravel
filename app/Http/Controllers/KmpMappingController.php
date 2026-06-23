@@ -47,23 +47,31 @@ class KmpMappingController extends Controller
 
     public function link(Request $request)
     {
-        $request->validate([
-            'kmp_name'    => 'required|string',
-            'employee_id' => 'nullable|integer|exists:employees,id',
-        ]);
+        try {
+            $request->validate([
+                'kmp_name'    => 'required|string',
+                'employee_id' => 'nullable|integer|exists:employees,id',
+            ]);
 
-        $kmpName = trim($request->input('kmp_name'));
+            $kmpName    = trim($request->input('kmp_name'));
+            $employeeId = $request->input('employee_id');
 
-        // Unlink any employee previously holding this kmp_employee_name
-        Employee::where('kmp_employee_name', $kmpName)->update(['kmp_employee_name' => null]);
+            Employee::where('kmp_employee_name', $kmpName)->update(['kmp_employee_name' => null]);
 
-        if ($request->filled('employee_id')) {
-            $emp = Employee::findOrFail($request->input('employee_id'));
-            $emp->update(['kmp_employee_name' => $kmpName]);
-            return back()->with('success', "KMP-сотрудник привязан к «{$emp->full_name}».");
+            if ($employeeId !== null && $employeeId !== '') {
+                $emp = Employee::findOrFail((int) $employeeId);
+                $emp->kmp_employee_name = $kmpName;
+                $emp->save();
+                return back()->with('success', "KMP-сотрудник привязан к «{$emp->full_name}».");
+            }
+
+            return back()->with('success', 'Привязка сброшена.');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            return back()->with('error', 'Ошибка: ' . $e->getMessage());
         }
-
-        return back()->with('success', 'Привязка сброшена.');
     }
 
     public function autoMatch()
