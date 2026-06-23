@@ -79,6 +79,14 @@ class KmpController extends Controller
         'Price', 'Amount', 'Discount_tot', 'Amount_disc', 'Amount_disc_tot',
     ];
 
+    // Колонки с числами — заменяем '.' на ',' чтобы Excel с рус. локалью не читал их как даты
+    private const NUMERIC_COLUMNS = [
+        'Год', 'ID аптеки', 'Номер заказа Pharmcenter',
+        'Цена_KZT', 'Размер_скидки', 'Заказ_упаковки',
+        'Дост_скидка', 'Дост_цена', 'Дост_колво', 'Дост_сумма_скид',
+        'Price', 'Amount', 'Discount_tot', 'Amount_disc', 'Amount_disc_tot',
+    ];
+
     public function export(Request $request)
     {
         set_time_limit(0);
@@ -106,10 +114,18 @@ class KmpController extends Controller
             fputs($out, "\xEF\xBB\xBF");
             fputcsv($out, self::COLUMNS, ';');
 
-            $q->chunk(500, function ($rows) use ($out) {
+            $numericSet = array_flip(self::NUMERIC_COLUMNS);
+            $q->chunk(500, function ($rows) use ($out, $numericSet) {
                 foreach ($rows as $row) {
                     $row = (array) $row;
-                    fputcsv($out, array_map(fn($col) => $row[$col] ?? '', self::COLUMNS), ';');
+                    $values = array_map(function ($col) use ($row, $numericSet) {
+                        $val = $row[$col] ?? '';
+                        if (isset($numericSet[$col]) && $val !== '' && $val !== null) {
+                            return str_replace('.', ',', $val);
+                        }
+                        return $val;
+                    }, self::COLUMNS);
+                    fputcsv($out, $values, ';');
                 }
                 ob_flush();
                 flush();
