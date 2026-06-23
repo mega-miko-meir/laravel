@@ -88,6 +88,8 @@ class CallController extends Controller
 
     public function export(Request $request)
     {
+        set_time_limit(0);
+
         $columns = [
             'appointment_Date'   => 'Дата',
             'employee'           => 'Сотрудник',

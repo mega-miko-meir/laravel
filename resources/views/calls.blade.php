@@ -228,17 +228,30 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
             </svg>
         </button>
+        @php
+            $activeFilters = count(array_filter(
+                request()->except('_token','sort','dir','page'),
+                fn($v) => $v !== '' && $v !== null && $v !== []
+            ));
+        @endphp
         <form action="{{ route('calls.export') }}" method="POST" style="display:inline;">
             @csrf
             @foreach(request()->except('_token','sort','dir') as $k => $v)
                 @if(is_array($v)) @foreach($v as $item) <input type="hidden" name="{{ $k }}[]" value="{{ $item }}"> @endforeach
                 @else <input type="hidden" name="{{ $k }}" value="{{ $v }}"> @endif
             @endforeach
-            <button type="submit" class="btn">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            <button type="submit" class="btn" style="background:#16a34a;color:#fff;border-color:#16a34a;gap:7px;"
+                    onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'"
+                    title="Выгрузить текущую выборку в CSV">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;flex-shrink:0;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
-                Экспорт CSV
+                Выгрузить
+                @if($activeFilters)
+                    <span style="background:rgba(255,255,255,.25);border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;">
+                        {{ $activeFilters }}
+                    </span>
+                @endif
             </button>
         </form>
     </div>
