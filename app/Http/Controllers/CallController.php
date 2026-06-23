@@ -67,12 +67,18 @@ class CallController extends Controller
             $specialties = Cache::remember('calls_filter_specialties', 3600, fn() => $base('customer_spesiality'));
             $departments = Cache::remember('calls_filter_departments', 3600, fn() => $base('employee_department'));
 
+            $empList = \App\Models\Employee::whereNotNull('crm_employee_id')
+                ->orderBy('full_name')
+                ->get(['full_name', 'crm_employee_id'])
+                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->crm_employee_id])
+                ->values();
+
         } catch (\Exception $e) {
             return back()->withErrors(['nobel_db' => 'Nobel CRM недоступна: ' . $e->getMessage()]);
         }
 
         return view('calls', compact(
-            'calls', 'provinces', 'towns', 'specialties', 'departments',
+            'calls', 'provinces', 'towns', 'specialties', 'departments', 'empList',
             'totalVisits', 'employeesCount', 'avgDuration', 'visitsPerEmployee',
             'monthlyTrend', 'topRegions', 'topSpecialties',
             'doctorVisits', 'pharmacyVisits',
