@@ -12,6 +12,7 @@ class CallController extends Controller
     public function index(Request $request)
     {
         $onekeyTotal = $onekeyVisited = $onekeyPercent = 0;
+        $pharmOnekeyTotal = $pharmOnekeyVisited = $pharmOnekeyPercent = 0;
 
         try {
             // 1 запрос вместо 6: все KPI-метрики за один SELECT
@@ -76,31 +77,43 @@ class CallController extends Controller
                 ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->crm_employee_id])
                 ->values();
 
-            // OneKey coverage — cross-table query in Nobel DB
-            $coverageSql = "
+            // OneKey coverage — общие фильтры для обоих запросов
+            $covWhere    = " AND c.appointment_status = 'Выполнено'";
+            $covBindings = [];
+            if ($request->filled('date_from')) { $covWhere .= " AND c.appointment_Date >= ?"; $covBindings[] = $request->input('date_from'); }
+            if ($request->filled('date_to'))   { $covWhere .= " AND c.appointment_Date <= ?"; $covBindings[] = $request->input('date_to'); }
+            if ($request->filled('crm_employee_id')) { $covWhere .= " AND c.employee_id = ?"; $covBindings[] = $request->input('crm_employee_id'); }
+            if ($request->filled('province')) {
+                $provs = (array) $request->input('province');
+                $covWhere .= " AND c.province IN (" . implode(',', array_fill(0, count($provs), '?')) . ")";
+                array_push($covBindings, ...$provs);
+            }
+
+            // Охват врачей (qs_onekey_doctors)
+            $doctorRow     = DB::connection('nobel')->selectOne("
                 SELECT
                     (SELECT COUNT(DISTINCT organization) FROM qs_onekey_doctors
                      WHERE organization IS NOT NULL AND organization <> '') AS onekey_total,
                     COUNT(DISTINCT c.organization) AS visited_count
                 FROM qs_calls c
                 INNER JOIN qs_onekey_doctors d ON d.organization = c.organization
-                WHERE c.appointment_type = 'Визит к врачу'
-                  AND c.appointment_status = 'Выполнено'
-            ";
-            $coverageBindings = [];
-            if ($request->filled('date_from')) { $coverageSql .= " AND c.appointment_Date >= ?"; $coverageBindings[] = $request->input('date_from'); }
-            if ($request->filled('date_to'))   { $coverageSql .= " AND c.appointment_Date <= ?"; $coverageBindings[] = $request->input('date_to'); }
-            if ($request->filled('crm_employee_id')) { $coverageSql .= " AND c.employee_id = ?"; $coverageBindings[] = $request->input('crm_employee_id'); }
-            if ($request->filled('province')) {
-                $provinces = (array) $request->input('province');
-                $coverageSql .= " AND c.province IN (" . implode(',', array_fill(0, count($provinces), '?')) . ")";
-                array_push($coverageBindings, ...$provinces);
-            }
+                WHERE c.appointment_type = 'Визит к врачу'" . $covWhere, $covBindings);
+            $onekeyTotal   = (int)($doctorRow->onekey_total  ?? 0);
+            $onekeyVisited = (int)($doctorRow->visited_count ?? 0);
+            $onekeyPercent = $onekeyTotal > 0 ? round($onekeyVisited / $onekeyTotal * 100) : 0;
 
-            $coverageRow    = DB::connection('nobel')->selectOne($coverageSql, $coverageBindings);
-            $onekeyTotal    = (int)($coverageRow->onekey_total   ?? 0);
-            $onekeyVisited  = (int)($coverageRow->visited_count  ?? 0);
-            $onekeyPercent  = $onekeyTotal > 0 ? round($onekeyVisited / $onekeyTotal * 100) : 0;
+            // Охват аптек (qs_onekey_pharmacy)
+            $pharmRow           = DB::connection('nobel')->selectOne("
+                SELECT
+                    (SELECT COUNT(DISTINCT organization) FROM qs_onekey_pharmacy
+                     WHERE organization IS NOT NULL AND organization <> '') AS onekey_total,
+                    COUNT(DISTINCT c.organization) AS visited_count
+                FROM qs_calls c
+                INNER JOIN qs_onekey_pharmacy p ON p.organization = c.organization
+                WHERE c.appointment_type = 'Визит в аптеку'" . $covWhere, $covBindings);
+            $pharmOnekeyTotal   = (int)($pharmRow->onekey_total  ?? 0);
+            $pharmOnekeyVisited = (int)($pharmRow->visited_count ?? 0);
+            $pharmOnekeyPercent = $pharmOnekeyTotal > 0 ? round($pharmOnekeyVisited / $pharmOnekeyTotal * 100) : 0;
 
         } catch (\Exception $e) {
             return back()->withErrors(['nobel_db' => 'Nobel CRM недоступна: ' . $e->getMessage()]);
@@ -112,6 +125,7 @@ class CallController extends Controller
             'monthlyTrend', 'topRegions', 'topSpecialties',
             'doctorVisits', 'pharmacyVisits',
             'onekeyTotal', 'onekeyVisited', 'onekeyPercent',
+            'pharmOnekeyTotal', 'pharmOnekeyVisited', 'pharmOnekeyPercent',
             'sortCol', 'sortDir'
         ));
     }

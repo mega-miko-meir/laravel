@@ -460,45 +460,69 @@
 </div>
 
 {{-- ─── OneKey COVERAGE ─── --}}
-@if($onekeyTotal > 0)
-<div class="kpi-card" style="margin-bottom:20px;padding:16px 20px;">
-    <div class="kpi-accent" style="background:#10b981;"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,.1);
+@if($onekeyTotal > 0 || $pharmOnekeyTotal > 0)
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+
+    {{-- Врачи --}}
+    @if($onekeyTotal > 0)
+    <div class="kpi-card" style="padding:16px 20px;">
+        <div class="kpi-accent" style="background:#6366f1;"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.1);
                         display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:22px;height:22px;" fill="none" viewBox="0 0 24 24" stroke="#10b981">
+                <svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke="#6366f1">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
             </div>
             <div>
-                <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">
-                    Охват базы OneKey — врачи
-                </div>
-                <div style="display:flex;align-items:baseline;gap:8px;">
-                    <span style="font-size:28px;font-weight:700;color:var(--text1);line-height:1;">{{ $onekeyPercent }}%</span>
-                    <span style="font-size:14px;color:var(--text2);">
-                        {{ number_format($onekeyVisited, 0, '.', ' ') }}
-                        <span style="color:var(--text3);">/ {{ number_format($onekeyTotal, 0, '.', ' ') }}</span>
-                        организаций
-                    </span>
-                </div>
+                <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;">Охват врачей OneKey</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:1px;">по названию организации</div>
             </div>
         </div>
-        <div style="flex:1;min-width:200px;max-width:320px;">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;">
-                <span>Посещено</span>
-                <span>Всего в OneKey</span>
-            </div>
-            <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
-                <div style="height:100%;border-radius:4px;background:#10b981;width:{{ $onekeyPercent }}%;transition:width .6s;"></div>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px;">
-                Совпадение по названию организации
-            </div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">
+            <span style="font-size:32px;font-weight:700;color:#6366f1;line-height:1;">{{ $onekeyPercent }}%</span>
+            <span style="font-size:13px;color:var(--text2);">
+                {{ number_format($onekeyVisited, 0, '.', ' ') }}
+                <span style="color:var(--text3);">/ {{ number_format($onekeyTotal, 0, '.', ' ') }}</span>
+            </span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;border-radius:3px;background:#6366f1;width:{{ $onekeyPercent }}%;transition:width .6s;"></div>
         </div>
     </div>
+    @endif
+
+    {{-- Аптеки --}}
+    @if($pharmOnekeyTotal > 0)
+    <div class="kpi-card" style="padding:16px 20px;">
+        <div class="kpi-accent" style="background:#0ea5e9;"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(14,165,233,.1);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke="#0ea5e9">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;">Охват аптек OneKey</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:1px;">по названию организации</div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">
+            <span style="font-size:32px;font-weight:700;color:#0ea5e9;line-height:1;">{{ $pharmOnekeyPercent }}%</span>
+            <span style="font-size:13px;color:var(--text2);">
+                {{ number_format($pharmOnekeyVisited, 0, '.', ' ') }}
+                <span style="color:var(--text3);">/ {{ number_format($pharmOnekeyTotal, 0, '.', ' ') }}</span>
+            </span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;border-radius:3px;background:#0ea5e9;width:{{ $pharmOnekeyPercent }}%;transition:width .6s;"></div>
+        </div>
+    </div>
+    @endif
+
 </div>
 @endif
 
