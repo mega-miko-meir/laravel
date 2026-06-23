@@ -21,6 +21,25 @@
 .kmp-td    { padding:10px 14px;font-size:13px;color:var(--kmp-t1);border-bottom:1px solid var(--kmp-border); }
 .kmp-sort  { text-decoration:none;color:inherit; }
 .kmp-sort:hover { text-decoration:underline; }
+
+.kms-wrap { position:relative; }
+.kms-display {
+    background:#fff;border:1px solid var(--kmp-border);border-radius:6px;
+    padding:0 8px 0 10px;font-size:12px;color:var(--kmp-t1);cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    height:32px;white-space:nowrap;min-width:130px;
+}
+.kms-display:focus { outline:none;border-color:#0ea5e9; }
+.kms-val { color:var(--kmp-t2);overflow:hidden;text-overflow:ellipsis; }
+.kms-val.active { color:#0ea5e9;font-weight:600; }
+.kms-dropdown {
+    position:absolute;top:calc(100% + 4px);left:0;z-index:300;
+    background:#fff;border:1px solid var(--kmp-border);border-radius:8px;
+    box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;min-width:200px;
+}
+.kms-option { display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;color:var(--kmp-t1); }
+.kms-option:hover { background:#f8fafc; }
+.kms-option input[type=checkbox] { accent-color:#0ea5e9;width:13px;height:13px; }
 </style>
 
 <div style="max-width:1300px;margin:0 auto;">
@@ -157,14 +176,32 @@
                 </select>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;flex-direction:column;gap:4px;"
+                 x-data="kmpMultiSelect(@js($depts->values()), @js(request('dept', [])))"
+                 @click.outside="open=false">
                 <label style="font-size:11px;font-weight:600;color:#64748b;">Подразделение</label>
-                <select name="dept" class="kmp-sel">
-                    <option value="">Все</option>
-                    @foreach($depts as $d)
-                        <option value="{{ $d }}" {{ request('dept') == $d ? 'selected' : '' }}>{{ $d }}</option>
-                    @endforeach
-                </select>
+                <div class="kms-wrap">
+                    <div class="kms-display" @click="open=!open" tabindex="0">
+                        <span class="kms-val" :class="selected.length ? 'active' : ''"
+                              x-text="selected.length ? selected.length + ' выбр.' : 'Все'"></span>
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                             style="width:11px;height:11px;flex-shrink:0;color:#94a3b8;"
+                             :style="open ? 'transform:rotate(180deg)' : ''">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div class="kms-dropdown" x-show="open" x-cloak>
+                        <template x-for="item in options" :key="item">
+                            <label class="kms-option">
+                                <input type="checkbox" :value="item" @change="toggle(item)" :checked="selected.includes(item)">
+                                <span x-text="item"></span>
+                            </label>
+                        </template>
+                    </div>
+                    <template x-for="s in selected">
+                        <input type="hidden" name="dept[]" :value="s">
+                    </template>
+                </div>
             </div>
 
             <div style="display:flex;gap:8px;align-items:flex-end;">
@@ -415,6 +452,19 @@
 </div>
 
 <script>
+function kmpMultiSelect(options, init) {
+    return {
+        open: false,
+        options,
+        selected: Array.isArray(init) ? init : (init ? [init] : []),
+        toggle(item) {
+            this.selected.includes(item)
+                ? this.selected = this.selected.filter(i => i !== item)
+                : this.selected.push(item);
+        },
+    };
+}
+
 function filterPicker(list, initValue, initLabel) {
     return {
         list,
