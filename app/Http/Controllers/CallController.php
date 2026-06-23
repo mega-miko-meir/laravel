@@ -101,13 +101,13 @@ class CallController extends Controller
             $onekeyVisited = (int)($doctorRow->visited_count ?? 0);
             $onekeyPercent = $onekeyTotal > 0 ? round($onekeyVisited / $onekeyTotal * 100) : 0;
 
-            // Охват аптек — total по organization_id, visited через join на organization
+            // Охват аптек — total по organization_id, visited через join на organization_id
             $pharmRow           = DB::connection('nobel')->selectOne("
                 SELECT
                     (SELECT COUNT(*) FROM qs_onekey_pharmacy) AS onekey_total,
                     COUNT(DISTINCT p.organization_id) AS visited_count
                 FROM qs_calls c
-                INNER JOIN qs_onekey_pharmacy p ON p.organization = c.organization
+                INNER JOIN qs_onekey_pharmacy p ON p.organization_id = c.organization_id
                 WHERE c.appointment_type = 'Визит в аптеку'" . $covWhere, $covBindings);
             $pharmOnekeyTotal   = (int)($pharmRow->onekey_total  ?? 0);
             $pharmOnekeyVisited = (int)($pharmRow->visited_count ?? 0);
