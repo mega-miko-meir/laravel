@@ -2,18 +2,16 @@
 
 @section('content')
 
-<x-back-button />
 <x-flash-message />
 
 @php
     $hasVisits = !empty($visitStats);
     $hasKmp    = !empty($kmpStats);
-    $defaultTab = 'profile';
 @endphp
 
 <style>
-.emp-tabs { display:flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:4px;width:fit-content;margin-bottom:24px; }
-.emp-tab  { padding:7px 20px;font-size:13px;font-weight:500;border-radius:7px;border:none;cursor:pointer;transition:all .15s;line-height:1; }
+.emp-tabs { display:flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:3px; }
+.emp-tab  { padding:5px 16px;font-size:13px;font-weight:500;border-radius:7px;border:none;cursor:pointer;transition:all .15s;line-height:1; }
 .emp-tab[data-active="true"]  { background:#fff;color:#1e3a8a;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.10); }
 .emp-tab[data-active="false"] { background:transparent;color:#64748b; }
 .emp-tab[data-active="false"]:hover { color:#1e3a8a; }
@@ -27,12 +25,24 @@
 .bind-action:hover { text-decoration:underline; }
 </style>
 
-<div x-data="{ tab: '{{ $defaultTab }}' }" style="width:100%;padding:8px 0;">
+<div x-data="{ tab: 'profile' }" style="width:100%;padding:4px 0;">
 
-    {{-- Tab bar --}}
-    <div class="emp-tabs">
-        <button class="emp-tab" :data-active="tab === 'profile'" @click="tab = 'profile'">
-            Профиль
+    {{-- Назад + вкладки в одной строке --}}
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <a href="javascript:void(0);" onclick="window.history.back();"
+           style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;flex-shrink:0;
+                  color:#64748b;background:#fff;padding:5px 12px;border:1px solid #e2e8f0;
+                  border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04);text-decoration:none;transition:all .15s;"
+           onmouseover="this.style.color='#4f46e5';this.style.borderColor='#c7d2fe';this.style.background='#f5f3ff';"
+           onmouseout="this.style.color='#64748b';this.style.borderColor='#e2e8f0';this.style.background='#fff';">
+            <svg style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Назад
+        </a>
+        <div class="emp-tabs">
+            <button class="emp-tab" :data-active="tab === 'profile'" @click="tab = 'profile'">
+                Профиль
         </button>
         @if($hasVisits)
         <button class="emp-tab" :data-active="tab === 'visits'" @click="tab = 'visits'">
@@ -44,7 +54,8 @@
             KMP Продажи
         </button>
         @endif
-    </div>
+        </div>{{-- /emp-tabs --}}
+    </div>{{-- /flex row --}}
 
     {{-- ── Профиль ── --}}
     <div x-show="tab === 'profile'">
