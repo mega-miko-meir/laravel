@@ -255,20 +255,44 @@
         </div>
 
         {{-- Top brands --}}
-        <div class="kmp-card">
-            <div class="kmp-label" style="margin-bottom:16px;">Топ брендов по сумме</div>
+        <div class="kmp-card" x-data="{ showAmt: true, showQty: true }">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <div class="kmp-label">Топ брендов</div>
+                <div style="display:flex;gap:6px;">
+                    <button @click="if(showAmt && !showQty) return; showAmt = !showAmt"
+                            :style="showAmt
+                                ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;'
+                                : 'background:#fff;color:#94a3b8;border-color:#e2e8f0;'"
+                            style="border:1px solid;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">
+                        Сумма
+                    </button>
+                    <button @click="if(showQty && !showAmt) return; showQty = !showQty"
+                            :style="showQty
+                                ? 'background:#10b981;color:#fff;border-color:#10b981;'
+                                : 'background:#fff;color:#94a3b8;border-color:#e2e8f0;'"
+                            style="border:1px solid;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">
+                        Уп.
+                    </button>
+                </div>
+            </div>
             @if($topBrands->count() > 0)
-                @php $brandMax = $topBrands->first()->amount ?: 1; @endphp
+                @php
+                    $brandMax    = $topBrands->first()->amount ?: 1;
+                    $brandMaxQty = $topBrands->max('qty') ?: 1;
+                @endphp
                 <div style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
                 @foreach($topBrands->take(10) as $b)
                     <div>
                         <div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:6px;">
                             <span style="font-size:12px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;">{{ $b->brand }}</span>
-                            <span style="font-size:11px;color:#64748b;flex-shrink:0;white-space:nowrap;">{{ number_format($b->qty) }} уп.</span>
-                            <span style="font-size:11px;font-weight:600;color:#0ea5e9;flex-shrink:0;white-space:nowrap;">{{ number_format($b->amount) }}</span>
+                            <span x-show="showQty" style="font-size:11px;color:#10b981;font-weight:600;flex-shrink:0;white-space:nowrap;">{{ number_format($b->qty) }} уп.</span>
+                            <span x-show="showAmt" style="font-size:11px;font-weight:600;color:#0ea5e9;flex-shrink:0;white-space:nowrap;">{{ number_format($b->amount) }}</span>
                         </div>
                         <div style="height:4px;background:#f1f5f9;border-radius:2px;">
-                            <div style="height:100%;width:{{ round($b->amount / $brandMax * 100) }}%;background:linear-gradient(90deg,#38bdf8,#0ea5e9);border-radius:2px;"></div>
+                            <div x-show="showAmt"
+                                 style="height:100%;width:{{ round($b->amount / $brandMax * 100) }}%;background:linear-gradient(90deg,#38bdf8,#0ea5e9);border-radius:2px;"></div>
+                            <div x-show="!showAmt && showQty"
+                                 style="height:100%;width:{{ round($b->qty / $brandMaxQty * 100) }}%;background:linear-gradient(90deg,#34d399,#10b981);border-radius:2px;"></div>
                         </div>
                     </div>
                 @endforeach
