@@ -107,8 +107,34 @@
 
             <div style="display:flex;flex-direction:column;gap:4px;">
                 <label style="font-size:11px;font-weight:600;color:#64748b;">МП</label>
-                <input type="text" name="employee" value="{{ request('employee') }}" placeholder="Имя МП..."
-                       class="kmp-sel" style="width:160px;">
+                @php
+                    $selEmp = collect($empList)->firstWhere('value', request('kmp_employee_name'));
+                    $initEmpLabel = $selEmp ? $selEmp['label'] : '';
+                @endphp
+                <div x-data="filterPicker(@js($empList), @js(request('kmp_employee_name')), @js($initEmpLabel))"
+                     style="position:relative;width:190px;">
+                    <div style="position:relative;">
+                        <input type="text" x-model="query"
+                               @focus="open=true" @input="open=true" @keydown.escape="open=false"
+                               @click.outside="open=false"
+                               autocomplete="off" placeholder="Поиск МП..."
+                               class="kmp-sel" style="width:100%;box-sizing:border-box;padding-right:22px;">
+                        <span x-show="selected" @click="clear($el.closest('form'))"
+                              style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;user-select:none;">×</span>
+                    </div>
+                    <input type="hidden" name="kmp_employee_name" x-ref="hiddenVal"
+                           x-effect="$refs.hiddenVal.value = selected ?? ''">
+                    <div x-show="open && filtered.length" x-cloak
+                         style="position:absolute;top:calc(100% + 2px);left:0;width:100%;z-index:999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:200px;overflow-y:auto;">
+                        <template x-for="emp in filtered" :key="emp.value">
+                            <div @click="choose(emp, $el.closest('form'))"
+                                 style="padding:7px 10px;font-size:12px;color:#1e293b;cursor:pointer;"
+                                 onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+                                <span x-text="emp.label"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:4px;">
@@ -215,7 +241,7 @@
                             $pct = max(4, round($m->amount / $maxAmt * 100));
                         @endphp
                         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"
-                             title="{{ $lbl }}: {{ number_format($m->amount) }} KZT">
+                             title="{{ $lbl }}: {{ number_format($m->amount) }} KZT / {{ number_format($m->qty) }} уп.">
                             <div style="width:100%;height:80px;display:flex;align-items:flex-end;">
                                 <div style="width:100%;height:{{ $pct }}%;background:linear-gradient(180deg,#38bdf8,#0ea5e9);border-radius:3px 3px 0 0;min-height:3px;"></div>
                             </div>
@@ -236,9 +262,10 @@
                 <div style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
                 @foreach($topBrands->take(10) as $b)
                     <div>
-                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                            <span style="font-size:12px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:75%;">{{ $b->brand }}</span>
-                            <span style="font-size:11px;font-weight:600;color:#0ea5e9;flex-shrink:0;margin-left:6px;">{{ number_format($b->amount) }}</span>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:6px;">
+                            <span style="font-size:12px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;">{{ $b->brand }}</span>
+                            <span style="font-size:11px;color:#64748b;flex-shrink:0;white-space:nowrap;">{{ number_format($b->qty) }} уп.</span>
+                            <span style="font-size:11px;font-weight:600;color:#0ea5e9;flex-shrink:0;white-space:nowrap;">{{ number_format($b->amount) }}</span>
                         </div>
                         <div style="height:4px;background:#f1f5f9;border-radius:2px;">
                             <div style="height:100%;width:{{ round($b->amount / $brandMax * 100) }}%;background:linear-gradient(90deg,#38bdf8,#0ea5e9);border-radius:2px;"></div>
@@ -264,6 +291,7 @@
                         <th class="kmp-th" style="text-align:left;">#</th>
                         <th class="kmp-th" style="text-align:left;">Аптека</th>
                         <th class="kmp-th" style="text-align:left;">Город</th>
+                        <th class="kmp-th" style="text-align:right;">Упак.</th>
                         <th class="kmp-th" style="text-align:right;">Сумма (KZT)</th>
                         <th class="kmp-th" style="text-align:right;">Заказов</th>
                     </tr>
@@ -274,6 +302,7 @@
                         <td class="kmp-td" style="color:#94a3b8;width:32px;">{{ $i + 1 }}</td>
                         <td class="kmp-td" style="font-weight:500;">{{ $ph->name }}</td>
                         <td class="kmp-td" style="color:#64748b;">{{ $ph->city }}</td>
+                        <td class="kmp-td" style="text-align:right;color:#374151;font-weight:500;">{{ number_format($ph->qty) }}</td>
                         <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;">{{ number_format($ph->amount) }}</td>
                         <td class="kmp-td" style="text-align:right;color:#64748b;">{{ $ph->orders }}</td>
                     </tr>
@@ -300,12 +329,12 @@
                                 'Медпредставитель' => 'МП',
                                 'Название аптеки'  => 'Аптека',
                                 'Брэнд'            => 'Бренд',
-                                'Amount_disc_tot'  => 'Сумма',
-                                'Дост_колво'       => 'Уп.',
+                                'Amount_disc'      => 'Сумма (KZT)',
+                                'Дост_колво'       => 'Упак.',
                             ];
                         @endphp
                         @foreach($sorts as $col => $label)
-                            <th class="kmp-th" style="text-align:{{ in_array($col, ['Amount_disc_tot','Дост_колво']) ? 'right' : 'left' }};">
+                            <th class="kmp-th" style="text-align:{{ in_array($col, ['Amount_disc','Дост_колво']) ? 'right' : 'left' }};">
                                 <a href="{{ request()->fullUrlWithQuery(['sort' => $col, 'dir' => ($sortCol === $col && $sortDir === 'asc') ? 'desc' : 'asc']) }}"
                                    class="kmp-sort">
                                     {{ $label }}
@@ -326,7 +355,7 @@
                         <td class="kmp-td" style="white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;">{{ $row->{'Медпредставитель'} }}</td>
                         <td class="kmp-td" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $row->{'Название аптеки'} }}</td>
                         <td class="kmp-td">{{ $row->{'Брэнд'} }}</td>
-                        <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;white-space:nowrap;">{{ number_format($row->{'Amount_disc_tot'}, 0, '.', ' ') }}</td>
+                        <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;white-space:nowrap;">{{ number_format($row->{'Amount_disc'}, 0, '.', ' ') }}</td>
                         <td class="kmp-td" style="text-align:right;">{{ (int) $row->{'Дост_колво'} }}</td>
                         <td class="kmp-td">
                             @php $st = $row->{'Статус заказа'}; @endphp
@@ -355,5 +384,33 @@
     </div>
 
 </div>
+
+<script>
+function filterPicker(list, initValue, initLabel) {
+    return {
+        list,
+        selected: initValue || null,
+        query:    initLabel || '',
+        open:     false,
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            if (!q) return this.list.slice(0, 80);
+            return this.list.filter(e => e.label.toLowerCase().includes(q)).slice(0, 80);
+        },
+        choose(emp, form) {
+            this.selected = emp.value;
+            this.query    = emp.label;
+            this.open     = false;
+            this.$nextTick(() => form && form.submit());
+        },
+        clear(form) {
+            this.selected = null;
+            this.query    = '';
+            this.open     = false;
+            this.$nextTick(() => form && form.submit());
+        },
+    };
+}
+</script>
 
 @endsection

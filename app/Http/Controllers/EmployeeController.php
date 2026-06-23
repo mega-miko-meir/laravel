@@ -133,19 +133,19 @@ class EmployeeController extends Controller
 
                         // 1 запрос вместо 3: скалярные KMP-метрики
                         $kpi = (clone $base)->selectRaw('
-                            ROUND(SUM(`Amount_disc_tot`)) as totalAmount,
-                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(NOW()) AND MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc_tot` END)) as thisMonth,
-                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc_tot` END)) as lastMonth
+                            ROUND(SUM(`Amount_disc`)) as totalAmount,
+                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(NOW()) AND MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc` END)) as thisMonth,
+                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc` END)) as lastMonth
                         ')->first();
 
                         $monthly = (clone $base)
-                            ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount")
+                            ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc`)) as amount")
                             ->whereNotNull('Дата')
                             ->where('Дата', '>=', now()->subMonths(5)->startOfMonth())
                             ->groupBy('month')->orderBy('month')->get();
 
                         $topBrands = (clone $base)
-                            ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount')
+                            ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount')
                             ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
                             ->groupBy('Брэнд')->orderByDesc('amount')->limit(4)->get();
 

@@ -12,7 +12,7 @@ class KmpController extends Controller
     public function index(Request $request)
     {
         try {
-            $allowedSorts = ['Дата', 'Медпредставитель', 'Название аптеки', 'Брэнд', 'Amount_disc_tot', 'Дост_колво'];
+            $allowedSorts = ['Дата', 'Медпредставитель', 'Название аптеки', 'Брэнд', 'Amount_disc', 'Дост_колво'];
             $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'Дата';
             $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
@@ -24,7 +24,7 @@ class KmpController extends Controller
                 $kpi = $this->filtered($request)
                     ->selectRaw('
                         COUNT(*) as total_orders,
-                        ROUND(SUM(`Amount_disc_tot`)) as total_amount,
+                        ROUND(SUM(`Amount_disc`)) as total_amount,
                         ROUND(SUM(`Дост_колво`)) as total_qty,
                         COUNT(DISTINCT `Медпредставитель`) as emp_count,
                         COUNT(DISTINCT `ID аптеки`) as pharmacy_count,
@@ -33,7 +33,7 @@ class KmpController extends Controller
                     ->first();
 
                 $monthlyTrend = $this->filtered($request)
-                    ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders")
+                    ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders")
                     ->whereNotNull('Дата')
                     ->groupBy('month')
                     ->orderBy('month')
@@ -41,7 +41,7 @@ class KmpController extends Controller
                     ->get();
 
                 $topBrands = $this->filtered($request)
-                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
+                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
                     ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
                     ->groupBy('Брэнд')
                     ->orderByDesc('amount')
@@ -49,7 +49,7 @@ class KmpController extends Controller
                     ->get();
 
                 $topPharmacies = $this->filtered($request)
-                    ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
+                    ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
                     ->whereNotNull('Название аптеки')->where('Название аптеки', '<>', '')
                     ->groupBy('Название аптеки', 'Город аптеки')
                     ->orderByDesc('amount')
@@ -69,12 +69,18 @@ class KmpController extends Controller
             $years  = Cache::remember('kmp_filter_years',  3600, fn() => Kmp::distinct()->where('Статус заказа', 'Доставлено')->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год'));
             $depts  = Cache::remember('kmp_filter_depts',  3600, fn() => $this->distinctValues('Бизнес-подразделение'));
 
+            $empList = \App\Models\Employee::whereNotNull('kmp_employee_name')
+                ->orderBy('full_name')
+                ->get(['full_name', 'kmp_employee_name'])
+                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->kmp_employee_name])
+                ->values();
+
         } catch (\Exception $e) {
             return back()->withErrors(['nobel_db' => 'Nobel DB недоступна: ' . $e->getMessage()]);
         }
 
         return view('kmp', compact(
-            'rows', 'brands', 'cities', 'years', 'depts',
+            'rows', 'brands', 'cities', 'years', 'depts', 'empList',
             'kpi', 'monthlyTrend', 'topBrands', 'topPharmacies',
             'sortCol', 'sortDir'
         ));
