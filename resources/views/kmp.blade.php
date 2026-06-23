@@ -45,6 +45,12 @@
 <div style="max-width:1300px;margin:0 auto;">
 
     {{-- Header --}}
+    @php
+        $activeExportFilters = count(array_filter(
+            request()->except('_token', 'sort', 'dir', 'page'),
+            fn($v) => $v !== '' && $v !== null && (!is_array($v) || count($v) > 0)
+        ));
+    @endphp
     <div x-data="{ exportOpen: false }" style="margin-bottom:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
             <div>
@@ -58,6 +64,11 @@
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
                 Выгрузить отчёт
+                @if($activeExportFilters > 0)
+                <span style="background:rgba(255,255,255,.25);border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;">
+                    {{ $activeExportFilters }}
+                </span>
+                @endif
             </button>
         </div>
 
@@ -66,6 +77,16 @@
              style="margin-top:12px;background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px;">
             <form method="POST" action="{{ route('kmp.export') }}" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
                 @csrf
+                {{-- Передаём все текущие фильтры (год, МП, город, бренд, подразделение) --}}
+                @foreach(request()->except('_token', 'sort', 'dir', 'page', 'date_from', 'date_to') as $k => $v)
+                    @if(is_array($v))
+                        @foreach($v as $item)
+                            <input type="hidden" name="{{ $k }}[]" value="{{ $item }}">
+                        @endforeach
+                    @else
+                        <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                    @endif
+                @endforeach
                 <div style="display:flex;flex-direction:column;gap:4px;">
                     <label style="font-size:11px;font-weight:600;color:#15803d;">Дата от</label>
                     <input type="date" name="date_from"
@@ -86,9 +107,15 @@
                     </svg>
                     Скачать
                 </button>
+                @if($activeExportFilters > 0)
+                <p style="font-size:11px;color:#15803d;margin:0;align-self:center;font-weight:500;">
+                    Фильтров: {{ $activeExportFilters }} — в файл попадут только отфильтрованные строки
+                </p>
+                @else
                 <p style="font-size:11px;color:#64748b;margin:0;align-self:center;">
                     CSV, все колонки, только «Доставлено»
                 </p>
+                @endif
             </form>
         </div>
     </div>

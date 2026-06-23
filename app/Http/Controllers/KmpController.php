@@ -117,35 +117,28 @@ class KmpController extends Controller
     {
         set_time_limit(0);
 
-        $request->validate([
-            'date_from' => 'nullable|date',
-            'date_to'   => 'nullable|date',
+        $q = $this->filtered($request)->orderBy('Дата');
+
+        $parts = array_filter([
+            $request->input('year'),
+            $request->input('kmp_employee_name') ? 'emp' : null,
+            $request->input('date_from'),
+            $request->input('date_to'),
         ]);
+        $fileName = 'kmp_' . (implode('_', $parts) ?: 'all') . '.csv';
 
-        $dateFrom = $request->input('date_from');
-        $dateTo   = $request->input('date_to');
+        $numericSet = array_flip(self::NUMERIC_COLUMNS);
 
-        $q = DB::connection('nobel')->table('kmp')
-            ->where('Статус заказа', 'Доставлено')
-            ->orderBy('Дата');
-
-        if ($dateFrom) $q->where('Дата', '>=', $dateFrom . ' 00:00:00');
-        if ($dateTo)   $q->where('Дата', '<=', $dateTo . ' 23:59:59');
-
-        $suffix   = ($dateFrom ?? 'all') . '_' . ($dateTo ?? 'all');
-        $fileName = 'kmp_' . $suffix . '.csv';
-
-        return response()->streamDownload(function () use ($q) {
+        return response()->streamDownload(function () use ($q, $numericSet) {
             $out = fopen('php://output', 'w');
             fputs($out, "\xEF\xBB\xBF");
             fputcsv($out, self::COLUMNS, ';');
 
-            $numericSet = array_flip(self::NUMERIC_COLUMNS);
             $q->chunk(500, function ($rows) use ($out, $numericSet) {
                 foreach ($rows as $row) {
-                    $row = (array) $row;
-                    $values = array_map(function ($col) use ($row, $numericSet) {
-                        $val = $row[$col] ?? '';
+                    $attrs  = $row->getAttributes();
+                    $values = array_map(function ($col) use ($attrs, $numericSet) {
+                        $val = $attrs[$col] ?? '';
                         if (isset($numericSet[$col]) && $val !== '' && $val !== null) {
                             return str_replace('.', ',', $val);
                         }
