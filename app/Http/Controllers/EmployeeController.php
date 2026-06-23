@@ -71,35 +71,51 @@ class EmployeeController extends Controller
         $visitStats = null;
         if ($employee->crm_employee_id) {
             try {
-                $crmId = $employee->crm_employee_id;
-                $base  = Call::where('employee_id', $crmId)
-                    ->where('appointment_status', 'Выполнено')
-                    ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
+                $crmId      = $employee->crm_employee_id;
+                $visitStats = \Illuminate\Support\Facades\Cache::remember(
+                    "employee_visit_stats_{$crmId}",
+                    3600,
+                    function () use ($crmId) {
+                        $base = Call::where('employee_id', $crmId)
+                            ->where('appointment_status', 'Выполнено')
+                            ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
 
-                $total     = (clone $base)->count();
-                $avgDur    = (int) ((clone $base)->where('appointment_duration', '>', 0)->avg('appointment_duration') ?? 0);
-                $lastDate  = (clone $base)->max('appointment_Date');
+                        // 1 запрос вместо 5: все скалярные KPI
+                        $kpi = (clone $base)->selectRaw('
+                            COUNT(*) as total,
+                            ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avgDur,
+                            MAX(appointment_Date) as lastDate,
+                            SUM(appointment_type = "Визит к врачу") as doctorVisits,
+                            SUM(appointment_type = "Визит в аптеку") as pharmacyVisits,
+                            SUM(YEAR(appointment_Date) = YEAR(NOW()) AND MONTH(appointment_Date) = MONTH(NOW())) as thisMonth,
+                            SUM(YEAR(appointment_Date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(appointment_Date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH))) as lastMonth
+                        ')->first();
 
-                $thisMonth = (clone $base)->whereYear('appointment_Date', now()->year)->whereMonth('appointment_Date', now()->month)->count();
-                $lastMonth = (clone $base)->whereYear('appointment_Date', now()->subMonth()->year)->whereMonth('appointment_Date', now()->subMonth()->month)->count();
+                        $monthly = (clone $base)
+                            ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
+                            ->whereNotNull('appointment_Date')
+                            ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
+                            ->groupBy('month')->orderBy('month')->get();
 
-                $monthly = (clone $base)
-                    ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
-                    ->whereNotNull('appointment_Date')
-                    ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
-                    ->groupBy('month')
-                    ->orderBy('month')
-                    ->get();
+                        $topSpec = (clone $base)
+                            ->selectRaw('customer_spesiality, COUNT(*) as cnt')
+                            ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
+                            ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
 
-                $topSpec = (clone $base)
-                    ->selectRaw('customer_spesiality, COUNT(*) as cnt')
-                    ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
-                    ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
-
-                $doctorVisits   = (clone $base)->where('appointment_type', 'Визит к врачу')->count();
-                $pharmacyVisits = (clone $base)->where('appointment_type', 'Визит в аптеку')->count();
-
-                $visitStats = compact('total', 'avgDur', 'lastDate', 'thisMonth', 'lastMonth', 'monthly', 'topSpec', 'crmId', 'doctorVisits', 'pharmacyVisits');
+                        return [
+                            'total'          => (int) ($kpi->total ?? 0),
+                            'avgDur'         => (int) ($kpi->avgDur ?? 0),
+                            'lastDate'       => $kpi->lastDate,
+                            'thisMonth'      => (int) ($kpi->thisMonth ?? 0),
+                            'lastMonth'      => (int) ($kpi->lastMonth ?? 0),
+                            'doctorVisits'   => (int) ($kpi->doctorVisits ?? 0),
+                            'pharmacyVisits' => (int) ($kpi->pharmacyVisits ?? 0),
+                            'monthly'        => $monthly,
+                            'topSpec'        => $topSpec,
+                            'crmId'          => $crmId,
+                        ];
+                    }
+                );
             } catch (\Exception $e) {
                 // Nobel DB недоступна — показываем карточку без блока визитов
             }
@@ -108,35 +124,41 @@ class EmployeeController extends Controller
         $kmpStats = null;
         if ($employee->kmp_employee_name) {
             try {
-                $kmpName = $employee->kmp_employee_name;
-                $base = Kmp::where('Медпредставитель', $kmpName)->where('Статус заказа', 'Доставлено');
+                $kmpName  = $employee->kmp_employee_name;
+                $kmpStats = \Illuminate\Support\Facades\Cache::remember(
+                    'employee_kmp_stats_' . md5($kmpName),
+                    3600,
+                    function () use ($kmpName) {
+                        $base = Kmp::where('Медпредставитель', $kmpName)->where('Статус заказа', 'Доставлено');
 
-                $totalAmount = (int) (clone $base)->sum('Amount_disc_tot');
+                        // 1 запрос вместо 3: скалярные KMP-метрики
+                        $kpi = (clone $base)->selectRaw('
+                            ROUND(SUM(`Amount_disc_tot`)) as totalAmount,
+                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(NOW()) AND MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc_tot` END)) as thisMonth,
+                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc_tot` END)) as lastMonth
+                        ')->first();
 
-                $thisMonth = (int) (clone $base)
-                    ->whereYear('Дата', now()->year)
-                    ->whereMonth('Дата', now()->month)
-                    ->sum('Amount_disc_tot');
+                        $monthly = (clone $base)
+                            ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount")
+                            ->whereNotNull('Дата')
+                            ->where('Дата', '>=', now()->subMonths(5)->startOfMonth())
+                            ->groupBy('month')->orderBy('month')->get();
 
-                $lastMonth = (int) (clone $base)
-                    ->whereYear('Дата', now()->subMonth()->year)
-                    ->whereMonth('Дата', now()->subMonth()->month)
-                    ->sum('Amount_disc_tot');
+                        $topBrands = (clone $base)
+                            ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount')
+                            ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
+                            ->groupBy('Брэнд')->orderByDesc('amount')->limit(4)->get();
 
-                $monthly = (clone $base)
-                    ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount")
-                    ->whereNotNull('Дата')
-                    ->where('Дата', '>=', now()->subMonths(5)->startOfMonth())
-                    ->groupBy('month')
-                    ->orderBy('month')
-                    ->get();
-
-                $topBrands = (clone $base)
-                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount')
-                    ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
-                    ->groupBy('Брэнд')->orderByDesc('amount')->limit(4)->get();
-
-                $kmpStats = compact('totalAmount', 'thisMonth', 'lastMonth', 'monthly', 'topBrands', 'kmpName');
+                        return [
+                            'totalAmount' => (int) ($kpi->totalAmount ?? 0),
+                            'thisMonth'   => (int) ($kpi->thisMonth ?? 0),
+                            'lastMonth'   => (int) ($kpi->lastMonth ?? 0),
+                            'monthly'     => $monthly,
+                            'topBrands'   => $topBrands,
+                            'kmpName'     => $kmpName,
+                        ];
+                    }
+                );
             } catch (\Exception $e) {
                 // Nobel DB недоступна
             }
