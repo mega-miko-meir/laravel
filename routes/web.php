@@ -12,6 +12,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\KmpController;
+use App\Http\Controllers\LeaderboardController;
 
 // Auth
 Route::post('/logout', [UserController::class, 'logout']);
@@ -53,6 +54,10 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     // KMP продажи
     Route::get('/kmp', [KmpController::class, 'index'])->name('kmp.index');
     Route::post('/kmp/export', [KmpController::class, 'export'])->name('kmp.export');
+
+    // Рейтинг МП
+    Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
+    Route::post('/leaderboard/export', [LeaderboardController::class, 'export'])->name('leaderboard.export');
 });
 
 // Dev/misc

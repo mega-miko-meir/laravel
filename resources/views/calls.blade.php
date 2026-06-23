@@ -459,6 +459,49 @@
 
 </div>
 
+{{-- ─── OneKey COVERAGE ─── --}}
+@if($onekeyTotal > 0)
+<div class="kpi-card" style="margin-bottom:20px;padding:16px 20px;">
+    <div class="kpi-accent" style="background:#10b981;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,.1);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg style="width:22px;height:22px;" fill="none" viewBox="0 0 24 24" stroke="#10b981">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">
+                    Охват базы OneKey — врачи
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                    <span style="font-size:28px;font-weight:700;color:var(--text1);line-height:1;">{{ $onekeyPercent }}%</span>
+                    <span style="font-size:14px;color:var(--text2);">
+                        {{ number_format($onekeyVisited, 0, '.', ' ') }}
+                        <span style="color:var(--text3);">/ {{ number_format($onekeyTotal, 0, '.', ' ') }}</span>
+                        организаций
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div style="flex:1;min-width:200px;max-width:320px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;">
+                <span>Посещено</span>
+                <span>Всего в OneKey</span>
+            </div>
+            <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;border-radius:4px;background:#10b981;width:{{ $onekeyPercent }}%;transition:width .6s;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">
+                Совпадение по названию организации
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- ─── CHARTS ─── --}}
 <div class="charts-grid">
 
