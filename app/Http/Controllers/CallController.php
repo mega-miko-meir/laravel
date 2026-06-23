@@ -89,25 +89,23 @@ class CallController extends Controller
                 array_push($covBindings, ...$provs);
             }
 
-            // Охват врачей (qs_onekey_doctors)
+            // Охват врачей — total по customer_id, visited через join на customer_id
             $doctorRow     = DB::connection('nobel')->selectOne("
                 SELECT
-                    (SELECT COUNT(DISTINCT organization) FROM qs_onekey_doctors
-                     WHERE organization IS NOT NULL AND organization <> '') AS onekey_total,
-                    COUNT(DISTINCT c.organization) AS visited_count
+                    (SELECT COUNT(*) FROM qs_onekey_doctors) AS onekey_total,
+                    COUNT(DISTINCT d.customer_id) AS visited_count
                 FROM qs_calls c
-                INNER JOIN qs_onekey_doctors d ON d.organization = c.organization
+                INNER JOIN qs_onekey_doctors d ON d.customer_id = c.customer_id
                 WHERE c.appointment_type = 'Визит к врачу'" . $covWhere, $covBindings);
             $onekeyTotal   = (int)($doctorRow->onekey_total  ?? 0);
             $onekeyVisited = (int)($doctorRow->visited_count ?? 0);
             $onekeyPercent = $onekeyTotal > 0 ? round($onekeyVisited / $onekeyTotal * 100) : 0;
 
-            // Охват аптек (qs_onekey_pharmacy)
+            // Охват аптек — total по organization_id, visited через join на organization
             $pharmRow           = DB::connection('nobel')->selectOne("
                 SELECT
-                    (SELECT COUNT(DISTINCT organization) FROM qs_onekey_pharmacy
-                     WHERE organization IS NOT NULL AND organization <> '') AS onekey_total,
-                    COUNT(DISTINCT c.organization) AS visited_count
+                    (SELECT COUNT(*) FROM qs_onekey_pharmacy) AS onekey_total,
+                    COUNT(DISTINCT p.organization_id) AS visited_count
                 FROM qs_calls c
                 INNER JOIN qs_onekey_pharmacy p ON p.organization = c.organization
                 WHERE c.appointment_type = 'Визит в аптеку'" . $covWhere, $covBindings);
