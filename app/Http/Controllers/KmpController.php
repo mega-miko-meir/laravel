@@ -48,6 +48,14 @@ class KmpController extends Controller
                     ->limit(15)
                     ->get();
 
+                $topBrandsByQty = $this->filtered($request)
+                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
+                    ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
+                    ->groupBy('Брэнд')
+                    ->orderByDesc('qty')
+                    ->limit(15)
+                    ->get();
+
                 $topPharmacies = $this->filtered($request)
                     ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
                     ->whereNotNull('Название аптеки')->where('Название аптеки', '<>', '')
@@ -56,10 +64,10 @@ class KmpController extends Controller
                     ->limit(10)
                     ->get();
 
-                return compact('kpi', 'monthlyTrend', 'topBrands', 'topPharmacies');
+                return compact('kpi', 'monthlyTrend', 'topBrands', 'topBrandsByQty', 'topPharmacies');
             });
 
-            ['kpi' => $kpi, 'monthlyTrend' => $monthlyTrend, 'topBrands' => $topBrands, 'topPharmacies' => $topPharmacies] = $agg;
+            ['kpi' => $kpi, 'monthlyTrend' => $monthlyTrend, 'topBrands' => $topBrands, 'topBrandsByQty' => $topBrandsByQty, 'topPharmacies' => $topPharmacies] = $agg;
 
             // Таблица — не кешируется (зависит от сортировки и страницы)
             $rows = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
@@ -81,7 +89,7 @@ class KmpController extends Controller
 
         return view('kmp', compact(
             'rows', 'brands', 'cities', 'years', 'depts', 'empList',
-            'kpi', 'monthlyTrend', 'topBrands', 'topPharmacies',
+            'kpi', 'monthlyTrend', 'topBrands', 'topBrandsByQty', 'topPharmacies',
             'sortCol', 'sortDir'
         ));
     }

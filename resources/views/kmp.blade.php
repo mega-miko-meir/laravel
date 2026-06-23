@@ -255,48 +255,53 @@
         </div>
 
         {{-- Top brands --}}
-        <div class="kmp-card" x-data="{ showAmt: true, showQty: true }">
+        <div class="kmp-card" x-data="{
+            showAmt: true,
+            showQty: true,
+            byAmt: @js($topBrands),
+            byQty: @js($topBrandsByQty),
+            get list() { return (!this.showAmt && this.showQty) ? this.byQty : this.byAmt; },
+            get maxAmt() { return Math.max(...this.byAmt.map(b => b.amount), 1); },
+            get maxQty()  { return Math.max(...this.byQty.map(b => b.qty),  1); },
+            fmt(n) { return Math.round(n || 0).toLocaleString('ru-RU'); },
+            toggle(m) {
+                if (m === 'amt') { if (this.showAmt && !this.showQty) return; this.showAmt = !this.showAmt; }
+                else             { if (this.showQty && !this.showAmt) return; this.showQty = !this.showQty; }
+            },
+        }">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                 <div class="kmp-label">Топ брендов</div>
                 <div style="display:flex;gap:6px;">
-                    <button @click="if(showAmt && !showQty) return; showAmt = !showAmt"
-                            :style="showAmt
-                                ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;'
-                                : 'background:#fff;color:#94a3b8;border-color:#e2e8f0;'"
+                    <button @click="toggle('amt')"
+                            :style="showAmt ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : 'background:#fff;color:#94a3b8;border-color:#e2e8f0;'"
                             style="border:1px solid;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">
                         Сумма
                     </button>
-                    <button @click="if(showQty && !showAmt) return; showQty = !showQty"
-                            :style="showQty
-                                ? 'background:#10b981;color:#fff;border-color:#10b981;'
-                                : 'background:#fff;color:#94a3b8;border-color:#e2e8f0;'"
+                    <button @click="toggle('qty')"
+                            :style="showQty ? 'background:#10b981;color:#fff;border-color:#10b981;' : 'background:#fff;color:#94a3b8;border-color:#e2e8f0;'"
                             style="border:1px solid;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">
                         Уп.
                     </button>
                 </div>
             </div>
             @if($topBrands->count() > 0)
-                @php
-                    $brandMax    = $topBrands->first()->amount ?: 1;
-                    $brandMaxQty = $topBrands->max('qty') ?: 1;
-                @endphp
-                <div style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
-                @foreach($topBrands->take(10) as $b)
+            <div style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
+                <template x-for="b in list" :key="b.brand">
                     <div>
                         <div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:6px;">
-                            <span style="font-size:12px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;">{{ $b->brand }}</span>
-                            <span x-show="showQty" style="font-size:11px;color:#10b981;font-weight:600;flex-shrink:0;white-space:nowrap;">{{ number_format($b->qty) }} уп.</span>
-                            <span x-show="showAmt" style="font-size:11px;font-weight:600;color:#0ea5e9;flex-shrink:0;white-space:nowrap;">{{ number_format($b->amount) }}</span>
+                            <span x-text="b.brand" style="font-size:12px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;"></span>
+                            <span x-show="showQty" x-text="fmt(b.qty) + ' уп.'" style="font-size:11px;color:#10b981;font-weight:600;flex-shrink:0;white-space:nowrap;"></span>
+                            <span x-show="showAmt" x-text="fmt(b.amount)" style="font-size:11px;font-weight:600;color:#0ea5e9;flex-shrink:0;white-space:nowrap;"></span>
                         </div>
                         <div style="height:4px;background:#f1f5f9;border-radius:2px;">
                             <div x-show="showAmt"
-                                 style="height:100%;width:{{ round($b->amount / $brandMax * 100) }}%;background:linear-gradient(90deg,#38bdf8,#0ea5e9);border-radius:2px;"></div>
+                                 :style="`height:100%;width:${Math.round(b.amount/maxAmt*100)}%;background:linear-gradient(90deg,#38bdf8,#0ea5e9);border-radius:2px;`"></div>
                             <div x-show="!showAmt && showQty"
-                                 style="height:100%;width:{{ round($b->qty / $brandMaxQty * 100) }}%;background:linear-gradient(90deg,#34d399,#10b981);border-radius:2px;"></div>
+                                 :style="`height:100%;width:${Math.round(b.qty/maxQty*100)}%;background:linear-gradient(90deg,#34d399,#10b981);border-radius:2px;`"></div>
                         </div>
                     </div>
-                @endforeach
-                </div>
+                </template>
+            </div>
             @else
                 <div style="color:#94a3b8;font-size:13px;">Нет данных</div>
             @endif
