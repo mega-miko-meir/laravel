@@ -7,6 +7,7 @@
     $monthly      = $stats['monthly'];
     $topBrands    = $stats['topBrands'];
     $kmpName      = $stats['kmpName'];
+    $year         = $stats['year'] ?? date('Y');
 
     $monthDiff = $lastMonth > 0 ? round(($thisMonth - $lastMonth) / $lastMonth * 100) : null;
     $maxVal    = $monthly->max('amount') ?: 1;
@@ -28,7 +29,7 @@
             </svg>
             <span style="font-size:14px;font-weight:600;color:#1f2937;">KMP Продажи</span>
         </div>
-        <a href="{{ route('kmp.index', ['kmp_employee_name' => $kmpName]) }}"
+        <a href="{{ route('kmp.index', ['kmp_employee_name' => $kmpName, 'year' => $year]) }}"
            style="font-size:11px;color:#0ea5e9;text-decoration:none;"
            onmouseover="this.style.textDecoration='underline';"
            onmouseout="this.style.textDecoration='none';">
@@ -44,7 +45,7 @@
                 {{ number_format($totalAmount, 0, '.', ' ') }}
                 <span style="font-size:12px;font-weight:400;margin-left:2px;">KZT</span>
             </div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:3px;">Всего продаж (после скидок)</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:3px;">Продажи {{ $year }} (после скидок)</div>
         </div>
 
         {{-- Этот месяц vs прошлый --}}

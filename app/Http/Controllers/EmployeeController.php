@@ -129,13 +129,15 @@ class EmployeeController extends Controller
                     'employee_kmp_stats_' . md5($kmpName),
                     3600,
                     function () use ($kmpName) {
-                        $base = Kmp::where('Медпредставитель', $kmpName)->where('Статус заказа', 'Доставлено');
+                        $currentYear = (int) now()->year;
+                        $base = Kmp::where('Медпредставитель', $kmpName)
+                            ->where('Статус заказа', 'Доставлено')
+                            ->where('Год', $currentYear);
 
-                        // 1 запрос вместо 3: скалярные KMP-метрики
                         $kpi = (clone $base)->selectRaw('
                             ROUND(SUM(`Amount_disc`)) as totalAmount,
-                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(NOW()) AND MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc` END)) as thisMonth,
-                            ROUND(SUM(CASE WHEN YEAR(`Дата`) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc` END)) as lastMonth
+                            ROUND(SUM(CASE WHEN MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc` END)) as thisMonth,
+                            ROUND(SUM(CASE WHEN MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc` END)) as lastMonth
                         ')->first();
 
                         $monthly = (clone $base)
@@ -156,6 +158,7 @@ class EmployeeController extends Controller
                             'monthly'     => $monthly,
                             'topBrands'   => $topBrands,
                             'kmpName'     => $kmpName,
+                            'year'        => $currentYear,
                         ];
                     }
                 );
