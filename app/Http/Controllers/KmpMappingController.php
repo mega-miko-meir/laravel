@@ -76,48 +76,51 @@ class KmpMappingController extends Controller
 
     public function autoMatch()
     {
-        set_time_limit(0);
-
         try {
-            $kmpEmployees = $this->getKmpEmployees();
+            // Берём только из кеша — не запускаем тяжёлый GROUP BY запрос повторно
+            $kmpEmployees = Cache::get('kmp_employees_list');
 
             if (empty($kmpEmployees)) {
-                return back()->with('error', 'Список KMP-сотрудников пуст или Nobel DB недоступна.');
+                return back()->with('error', 'Список KMP-сотрудников ещё не загружен. Перезагрузите страницу и попробуйте снова.');
             }
 
             // Lookup: первые два слова KMP-имени => полное имя
             $kmpByShName = [];
             foreach ($kmpEmployees as $r) {
                 $parts = preg_split('/\s+/', trim($r->name));
-                $sh = implode(' ', array_slice($parts, 0, 2));
+                $sh    = implode(' ', array_slice($parts, 0, 2));
                 if (!isset($kmpByShName[$sh])) {
                     $kmpByShName[$sh] = $r->name;
                 }
             }
 
+            // Уже привязанные имена
             $alreadyLinked = Employee::whereNotNull('kmp_employee_name')
-                ->pluck('kmp_employee_name')
-                ->flip();
+                ->pluck('kmp_employee_name', 'id');
 
-            $matched = 0;
-            foreach (Employee::all() as $emp) {
+            // Только нужные колонки — не грузим всю модель
+            $toUpdate = []; // [employee_id => kmp_name]
+            $usedNames = $alreadyLinked->values()->flip()->toArray();
+
+            foreach (Employee::select(['id', 'full_name', 'kmp_employee_name'])->get() as $emp) {
                 if ($emp->kmp_employee_name) continue;
                 $shName = $emp->sh_name;
                 if (!$shName) continue;
 
                 if (isset($kmpByShName[$shName])) {
                     $kmpName = $kmpByShName[$shName];
-                    if ($alreadyLinked->has($kmpName)) continue;
-                    $emp->kmp_employee_name = $kmpName;
-                    $emp->save();
-                    $alreadyLinked->put($kmpName, true);
-                    $matched++;
+                    if (isset($usedNames[$kmpName])) continue;
+                    $toUpdate[$emp->id] = $kmpName;
+                    $usedNames[$kmpName] = true;
                 }
             }
 
-            Cache::forget('kmp_employees_list');
+            // Один UPDATE на сотрудника вместо полного save()
+            foreach ($toUpdate as $id => $kmpName) {
+                Employee::where('id', $id)->update(['kmp_employee_name' => $kmpName]);
+            }
 
-            return back()->with('success', "Автоматически привязано: {$matched} сотрудников.");
+            return back()->with('success', "Автоматически привязано: " . count($toUpdate) . " сотрудников.");
 
         } catch (\Exception $e) {
             return back()->with('error', 'Ошибка автопривязки: ' . $e->getMessage());
