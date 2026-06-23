@@ -14,6 +14,9 @@
         @if($visitStats)
             <x-visit-stats :stats="$visitStats" />
         @endif
+        @if($kmpStats)
+            <x-kmp-stats :stats="$kmpStats" />
+        @endif
     </div>
 
     {{-- Правая колонка --}}

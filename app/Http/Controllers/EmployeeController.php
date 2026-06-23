@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\EmployeeCredential;
 use App\Models\EmployeeEvent;
 use App\Models\Nobel\Call;
+use App\Models\Nobel\Kmp;
 use App\Services\TeamService;
 use Illuminate\Http\Request;
 
@@ -104,6 +105,43 @@ class EmployeeController extends Controller
             }
         }
 
+        $kmpStats = null;
+        if ($employee->kmp_employee_name) {
+            try {
+                $kmpName = $employee->kmp_employee_name;
+                $base = Kmp::where('Медпредставитель', $kmpName)->where('Статус заказа', 'Доставлено');
+
+                $totalAmount = (int) (clone $base)->sum('Amount_disc_tot');
+
+                $thisMonth = (int) (clone $base)
+                    ->whereYear('Дата', now()->year)
+                    ->whereMonth('Дата', now()->month)
+                    ->sum('Amount_disc_tot');
+
+                $lastMonth = (int) (clone $base)
+                    ->whereYear('Дата', now()->subMonth()->year)
+                    ->whereMonth('Дата', now()->subMonth()->month)
+                    ->sum('Amount_disc_tot');
+
+                $monthly = (clone $base)
+                    ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount")
+                    ->whereNotNull('Дата')
+                    ->where('Дата', '>=', now()->subMonths(5)->startOfMonth())
+                    ->groupBy('month')
+                    ->orderBy('month')
+                    ->get();
+
+                $topBrands = (clone $base)
+                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount')
+                    ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
+                    ->groupBy('Брэнд')->orderByDesc('amount')->limit(4)->get();
+
+                $kmpStats = compact('totalAmount', 'thisMonth', 'lastMonth', 'monthly', 'topBrands', 'kmpName');
+            } catch (\Exception $e) {
+                // Nobel DB недоступна
+            }
+        }
+
         return view('employee', [
             'employee'             => $employee,
             'lastTerritory'        => $lastTerritory,
@@ -118,6 +156,7 @@ class EmployeeController extends Controller
             'tabletHistories'      => \App\Models\EmployeeTablet::where('employee_id', $employee->id)->with('tablet')->orderByDesc('assigned_at')->get(),
             'currentStatus'        => $employee->events()->latest('event_date')->value('event_type'),
             'visitStats'           => $visitStats,
+            'kmpStats'             => $kmpStats,
         ]);
     }
 

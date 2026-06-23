@@ -11,6 +11,7 @@ use App\Http\Controllers\EmployeeDataController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\CallController;
+use App\Http\Controllers\KmpController;
 
 // Auth
 Route::post('/logout', [UserController::class, 'logout']);
@@ -48,6 +49,10 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     // Calls (визиты) — только для админа
     Route::get('/calls', [CallController::class, 'index'])->name('calls.index');
     Route::post('/calls/export', [CallController::class, 'export'])->name('calls.export');
+
+    // KMP продажи
+    Route::get('/kmp', [KmpController::class, 'index'])->name('kmp.index');
+    Route::post('/kmp/export', [KmpController::class, 'export'])->name('kmp.export');
 });
 
 // Dev/misc

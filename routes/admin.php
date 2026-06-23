@@ -7,6 +7,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\CrmMappingController;
+use App\Http\Controllers\KmpMappingController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -32,5 +33,9 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/crm-mapping', [CrmMappingController::class, 'index'])->name('admin.crm-mapping');
     Route::post('/admin/crm-mapping/auto-match', [CrmMappingController::class, 'autoMatch'])->name('admin.crm-mapping.auto');
     Route::post('/admin/crm-mapping/link', [CrmMappingController::class, 'link'])->name('admin.crm-mapping.link');
+
+    Route::get('/admin/kmp-mapping', [KmpMappingController::class, 'index'])->name('admin.kmp-mapping');
+    Route::post('/admin/kmp-mapping/auto-match', [KmpMappingController::class, 'autoMatch'])->name('admin.kmp-mapping.auto');
+    Route::post('/admin/kmp-mapping/link', [KmpMappingController::class, 'link'])->name('admin.kmp-mapping.link');
 
 });

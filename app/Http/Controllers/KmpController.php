@@ -1,0 +1,147 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Nobel\Kmp;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
+class KmpController extends Controller
+{
+    public function index(Request $request)
+    {
+        try {
+            $kpi = $this->filtered($request)
+                ->selectRaw('
+                    COUNT(*) as total_orders,
+                    ROUND(SUM(`Amount_disc_tot`)) as total_amount,
+                    ROUND(SUM(`Дост_колво`)) as total_qty,
+                    COUNT(DISTINCT `Медпредставитель`) as emp_count,
+                    COUNT(DISTINCT `ID аптеки`) as pharmacy_count,
+                    COUNT(DISTINCT `Брэнд`) as brand_count
+                ')
+                ->first();
+
+            $monthlyTrend = $this->filtered($request)
+                ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders")
+                ->whereNotNull('Дата')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->limit(24)
+                ->get();
+
+            $topBrands = $this->filtered($request)
+                ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
+                ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
+                ->groupBy('Брэнд')
+                ->orderByDesc('amount')
+                ->limit(15)
+                ->get();
+
+            $topPharmacies = $this->filtered($request)
+                ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
+                ->whereNotNull('Название аптеки')->where('Название аптеки', '<>', '')
+                ->groupBy('Название аптеки', 'Город аптеки')
+                ->orderByDesc('amount')
+                ->limit(10)
+                ->get();
+
+            $allowedSorts = ['Дата', 'Медпредставитель', 'Название аптеки', 'Брэнд', 'Amount_disc_tot', 'Дост_колво'];
+            $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'Дата';
+            $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+
+            $rows = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
+
+            $brands  = Cache::remember('kmp_filter_brands',  3600, fn() => $this->distinctValues('Брэнд'));
+            $cities  = Cache::remember('kmp_filter_cities',  3600, fn() => $this->distinctValues('Город'));
+            $years   = Cache::remember('kmp_filter_years',   3600, fn() => Kmp::distinct()->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год'));
+            $depts   = Cache::remember('kmp_filter_depts',   3600, fn() => $this->distinctValues('Бизнес-подразделение'));
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['nobel_db' => 'Nobel DB недоступна: ' . $e->getMessage()]);
+        }
+
+        return view('kmp', compact(
+            'rows', 'brands', 'cities', 'years', 'depts',
+            'kpi', 'monthlyTrend', 'topBrands', 'topPharmacies',
+            'sortCol', 'sortDir'
+        ));
+    }
+
+    private const COLUMNS = [
+        'Дата', 'Месяц', 'Год', 'Медпредставитель', 'Региональный менеджер',
+        'Город', 'Название аптеки', 'ID аптеки', 'Город аптеки', 'Адрес аптеки',
+        'БИН аптеки', 'Брэнд', 'Бизнес-подразделение', 'Номер заказа Pharmcenter',
+        'SKU_splitted', 'Статус заказа', 'Цена_KZT', 'Размер_скидки', 'Заказ_упаковки',
+        'Дост_скидка', 'Дост_цена', 'Дост_колво', 'Дост_сумма_скид',
+        'Department', 'SW', 'Distributor', 'Distributor_branch',
+        'Price', 'Amount', 'Discount_tot', 'Amount_disc', 'Amount_disc_tot',
+    ];
+
+    public function export(Request $request)
+    {
+        set_time_limit(0);
+
+        $request->validate([
+            'date_from' => 'nullable|date',
+            'date_to'   => 'nullable|date',
+        ]);
+
+        $dateFrom = $request->input('date_from');
+        $dateTo   = $request->input('date_to');
+
+        $q = DB::connection('nobel')->table('kmp')
+            ->where('Статус заказа', 'Доставлено')
+            ->orderBy('Дата');
+
+        if ($dateFrom) $q->where('Дата', '>=', $dateFrom . ' 00:00:00');
+        if ($dateTo)   $q->where('Дата', '<=', $dateTo . ' 23:59:59');
+
+        $suffix   = ($dateFrom ?? 'all') . '_' . ($dateTo ?? 'all');
+        $fileName = 'kmp_' . $suffix . '.csv';
+
+        return response()->streamDownload(function () use ($q) {
+            $out = fopen('php://output', 'w');
+            fputs($out, "\xEF\xBB\xBF");
+            fputcsv($out, self::COLUMNS, ';');
+
+            $q->chunk(500, function ($rows) use ($out) {
+                foreach ($rows as $row) {
+                    $row = (array) $row;
+                    fputcsv($out, array_map(fn($col) => $row[$col] ?? '', self::COLUMNS), ';');
+                }
+                ob_flush();
+                flush();
+            });
+
+            fclose($out);
+        }, $fileName, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    private function filtered(Request $request)
+    {
+        $q = Kmp::query()->where('Статус заказа', 'Доставлено');
+        if ($request->filled('year'))              $q->where('Год', $request->input('year'));
+        if ($request->filled('date_from'))         $q->where('Дата', '>=', $request->input('date_from'));
+        if ($request->filled('date_to'))           $q->where('Дата', '<=', $request->input('date_to'));
+        if ($request->filled('employee'))          $q->where('Медпредставитель', 'like', '%' . $request->input('employee') . '%');
+        if ($request->filled('kmp_employee_name')) $q->where('Медпредставитель', $request->input('kmp_employee_name'));
+        if ($request->filled('city'))              $q->whereIn('Город', (array) $request->input('city'));
+        if ($request->filled('brand'))             $q->whereIn('Брэнд', (array) $request->input('brand'));
+        if ($request->filled('dept'))              $q->whereIn('Бизнес-подразделение', (array) $request->input('dept'));
+        return $q;
+    }
+
+    private function distinctValues(string $col): \Illuminate\Support\Collection
+    {
+        return Kmp::distinct()
+            ->where('Статус заказа', 'Доставлено')
+            ->whereNotNull($col)->where($col, '<>', '')
+            ->orderBy($col)
+            ->pluck($col);
+    }
+}
