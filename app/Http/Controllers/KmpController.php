@@ -12,51 +12,62 @@ class KmpController extends Controller
     public function index(Request $request)
     {
         try {
-            $kpi = $this->filtered($request)
-                ->selectRaw('
-                    COUNT(*) as total_orders,
-                    ROUND(SUM(`Amount_disc_tot`)) as total_amount,
-                    ROUND(SUM(`Дост_колво`)) as total_qty,
-                    COUNT(DISTINCT `Медпредставитель`) as emp_count,
-                    COUNT(DISTINCT `ID аптеки`) as pharmacy_count,
-                    COUNT(DISTINCT `Брэнд`) as brand_count
-                ')
-                ->first();
-
-            $monthlyTrend = $this->filtered($request)
-                ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders")
-                ->whereNotNull('Дата')
-                ->groupBy('month')
-                ->orderBy('month')
-                ->limit(24)
-                ->get();
-
-            $topBrands = $this->filtered($request)
-                ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
-                ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
-                ->groupBy('Брэнд')
-                ->orderByDesc('amount')
-                ->limit(15)
-                ->get();
-
-            $topPharmacies = $this->filtered($request)
-                ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
-                ->whereNotNull('Название аптеки')->where('Название аптеки', '<>', '')
-                ->groupBy('Название аптеки', 'Город аптеки')
-                ->orderByDesc('amount')
-                ->limit(10)
-                ->get();
-
             $allowedSorts = ['Дата', 'Медпредставитель', 'Название аптеки', 'Брэнд', 'Amount_disc_tot', 'Дост_колво'];
             $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'Дата';
             $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
+            // Кеш агрегатов по набору фильтров (кроме сортировки и пагинации)
+            $filterParams = $request->only(['year', 'date_from', 'date_to', 'employee', 'kmp_employee_name', 'city', 'brand', 'dept']);
+            $aggCacheKey  = 'kmp_agg_' . md5(json_encode($filterParams));
+
+            $agg = Cache::remember($aggCacheKey, 1800, function () use ($request) {
+                $kpi = $this->filtered($request)
+                    ->selectRaw('
+                        COUNT(*) as total_orders,
+                        ROUND(SUM(`Amount_disc_tot`)) as total_amount,
+                        ROUND(SUM(`Дост_колво`)) as total_qty,
+                        COUNT(DISTINCT `Медпредставитель`) as emp_count,
+                        COUNT(DISTINCT `ID аптеки`) as pharmacy_count,
+                        COUNT(DISTINCT `Брэнд`) as brand_count
+                    ')
+                    ->first();
+
+                $monthlyTrend = $this->filtered($request)
+                    ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders")
+                    ->whereNotNull('Дата')
+                    ->groupBy('month')
+                    ->orderBy('month')
+                    ->limit(24)
+                    ->get();
+
+                $topBrands = $this->filtered($request)
+                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
+                    ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
+                    ->groupBy('Брэнд')
+                    ->orderByDesc('amount')
+                    ->limit(15)
+                    ->get();
+
+                $topPharmacies = $this->filtered($request)
+                    ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc_tot`)) as amount, COUNT(*) as orders')
+                    ->whereNotNull('Название аптеки')->where('Название аптеки', '<>', '')
+                    ->groupBy('Название аптеки', 'Город аптеки')
+                    ->orderByDesc('amount')
+                    ->limit(10)
+                    ->get();
+
+                return compact('kpi', 'monthlyTrend', 'topBrands', 'topPharmacies');
+            });
+
+            ['kpi' => $kpi, 'monthlyTrend' => $monthlyTrend, 'topBrands' => $topBrands, 'topPharmacies' => $topPharmacies] = $agg;
+
+            // Таблица — не кешируется (зависит от сортировки и страницы)
             $rows = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
 
-            $brands  = Cache::remember('kmp_filter_brands',  3600, fn() => $this->distinctValues('Брэнд'));
-            $cities  = Cache::remember('kmp_filter_cities',  3600, fn() => $this->distinctValues('Город'));
-            $years   = Cache::remember('kmp_filter_years',   3600, fn() => Kmp::distinct()->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год'));
-            $depts   = Cache::remember('kmp_filter_depts',   3600, fn() => $this->distinctValues('Бизнес-подразделение'));
+            $brands = Cache::remember('kmp_filter_brands', 3600, fn() => $this->distinctValues('Брэнд'));
+            $cities = Cache::remember('kmp_filter_cities', 3600, fn() => $this->distinctValues('Город'));
+            $years  = Cache::remember('kmp_filter_years',  3600, fn() => Kmp::distinct()->where('Статус заказа', 'Доставлено')->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год'));
+            $depts  = Cache::remember('kmp_filter_depts',  3600, fn() => $this->distinctValues('Бизнес-подразделение'));
 
         } catch (\Exception $e) {
             return back()->withErrors(['nobel_db' => 'Nobel DB недоступна: ' . $e->getMessage()]);

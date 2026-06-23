@@ -21,6 +21,7 @@ class Employee extends Model
         'status',
         'photo_path',
         'crm_employee_id',
+        'kmp_employee_name',
     ];
 
     public function territories(){
