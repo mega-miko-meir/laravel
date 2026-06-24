@@ -104,7 +104,7 @@ class CallController extends Controller
             // Охват аптек — total по organization_id, visited через join на organization_id
             $pharmRow           = DB::connection('nobel')->selectOne("
                 SELECT
-                    (SELECT COUNT(*) FROM qs_onekey_pharmacy) AS onekey_total,
+                    (SELECT COUNT(DISTINCT organization_id) FROM qs_onekey_pharmacy) AS onekey_total,
                     COUNT(DISTINCT p.organization_id) AS visited_count
                 FROM qs_calls c
                 INNER JOIN qs_onekey_pharmacy p ON p.organization_id = c.organization_id
