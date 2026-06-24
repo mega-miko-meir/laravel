@@ -213,6 +213,16 @@
                         Ср. длит.<span class="sort-ico">{!! $sortIco('avg_duration') !!}</span>
                     </a>
                 </th>
+                <th class="{{ $sort==='target_visited' ? 'sort-active' : '' }}" style="text-align:right;">
+                    <a href="{{ $thUrl('target_visited') }}" style="color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Тарг. врачи<span class="sort-ico">{!! $sortIco('target_visited') !!}</span>
+                    </a>
+                </th>
+                <th class="{{ $sort==='target_percent' ? 'sort-active' : '' }}" style="text-align:right;">
+                    <a href="{{ $thUrl('target_percent') }}" style="color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Охват тарг.<span class="sort-ico">{!! $sortIco('target_percent') !!}</span>
+                    </a>
+                </th>
                 <th class="{{ $sort==='total_amount' ? 'sort-active' : '' }}" style="text-align:right;">
                     <a href="{{ $thUrl('total_amount') }}" style="color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:flex-end;gap:2px;">
                         Сумма KZT<span class="sort-ico">{!! $sortIco('total_amount') !!}</span>
@@ -283,6 +293,30 @@
             <td class="num-cell">
                 @if($row['avg_duration'] > 0)
                 <span style="color:var(--text2);">{{ $row['avg_duration'] }}<span style="font-size:11px;"> мин</span></span>
+                @else
+                <span style="color:var(--text3);">—</span>
+                @endif
+            </td>
+
+            {{-- Таргетные врачи --}}
+            <td class="num-cell">
+                @if($row['target_total'] > 0)
+                <div class="num-big" style="color:#0f766e;">
+                    {{ $row['target_visited'] }}<span style="font-weight:400;color:var(--text3);font-size:12px;"> / {{ $row['target_total'] }}</span>
+                </div>
+                @else
+                <span style="color:var(--text3);">—</span>
+                @endif
+            </td>
+
+            {{-- Охват таргетных --}}
+            <td class="num-cell">
+                @if($row['target_total'] > 0)
+                @php $pct = $row['target_percent']; $pctColor = $pct >= 80 ? '#16a34a' : ($pct >= 50 ? '#f59e0b' : '#ef4444'); @endphp
+                <div style="font-weight:700;color:{{ $pctColor }};">{{ $pct }}%</div>
+                <div style="margin-top:4px;height:4px;background:var(--border);border-radius:2px;min-width:50px;">
+                    <div style="height:100%;border-radius:2px;background:{{ $pctColor }};width:{{ $pct }}%;transition:width .5s;"></div>
+                </div>
                 @else
                 <span style="color:var(--text3);">—</span>
                 @endif
