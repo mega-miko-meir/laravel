@@ -4,58 +4,59 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\Nobel\Call;
-use App\Models\Nobel\Kmp;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class LeaderboardController extends Controller
 {
+    public const FREQUENCY    = 2;
+    public const DAILY_TARGET = 18;
+
     public function index(Request $request)
     {
-        $year     = $request->input('year', (string) date('Y'));
         $dateFrom = $request->input('date_from');
         $dateTo   = $request->input('date_to');
 
-        [$crmStats, $kmpStats, $targetStats] = $this->fetchStats($year, $dateFrom, $dateTo);
+        [$crmStats, $stgDoctors, $stgPharmacies] = $this->fetchStats($dateFrom, $dateTo);
+        $workingDays = $this->workingDays($dateFrom, $dateTo);
+        $callTarget  = $workingDays * self::DAILY_TARGET;
+        $rows        = $this->buildRows($crmStats, $stgDoctors, $stgPharmacies, $callTarget);
 
-        $rows = $this->buildRows($crmStats, $kmpStats, $targetStats);
-
-        $allowedSorts = ['total_visits', 'doctor_visits', 'pharmacy_visits', 'avg_duration',
-                         'total_amount', 'total_qty', 'target_visited', 'target_percent'];
+        $allowedSorts = [
+            'total_visits', 'call_pct', 'doctor_visits', 'pharmacy_visits', 'avg_duration',
+            'base_doctors', 'base_pharmacies', 'freq_pct_doc', 'freq_pct_phar',
+        ];
         $sort = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'total_visits';
         $dir  = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
         $rows = ($dir === 'desc' ? $rows->sortByDesc($sort) : $rows->sortBy($sort))->values();
 
-        $years = Cache::remember('kmp_filter_years', 3600, fn() =>
-            Kmp::distinct()->where('Статус заказа', 'Доставлено')
-                ->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год')
-        );
-
-        return view('leaderboard', compact('rows', 'years', 'year', 'dateFrom', 'dateTo', 'sort', 'dir'));
+        return view('leaderboard', compact('rows', 'dateFrom', 'dateTo', 'sort', 'dir', 'workingDays', 'callTarget'));
     }
 
     public function export(Request $request)
     {
-        $year     = $request->input('year', (string) date('Y'));
-        $dateFrom = $request->input('date_from');
-        $dateTo   = $request->input('date_to');
+        $dateFrom    = $request->input('date_from');
+        $dateTo      = $request->input('date_to');
+        $workingDays = $this->workingDays($dateFrom, $dateTo);
+        $callTarget  = $workingDays * self::DAILY_TARGET;
 
-        [$crmStats, $kmpStats, $targetStats] = $this->fetchStats($year, $dateFrom, $dateTo);
-
-        $rows = $this->buildRows($crmStats, $kmpStats, $targetStats)
-            ->sortByDesc('total_visits')->values();
+        [$crmStats, $stgDoctors, $stgPharmacies] = $this->fetchStats($dateFrom, $dateTo);
+        $rows = $this->buildRows($crmStats, $stgDoctors, $stgPharmacies, $callTarget)
+                     ->sortByDesc('total_visits')->values();
 
         $fileName = 'leaderboard_' . now()->format('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($rows) {
+        return response()->streamDownload(function () use ($rows, $workingDays, $callTarget) {
             $out = fopen('php://output', 'w');
             fputs($out, "\xEF\xBB\xBF");
             fputcsv($out, [
                 '#', 'Сотрудник', 'Должность',
-                'Всего визитов', 'К врачам', 'В аптеки', 'Ср. длит. мин',
-                'Тарг. врачи (факт)', 'Тарг. врачи (план)', 'Охват тарг. %',
-                'Сумма KZT', 'Кол-во уп.',
+                'Всего визитов', 'Таргет (' . $workingDays . '×' . self::DAILY_TARGET . ')', 'Реализация %',
+                'База врачей', 'Таргет частоты (врачи)', 'Факт визитов (врачи)', '% частоты (врачи)',
+                'База аптек', 'Таргет частоты (аптеки)', 'Факт визитов (аптеки)', '% частоты (аптеки)',
+                'Ср. длит. мин',
             ], ';');
             foreach ($rows as $i => $r) {
                 fputcsv($out, [
@@ -63,14 +64,17 @@ class LeaderboardController extends Controller
                     $r['name'],
                     $r['position'],
                     $r['total_visits'],
+                    $callTarget,
+                    $r['call_pct'],
+                    $r['base_doctors'],
+                    $r['freq_target_doc'],
                     $r['doctor_visits'],
+                    $r['freq_pct_doc'],
+                    $r['base_pharmacies'],
+                    $r['freq_target_phar'],
                     $r['pharmacy_visits'],
+                    $r['freq_pct_phar'],
                     $r['avg_duration'],
-                    $r['target_visited'],
-                    $r['target_total'],
-                    $r['target_percent'],
-                    str_replace('.', ',', $r['total_amount']),
-                    str_replace('.', ',', $r['total_qty']),
                 ], ';');
             }
             fclose($out);
@@ -80,17 +84,18 @@ class LeaderboardController extends Controller
         ]);
     }
 
-    private function fetchStats(string $year, ?string $dateFrom, ?string $dateTo): array
+    private function fetchStats(?string $dateFrom, ?string $dateTo): array
     {
-        $crmStats    = collect();
-        $kmpStats    = collect();
-        $targetStats = collect();
+        $crmStats     = collect();
+        $stgDoctors   = collect();
+        $stgPharmacies = collect();
 
         try {
             $q = Call::whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
                 ->where('appointment_status', 'Выполнено')
                 ->selectRaw('
                     employee_id,
+                    MAX(employee) as employee_name,
                     COUNT(*) as total_visits,
                     SUM(appointment_type = "Визит к врачу") as doctor_visits,
                     SUM(appointment_type = "Визит в аптеку") as pharmacy_visits,
@@ -99,65 +104,83 @@ class LeaderboardController extends Controller
             if ($dateFrom) $q->where('appointment_Date', '>=', $dateFrom);
             if ($dateTo)   $q->where('appointment_Date', '<=', $dateTo);
             $crmStats = $q->groupBy('employee_id')->get()->keyBy('employee_id');
-        } catch (\Exception $e) {}
 
-        try {
-            $q = Kmp::where('Статус заказа', 'Доставлено')
-                ->selectRaw('`Медпредставитель`, ROUND(SUM(`Amount_disc`)) as total_amount, ROUND(SUM(`Дост_колво`)) as total_qty');
-            if ($year)     $q->where('Год', $year);
-            if ($dateFrom) $q->where('Дата', '>=', $dateFrom);
-            if ($dateTo)   $q->where('Дата', '<=', $dateTo);
-            $kmpStats = $q->groupBy('Медпредставитель')->get()->keyBy('Медпредставитель');
-        } catch (\Exception $e) {}
+            // Базы клиентов из stg-таблиц (без фильтра по датам — это назначенная база)
+            $stgDoctors = DB::connection('nobel')
+                ->table('stg_nobel_report_2')
+                ->selectRaw('TRIM(employee) as employee, COUNT(DISTINCT customer_id) as base_count')
+                ->groupBy('employee')
+                ->get()
+                ->keyBy(fn($r) => trim($r->employee));
 
-        // Таргетные врачи: план = все уникальные customer_id с customer_target='yes'
-        // за период (любой статус); факт = только выполненные визиты
-        try {
-            $q = Call::where('appointment_type', 'Визит к врачу')
-                ->where('customer_target', 'yes')
-                ->selectRaw('
-                    employee_id,
-                    COUNT(DISTINCT customer_id) AS target_total,
-                    COUNT(DISTINCT CASE WHEN appointment_status = "Выполнено" THEN customer_id END) AS target_visited
-                ');
-            if ($dateFrom) $q->where('appointment_Date', '>=', $dateFrom);
-            if ($dateTo)   $q->where('appointment_Date', '<=', $dateTo);
-            $targetStats = $q->groupBy('employee_id')->get()->keyBy('employee_id');
-        } catch (\Exception $e) {}
+            $stgPharmacies = DB::connection('nobel')
+                ->table('stg_nobel_report_1')
+                ->where('organization_type', 'Аптечные учреждения')
+                ->selectRaw('TRIM(employee) as employee, COUNT(DISTINCT organization_id) as base_count')
+                ->groupBy('employee')
+                ->get()
+                ->keyBy(fn($r) => trim($r->employee));
 
-        return [$crmStats, $kmpStats, $targetStats];
+        } catch (\Exception) {}
+
+        return [$crmStats, $stgDoctors, $stgPharmacies];
     }
 
-    private function buildRows($crmStats, $kmpStats, $targetStats): \Illuminate\Support\Collection
+    private function buildRows(
+        \Illuminate\Support\Collection $crmStats,
+        \Illuminate\Support\Collection $stgDoctors,
+        \Illuminate\Support\Collection $stgPharmacies,
+        int $callTarget
+    ): \Illuminate\Support\Collection {
+        return Employee::whereNotNull('crm_employee_id')
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'position', 'crm_employee_id'])
+            ->map(function ($emp) use ($crmStats, $stgDoctors, $stgPharmacies, $callTarget) {
+                $crm            = $crmStats->get($emp->crm_employee_id);
+                $empName        = trim($crm?->employee_name ?? '');
+                $totalVisits    = (int)($crm?->total_visits    ?? 0);
+                $doctorVisits   = (int)($crm?->doctor_visits   ?? 0);
+                $pharmacyVisits = (int)($crm?->pharmacy_visits ?? 0);
+
+                $baseDoctors    = (int)($stgDoctors->get($empName)?->base_count    ?? 0);
+                $basePharmacies = (int)($stgPharmacies->get($empName)?->base_count ?? 0);
+                $freqTargetDoc  = $baseDoctors    * self::FREQUENCY;
+                $freqTargetPhar = $basePharmacies * self::FREQUENCY;
+
+                return [
+                    'id'              => $emp->id,
+                    'name'            => $emp->full_name,
+                    'position'        => $emp->position ?? '',
+                    'total_visits'    => $totalVisits,
+                    'call_pct'        => $callTarget > 0 ? round($totalVisits    / $callTarget  * 100) : 0,
+                    'doctor_visits'   => $doctorVisits,
+                    'pharmacy_visits' => $pharmacyVisits,
+                    'avg_duration'    => (int)($crm?->avg_duration ?? 0),
+                    'base_doctors'    => $baseDoctors,
+                    'base_pharmacies' => $basePharmacies,
+                    'freq_target_doc' => $freqTargetDoc,
+                    'freq_target_phar'=> $freqTargetPhar,
+                    'freq_pct_doc'    => $freqTargetDoc  > 0 ? round($doctorVisits   / $freqTargetDoc  * 100) : 0,
+                    'freq_pct_phar'   => $freqTargetPhar > 0 ? round($pharmacyVisits / $freqTargetPhar * 100) : 0,
+                ];
+            })
+            ->filter(fn($r) => $r['total_visits'] > 0)
+            ->values();
+    }
+
+    private function workingDays(?string $dateFrom, ?string $dateTo): int
     {
-        return Employee::where(function ($q) {
-            $q->whereNotNull('crm_employee_id')->orWhereNotNull('kmp_employee_name');
-        })->orderBy('full_name')
-          ->get(['id', 'full_name', 'position', 'crm_employee_id', 'kmp_employee_name'])
-          ->map(function ($emp) use ($crmStats, $kmpStats, $targetStats) {
-              $crm    = $crmStats->get($emp->crm_employee_id);
-              $kmp    = $kmpStats->get($emp->kmp_employee_name);
-              $target = $targetStats->get($emp->crm_employee_id);
-
-              $targetTotal   = (int)($target?->target_total   ?? 0);
-              $targetVisited = (int)($target?->target_visited ?? 0);
-
-              return [
-                  'id'              => $emp->id,
-                  'name'            => $emp->full_name,
-                  'position'        => $emp->position ?? '',
-                  'total_visits'    => (int)($crm?->total_visits    ?? 0),
-                  'doctor_visits'   => (int)($crm?->doctor_visits   ?? 0),
-                  'pharmacy_visits' => (int)($crm?->pharmacy_visits ?? 0),
-                  'avg_duration'    => (int)($crm?->avg_duration    ?? 0),
-                  'target_total'    => $targetTotal,
-                  'target_visited'  => $targetVisited,
-                  'target_percent'  => $targetTotal > 0 ? round($targetVisited / $targetTotal * 100) : 0,
-                  'total_amount'    => (int)($kmp?->total_amount ?? 0),
-                  'total_qty'       => (int)($kmp?->total_qty    ?? 0),
-              ];
-          })
-          ->filter(fn($r) => $r['total_visits'] > 0 || $r['total_amount'] > 0)
-          ->values();
+        if (!$dateFrom && !$dateTo) {
+            return 19;
+        }
+        $start = $dateFrom ? Carbon::parse($dateFrom) : now()->startOfMonth();
+        $end   = $dateTo   ? Carbon::parse($dateTo)   : now()->endOfMonth();
+        $days  = 0;
+        for ($d = $start->copy()->startOfDay(); $d->lte($end); $d->addDay()) {
+            if ($d->isWeekday()) {
+                $days++;
+            }
+        }
+        return $days;
     }
 }
