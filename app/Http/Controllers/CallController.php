@@ -15,10 +15,55 @@ class CallController extends Controller
         $pharmOnekeyTotal = $pharmOnekeyVisited = $pharmOnekeyPercent = 0;
 
         try {
-            // 1 запрос вместо 6: все KPI-метрики за один SELECT
-            $kpi = $this->filtered($request)
-                ->selectRaw('COUNT(*) as total, COUNT(DISTINCT employee) as employees_count, ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avg_duration, SUM(appointment_type = "Визит к врачу") as doctor_visits, SUM(appointment_type = "Визит в аптеку") as pharmacy_visits')
-                ->first();
+            // KPI, тренды и охват OneKey — тяжёлые агрегаты по ~200k строк без
+            // хороших индексов под TEXT-колонки в staging-таблицах Nobel CRM.
+            // Данные обновляются раз в сутки через ETL — кэшируем на 10 минут,
+            // ключ учитывает все фильтры, влияющие на эти запросы.
+            $filterKey = 'calls_summary_' . md5(json_encode($request->only([
+                'date_from', 'date_to', 'province', 'town', 'employee', 'crm_employee_id',
+                'employee_department', 'organization_type', 'customer_spesiality',
+            ])));
+
+            $summary = Cache::remember($filterKey, 600, function () use ($request) {
+                // 1 запрос вместо 6: все KPI-метрики за один SELECT
+                $kpi = $this->filtered($request)
+                    ->selectRaw('COUNT(*) as total, COUNT(DISTINCT employee) as employees_count, ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avg_duration, SUM(appointment_type = "Визит к врачу") as doctor_visits, SUM(appointment_type = "Визит в аптеку") as pharmacy_visits')
+                    ->first();
+
+                // Monthly trend (last 12 months)
+                $monthlyTrend = $this->filtered($request)
+                    ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total, COUNT(*) as completed")
+                    ->whereNotNull('appointment_Date')
+                    ->groupBy('month')
+                    ->orderBy('month')
+                    ->limit(12)
+                    ->get();
+
+                // Top 10 regions
+                $topRegions = $this->filtered($request)
+                    ->selectRaw('province, COUNT(*) as total')
+                    ->whereNotNull('province')->where('province', '<>', '')
+                    ->groupBy('province')
+                    ->orderByDesc('total')
+                    ->limit(10)
+                    ->get();
+
+                // Top specialties
+                $topSpecialties = $this->filtered($request)
+                    ->selectRaw('customer_spesiality, COUNT(*) as total')
+                    ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
+                    ->groupBy('customer_spesiality')
+                    ->orderByDesc('total')
+                    ->limit(12)
+                    ->get();
+
+                return compact('kpi', 'monthlyTrend', 'topRegions', 'topSpecialties');
+            });
+
+            $kpi            = $summary['kpi'];
+            $monthlyTrend   = $summary['monthlyTrend'];
+            $topRegions     = $summary['topRegions'];
+            $topSpecialties = $summary['topSpecialties'];
 
             $totalVisits       = (int) ($kpi->total ?? 0);
             $employeesCount    = (int) ($kpi->employees_count ?? 0);
@@ -26,33 +71,6 @@ class CallController extends Controller
             $doctorVisits      = (int) ($kpi->doctor_visits ?? 0);
             $pharmacyVisits    = (int) ($kpi->pharmacy_visits ?? 0);
             $visitsPerEmployee = $employeesCount > 0 ? round($totalVisits / $employeesCount, 1) : 0;
-
-            // Monthly trend (last 12 months)
-            $monthlyTrend = $this->filtered($request)
-                ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total, COUNT(*) as completed")
-                ->whereNotNull('appointment_Date')
-                ->groupBy('month')
-                ->orderBy('month')
-                ->limit(12)
-                ->get();
-
-            // Top 10 regions
-            $topRegions = $this->filtered($request)
-                ->selectRaw('province, COUNT(*) as total')
-                ->whereNotNull('province')->where('province', '<>', '')
-                ->groupBy('province')
-                ->orderByDesc('total')
-                ->limit(10)
-                ->get();
-
-            // Top specialties
-            $topSpecialties = $this->filtered($request)
-                ->selectRaw('customer_spesiality, COUNT(*) as total')
-                ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
-                ->groupBy('customer_spesiality')
-                ->orderByDesc('total')
-                ->limit(12)
-                ->get();
 
             // Paginated table with sorting
             $allowedSorts = ['appointment_Date', 'employee', 'organization', 'province', 'town', 'appointment_duration'];
@@ -89,26 +107,28 @@ class CallController extends Controller
                 array_push($covBindings, ...$provs);
             }
 
+            $coverageKey = 'calls_coverage_' . md5($covWhere . json_encode($covBindings));
+
             // Охват врачей — total по customer_id, visited через join на customer_id
-            $doctorRow     = DB::connection('nobel')->selectOne("
+            $doctorRow = Cache::remember("{$coverageKey}_doctor", 600, fn() => DB::connection('nobel')->selectOne("
                 SELECT
                     (SELECT COUNT(DISTINCT customer_id) FROM qs_onekey_doctors) AS onekey_total,
                     COUNT(DISTINCT d.customer_id) AS visited_count
                 FROM qs_calls c
                 INNER JOIN qs_onekey_doctors d ON d.customer_id = c.customer_id
-                WHERE c.appointment_type = 'Визит к врачу'" . $covWhere, $covBindings);
+                WHERE c.appointment_type = 'Визит к врачу'" . $covWhere, $covBindings));
             $onekeyTotal   = (int)($doctorRow->onekey_total  ?? 0);
             $onekeyVisited = (int)($doctorRow->visited_count ?? 0);
             $onekeyPercent = $onekeyTotal > 0 ? round($onekeyVisited / $onekeyTotal * 100) : 0;
 
             // Охват аптек — total по organization_id, visited через join на organization_id
-            $pharmRow           = DB::connection('nobel')->selectOne("
+            $pharmRow = Cache::remember("{$coverageKey}_pharmacy", 600, fn() => DB::connection('nobel')->selectOne("
                 SELECT
                     (SELECT COUNT(DISTINCT organization_id) FROM qs_onekey_pharmacy) AS onekey_total,
                     COUNT(DISTINCT p.organization_id) AS visited_count
                 FROM qs_calls c
                 INNER JOIN qs_onekey_pharmacy p ON p.organization_id = c.organization_id
-                WHERE c.appointment_type = 'Визит в аптеку'" . $covWhere, $covBindings);
+                WHERE c.appointment_type = 'Визит в аптеку'" . $covWhere, $covBindings));
             $pharmOnekeyTotal   = (int)($pharmRow->onekey_total  ?? 0);
             $pharmOnekeyVisited = (int)($pharmRow->visited_count ?? 0);
             $pharmOnekeyPercent = $pharmOnekeyTotal > 0 ? round($pharmOnekeyVisited / $pharmOnekeyTotal * 100) : 0;

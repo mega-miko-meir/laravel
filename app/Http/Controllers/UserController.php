@@ -35,9 +35,9 @@ class UserController extends Controller
     // dd(Role::all());
 
 
-    return response()->json([
-        'message' => 'The provided credentials are incorrect.',
-    ], 422);
+    return back()->withErrors([
+        'loginname' => 'Неверный логин или пароль.',
+    ])->onlyInput('loginname');
 
         // $incomingFields = $request->validate(
         //     [

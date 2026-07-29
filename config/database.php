@@ -53,6 +53,9 @@ return [
             'collation' => 'utf8mb4_unicode_ci',
             'prefix'    => '',
             'strict'    => false,
+            'options'   => [
+                PDO::ATTR_TIMEOUT => env('NOBEL_DB_TIMEOUT', 3),
+            ],
         ],
 
         'mysql' => [

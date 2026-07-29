@@ -15,8 +15,8 @@ class ClientExportRequest extends FormRequest
     public function rules(): array
     {
         $exportableColumns = [
-            'customer', 'customer_spesiality', 'organization',
-            'organization_address', 'town', 'province',
+            'customer_id', 'customer', 'customer_spesiality', 'organization',
+            'organization_id', 'organization_address', 'town', 'province',
         ];
 
         return [

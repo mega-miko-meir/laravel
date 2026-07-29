@@ -49,6 +49,7 @@
                 <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;">
                     @if(!$isPharmacy)
                         @foreach([
+                            ['customer_id',          'OneKey ID',     true],
                             ['customer',             'ФИО',           true],
                             ['customer_spesiality',  'Специальность', true],
                             ['organization',         'Место работы',  true],
@@ -64,6 +65,7 @@
                         @endforeach
                     @else
                         @foreach([
+                            ['organization_id',      'OneKey ID', true],
                             ['organization',         'Название',  true],
                             ['organization_address', 'Адрес',     true],
                             ['town',                 'Город',     true],
@@ -246,12 +248,12 @@ function filterComponent(name, options, selectedInit) {
         <thead>
             <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
                 @if(!$isPharmacy)
-                    @foreach(['ФИО', 'Специальность', 'Место работы', 'Регион', 'Город'] as $col)
+                    @foreach(['OneKey ID', 'ФИО', 'Специальность', 'Место работы', 'Регион', 'Город'] as $col)
                         <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:600;
                                    text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">{{ $col }}</th>
                     @endforeach
                 @else
-                    @foreach(['Название', 'Адрес', 'Регион', 'Город'] as $col)
+                    @foreach(['OneKey ID', 'Название', 'Адрес', 'Регион', 'Город'] as $col)
                         <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:600;
                                    text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">{{ $col }}</th>
                     @endforeach
@@ -264,12 +266,14 @@ function filterComponent(name, options, selectedInit) {
                     onmouseover="this.style.background='#fafafa';"
                     onmouseout="this.style.background='none';">
                     @if(!$isPharmacy)
+                        <td style="padding:9px 14px;color:#9ca3af;">{{ $client->customer_id }}</td>
                         <td style="padding:9px 14px;color:#111827;font-weight:500;">{{ $client->customer }}</td>
                         <td style="padding:9px 14px;color:#6b7280;">{{ $client->customer_spesiality }}</td>
                         <td style="padding:9px 14px;color:#374151;">{{ $client->organization }}</td>
                         <td style="padding:9px 14px;color:#6b7280;">{{ $client->province }}</td>
                         <td style="padding:9px 14px;color:#374151;">{{ $client->town }}</td>
                     @else
+                        <td style="padding:9px 14px;color:#9ca3af;">{{ $client->organization_id }}</td>
                         <td style="padding:9px 14px;color:#111827;font-weight:500;">{{ $client->organization }}</td>
                         <td style="padding:9px 14px;color:#6b7280;">{{ $client->organization_address }}</td>
                         <td style="padding:9px 14px;color:#6b7280;">{{ $client->province }}</td>
@@ -278,7 +282,7 @@ function filterComponent(name, options, selectedInit) {
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $isPharmacy ? 4 : 5 }}"
+                    <td colspan="{{ $isPharmacy ? 5 : 6 }}"
                         style="text-align:center;padding:32px 14px;color:#9ca3af;font-size:13px;">
                         Нет данных
                     </td>
