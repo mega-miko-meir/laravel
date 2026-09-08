@@ -126,18 +126,44 @@ class TabletController extends Controller
             ->with([
                 'latestAssignment.employee',
                 'currentAssignment',
-                'responsible',
+                'responsible.employee_territory' => fn ($q) => $q->orderByDesc('assigned_at'),
             ])
             ->get()
             ->sortByDesc(fn($tablet) => optional($tablet->latestAssignment)->assigned_at)
             ->values();
 
-        $freeTablets = Tablet::free()->get();
+        $perPage = 50;
+        $page = (int) $request->input('page', 1);
+        $tablets = new \Illuminate\Pagination\LengthAwarePaginator(
+            $tablets->slice(($page - 1) * $perPage, $perPage)->values(),
+            $tablets->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $freeTablets = Tablet::free()
+            ->with([
+                'latestAssignment.employee',
+                'currentAssignment',
+                'responsible.employee_territory' => fn ($q) => $q->orderByDesc('assigned_at'),
+            ])
+            ->get();
 
         $availableEmployees = $this->available->getAvailableForTablet();
         $count = $availableEmployees->count();
 
-        return view('tablets', compact('tablets', 'query', 'freeTablets', 'availableEmployees', 'count'));
+        $tabletStats = \Illuminate\Support\Facades\Cache::remember('tablets_status_counts', 300, function () {
+            return [
+                'active'  => Tablet::where('status', 'active')->count(),
+                'free'    => Tablet::free()->count(),
+                'new'     => Tablet::where('status', 'new')->count(),
+                'damaged' => Tablet::whereIn('status', ['damaged', 'lost'])->count(),
+                'admin'   => Tablet::whereIn('status', ['admin'])->count(),
+            ];
+        });
+
+        return view('tablets', compact('tablets', 'query', 'freeTablets', 'availableEmployees', 'count', 'tabletStats'));
     }
 
     public function exportToExcel(Request $request)

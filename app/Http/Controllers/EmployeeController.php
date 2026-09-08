@@ -65,107 +65,10 @@ class EmployeeController extends Controller
     {
         $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials', 'events'])->findOrFail($id);
 
-        $lastTerritory  = $employee->employee_territory()->latest('assigned_at')->first();
+        $lastTerritory  = $employee->employee_territory()
+            ->with(['children.employeeTerritories.employee'])
+            ->latest('assigned_at')->first();
         $lastTablet     = $employee->employee_tablet()->withPivot('assigned_at', 'returned_at')->orderByDesc('assigned_at')->first();
-
-        $visitStats = null;
-        if ($employee->crm_employee_id) {
-            try {
-                $crmId      = $employee->crm_employee_id;
-                $visitStats = \Illuminate\Support\Facades\Cache::remember(
-                    "employee_visit_stats_{$crmId}",
-                    3600,
-                    function () use ($crmId) {
-                        $base = Call::where('employee_id', $crmId)
-                            ->where('appointment_status', 'Выполнено')
-                            ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
-
-                        // 1 запрос вместо 5: все скалярные KPI
-                        $kpi = (clone $base)->selectRaw('
-                            COUNT(*) as total,
-                            ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avgDur,
-                            MAX(appointment_Date) as lastDate,
-                            SUM(appointment_type = "Визит к врачу") as doctorVisits,
-                            SUM(appointment_type = "Визит в аптеку") as pharmacyVisits,
-                            SUM(YEAR(appointment_Date) = YEAR(NOW()) AND MONTH(appointment_Date) = MONTH(NOW())) as thisMonth,
-                            SUM(YEAR(appointment_Date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(appointment_Date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH))) as lastMonth
-                        ')->first();
-
-                        $monthly = (clone $base)
-                            ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
-                            ->whereNotNull('appointment_Date')
-                            ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
-                            ->groupBy('month')->orderBy('month')->get();
-
-                        $topSpec = (clone $base)
-                            ->selectRaw('customer_spesiality, COUNT(*) as cnt')
-                            ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
-                            ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
-
-                        return [
-                            'total'          => (int) ($kpi->total ?? 0),
-                            'avgDur'         => (int) ($kpi->avgDur ?? 0),
-                            'lastDate'       => $kpi->lastDate,
-                            'thisMonth'      => (int) ($kpi->thisMonth ?? 0),
-                            'lastMonth'      => (int) ($kpi->lastMonth ?? 0),
-                            'doctorVisits'   => (int) ($kpi->doctorVisits ?? 0),
-                            'pharmacyVisits' => (int) ($kpi->pharmacyVisits ?? 0),
-                            'monthly'        => $monthly,
-                            'topSpec'        => $topSpec,
-                            'crmId'          => $crmId,
-                        ];
-                    }
-                );
-            } catch (\Exception $e) {
-                // Nobel DB недоступна — показываем карточку без блока визитов
-            }
-        }
-
-        $kmpStats = null;
-        if ($employee->kmp_employee_name) {
-            try {
-                $kmpName  = $employee->kmp_employee_name;
-                $kmpStats = \Illuminate\Support\Facades\Cache::remember(
-                    'employee_kmp_stats_' . md5($kmpName),
-                    3600,
-                    function () use ($kmpName) {
-                        $currentYear = (int) now()->year;
-                        $base = Kmp::where('Медпредставитель', $kmpName)
-                            ->where('Статус заказа', 'Доставлено')
-                            ->where('Год', $currentYear);
-
-                        $kpi = (clone $base)->selectRaw('
-                            ROUND(SUM(`Amount_disc`)) as totalAmount,
-                            ROUND(SUM(CASE WHEN MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc` END)) as thisMonth,
-                            ROUND(SUM(CASE WHEN MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc` END)) as lastMonth
-                        ')->first();
-
-                        $monthly = (clone $base)
-                            ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc`)) as amount")
-                            ->whereNotNull('Дата')
-                            ->where('Дата', '>=', now()->subMonths(5)->startOfMonth())
-                            ->groupBy('month')->orderBy('month')->get();
-
-                        $topBrands = (clone $base)
-                            ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount')
-                            ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
-                            ->groupBy('Брэнд')->orderByDesc('amount')->limit(4)->get();
-
-                        return [
-                            'totalAmount' => (int) ($kpi->totalAmount ?? 0),
-                            'thisMonth'   => (int) ($kpi->thisMonth ?? 0),
-                            'lastMonth'   => (int) ($kpi->lastMonth ?? 0),
-                            'monthly'     => $monthly,
-                            'topBrands'   => $topBrands,
-                            'kmpName'     => $kmpName,
-                            'year'        => $currentYear,
-                        ];
-                    }
-                );
-            } catch (\Exception $e) {
-                // Nobel DB недоступна
-            }
-        }
 
         return view('employee', [
             'employee'             => $employee,
@@ -173,16 +76,163 @@ class EmployeeController extends Controller
             'lastTablet'           => $lastTablet,
             'selectedBricks'       => $lastTerritory?->bricks ?? collect(),
             'bricks'               => \App\Models\Brick::all(),
-            'availableTablets'     => \App\Models\Tablet::free()->with('oldEmployee')->get(),
+            'availableTablets'     => \App\Models\Tablet::free()->with(['oldEmployee', 'latestAssignment.employee'])->get(),
             'availableTerritories' => \App\Models\Territory::whereNull('employee_id')
-                ->with(['employeeTerritories' => fn($q) => $q->with('employee')->latest('assigned_at')])
+                ->with([
+                    'employeeTerritories' => fn($q) => $q->with('employee')->latest('assigned_at'),
+                    'parent.employee',
+                ])
                 ->get(),
             'territoriesHistory'   => $employee->employee_territory()->withPivot('assigned_at', 'unassigned_at', 'id')->orderByDesc('assigned_at')->get(),
             'tabletHistories'      => \App\Models\EmployeeTablet::where('employee_id', $employee->id)->with('tablet')->orderByDesc('assigned_at')->get(),
             'currentStatus'        => $employee->events()->latest('event_date')->value('event_type'),
-            'visitStats'           => $visitStats,
-            'kmpStats'             => $kmpStats,
+            // Наличие CRM/KMP-блоков определяется по локальным полям сотрудника —
+            // без обращения к внешним БД, чтобы карточка открывалась мгновенно.
+            // Сами данные подгружаются отдельными запросами (см. visitStatsPartial/kmpStatsPartial).
+            'hasVisits'             => (bool) $employee->crm_employee_id,
+            'hasKmp'                => (bool) $employee->kmp_employee_name,
         ]);
+    }
+
+    /**
+     * Блок статистики визитов CRM для карточки сотрудника.
+     * Грузится отдельным запросом (fetch on tab click), чтобы не блокировать открытие карточки.
+     */
+    public function visitStatsPartial(Employee $employee)
+    {
+        $stats = $this->getVisitStats($employee);
+
+        if (!$stats) {
+            return view('components.stats-unavailable', ['label' => 'визитам'])->render();
+        }
+
+        return view('components.visit-stats', ['stats' => $stats])->render();
+    }
+
+    /**
+     * Блок статистики продаж KMP для карточки сотрудника.
+     * Грузится отдельным запросом (fetch on tab click), чтобы не блокировать открытие карточки.
+     */
+    public function kmpStatsPartial(Employee $employee)
+    {
+        $stats = $this->getKmpStats($employee);
+
+        if (!$stats) {
+            return view('components.stats-unavailable', ['label' => 'продажам KMP'])->render();
+        }
+
+        return view('components.kmp-stats', ['stats' => $stats])->render();
+    }
+
+    private function getVisitStats(Employee $employee): ?array
+    {
+        if (!$employee->crm_employee_id) {
+            return null;
+        }
+
+        try {
+            $crmId = $employee->crm_employee_id;
+
+            return \Illuminate\Support\Facades\Cache::remember(
+                "employee_visit_stats_{$crmId}",
+                3600,
+                function () use ($crmId) {
+                    $base = Call::where('employee_id', $crmId)
+                        ->where('appointment_status', 'Выполнено')
+                        ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
+
+                    // 1 запрос вместо 5: все скалярные KPI
+                    $kpi = (clone $base)->selectRaw('
+                        COUNT(*) as total,
+                        ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avgDur,
+                        MAX(appointment_Date) as lastDate,
+                        SUM(appointment_type = "Визит к врачу") as doctorVisits,
+                        SUM(appointment_type = "Визит в аптеку") as pharmacyVisits,
+                        SUM(YEAR(appointment_Date) = YEAR(NOW()) AND MONTH(appointment_Date) = MONTH(NOW())) as thisMonth,
+                        SUM(YEAR(appointment_Date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND MONTH(appointment_Date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH))) as lastMonth
+                    ')->first();
+
+                    $monthly = (clone $base)
+                        ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
+                        ->whereNotNull('appointment_Date')
+                        ->where('appointment_Date', '>=', now()->subMonths(5)->startOfMonth())
+                        ->groupBy('month')->orderBy('month')->get();
+
+                    $topSpec = (clone $base)
+                        ->selectRaw('customer_spesiality, COUNT(*) as cnt')
+                        ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
+                        ->groupBy('customer_spesiality')->orderByDesc('cnt')->limit(3)->get();
+
+                    return [
+                        'total'          => (int) ($kpi->total ?? 0),
+                        'avgDur'         => (int) ($kpi->avgDur ?? 0),
+                        'lastDate'       => $kpi->lastDate,
+                        'thisMonth'      => (int) ($kpi->thisMonth ?? 0),
+                        'lastMonth'      => (int) ($kpi->lastMonth ?? 0),
+                        'doctorVisits'   => (int) ($kpi->doctorVisits ?? 0),
+                        'pharmacyVisits' => (int) ($kpi->pharmacyVisits ?? 0),
+                        'monthly'        => $monthly,
+                        'topSpec'        => $topSpec,
+                        'crmId'          => $crmId,
+                    ];
+                }
+            );
+        } catch (\Exception $e) {
+            // Nobel DB недоступна
+            return null;
+        }
+    }
+
+    private function getKmpStats(Employee $employee): ?array
+    {
+        if (!$employee->kmp_employee_name) {
+            return null;
+        }
+
+        try {
+            $kmpName = $employee->kmp_employee_name;
+
+            return \Illuminate\Support\Facades\Cache::remember(
+                'employee_kmp_stats_' . md5($kmpName),
+                3600,
+                function () use ($kmpName) {
+                    $currentYear = (int) now()->year;
+                    $base = Kmp::where('Медпредставитель', $kmpName)
+                        ->where('Статус заказа', 'Доставлено')
+                        ->where('Год', $currentYear);
+
+                    $kpi = (clone $base)->selectRaw('
+                        ROUND(SUM(`Amount_disc`)) as totalAmount,
+                        ROUND(SUM(CASE WHEN MONTH(`Дата`) = MONTH(NOW()) THEN `Amount_disc` END)) as thisMonth,
+                        ROUND(SUM(CASE WHEN MONTH(`Дата`) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN `Amount_disc` END)) as lastMonth
+                    ')->first();
+
+                    $monthly = (clone $base)
+                        ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc`)) as amount")
+                        ->whereNotNull('Дата')
+                        ->where('Дата', '>=', now()->subMonths(5)->startOfMonth())
+                        ->groupBy('month')->orderBy('month')->get();
+
+                    $topBrands = (clone $base)
+                        ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount')
+                        ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
+                        ->groupBy('Брэнд')->orderByDesc('amount')->limit(4)->get();
+
+                    return [
+                        'totalAmount' => (int) ($kpi->totalAmount ?? 0),
+                        'thisMonth'   => (int) ($kpi->thisMonth ?? 0),
+                        'lastMonth'   => (int) ($kpi->lastMonth ?? 0),
+                        'monthly'     => $monthly,
+                        'topBrands'   => $topBrands,
+                        'kmpName'     => $kmpName,
+                        'year'        => $currentYear,
+                    ];
+                }
+            );
+        } catch (\Exception $e) {
+            // Nobel DB недоступна
+            return null;
+        }
     }
 
     /**
@@ -276,10 +326,13 @@ class EmployeeController extends Controller
         $order = $request->input('order', 'desc');
         $activeOnly = $request->input('active_only', 1);
 
-        $queryNormalized = strtolower(trim($query));
+        $queryNormalized = strtolower(trim($query ?? ''));
         $isRoleSearch = in_array($queryNormalized, ['rm', 'rep', 'ffm']);
 
-        $employees = Employee::with(['latestEvent', 'territories'])
+        $employees = Employee::with([
+                'latestEvent',
+                'employee_territory' => fn ($q) => $q->orderByDesc('assigned_at'),
+            ])
             ->where(function ($q) use ($query, $queryNormalized, $isRoleSearch) {
                 if (!$query) {
                     return;
@@ -322,10 +375,22 @@ class EmployeeController extends Controller
                     ? optional($e->latestEvent)->event_date
                     : data_get($e, $sort)
             )
+        )->values();
+
+        $perPage = 50;
+        $page = (int) $request->input('page', 1);
+        $employees = new \Illuminate\Pagination\LengthAwarePaginator(
+            $employees->slice(($page - 1) * $perPage, $perPage)->values(),
+            $employees->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
         );
 
         if ($request->ajax()) {
-            return view('components.employee-card', compact('employees', 'sort', 'order'))->render();
+            return response(
+                view('components.employee-card', compact('employees', 'sort', 'order'))->render()
+            )->header('X-Total-Count', $employees->total());
         }
 
         return view('home', [

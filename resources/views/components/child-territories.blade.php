@@ -27,14 +27,9 @@
                                 border-left:2px solid #e0e7ff;">
                         @foreach($children as $child)
                             @php
-                                $activeEmployee = $child->employeeTerritories()
-                                    ->whereNull('unassigned_at')
-                                    ->latest('assigned_at')
-                                    ->first()?->employee;
-
-                                $lastEmployee = $child->employeeTerritories()
-                                    ->latest('assigned_at')
-                                    ->first()?->employee;
+                                $sortedEt = $child->employeeTerritories->sortByDesc('assigned_at');
+                                $activeEmployee = $sortedEt->first(fn($et) => is_null($et->unassigned_at))?->employee;
+                                $lastEmployee = $sortedEt->first()?->employee;
                             @endphp
 
                             <div style="display:flex;align-items:center;justify-content:space-between;

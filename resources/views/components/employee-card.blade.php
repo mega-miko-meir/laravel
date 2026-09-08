@@ -33,6 +33,7 @@
         </thead>
         <tbody>
             @forelse($employees as $employee)
+                @php($latestTerritory = $employee->employee_territory->first())
                 <tr style="border-bottom:1px solid #f9fafb;"
                     onmouseover="this.style.background='#fafafa';"
                     onmouseout="this.style.background='none';">
@@ -47,7 +48,7 @@
                     </td>
 
                     <td style="padding:11px 16px;color:#374151;">
-                        {{ $employee->employee_territory()->latest('assigned_at')->first()->role ?? '—' }}
+                        {{ $latestTerritory->role ?? '—' }}
                     </td>
 
                     <td style="padding:11px 16px;">
@@ -61,11 +62,11 @@
                     </td>
 
                     <td style="padding:11px 16px;color:#374151;">
-                        {{ $employee->employee_territory()->latest('assigned_at')->first()->team ?? '—' }}
+                        {{ $latestTerritory->team ?? '—' }}
                     </td>
 
                     <td style="padding:11px 16px;color:#374151;">
-                        {{ $employee->employee_territory()->latest('assigned_at')->first()->city ?? '—' }}
+                        {{ $latestTerritory->city ?? '—' }}
                     </td>
 
                     <td style="padding:11px 16px;">
@@ -107,3 +108,9 @@
         </tbody>
     </table>
 </div>
+
+@if($employees instanceof \Illuminate\Contracts\Pagination\Paginator && $employees->hasPages())
+    <div style="margin-top:12px;">
+        {{ $employees->onEachSide(1)->links() }}
+    </div>
+@endif

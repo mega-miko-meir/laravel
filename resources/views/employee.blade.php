@@ -4,11 +4,6 @@
 
 <x-flash-message />
 
-@php
-    $hasVisits = !empty($visitStats);
-    $hasKmp    = !empty($kmpStats);
-@endphp
-
 <style>
 .emp-tabs { display:flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:3px; }
 .emp-tab  { padding:5px 16px;font-size:13px;font-weight:500;border-radius:7px;border:none;cursor:pointer;transition:all .15s;line-height:1; }
@@ -23,9 +18,38 @@
 .bind-empty { font-size:13px;color:#d1d5db; }
 .bind-action { font-size:12px;color:#2563eb;text-decoration:none;white-space:nowrap;flex-shrink:0; }
 .bind-action:hover { text-decoration:underline; }
+
+/* Skeleton / shimmer для лениво загружаемых блоков CRM и KMP */
+.skeleton-card { margin-top:16px;background:#fff;border-radius:12px;border:1px solid #f0f0f0;
+                 box-shadow:0 1px 3px rgba(0,0,0,.06);padding:18px;display:flex;flex-direction:column;gap:12px; }
+.skeleton-line { height:14px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#f8fafc 50%,#f1f5f9 75%);
+                 background-size:200% 100%;animation:skeleton-shimmer 1.4s ease-in-out infinite; }
+@keyframes skeleton-shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
 </style>
 
-<div x-data="{ tab: 'profile' }" style="width:100%;padding:4px 0;">
+<div x-data="{
+        tab: 'profile',
+        visitsLoaded: false, visitsLoading: false, visitsHtml: '',
+        kmpLoaded: false, kmpLoading: false, kmpHtml: '',
+        loadVisits() {
+            if (this.visitsLoaded || this.visitsLoading) return;
+            this.visitsLoading = true;
+            fetch('{{ route('employees.visitStats', $employee->id) }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.text())
+                .then(html => { this.visitsHtml = html; this.visitsLoaded = true; })
+                .catch(() => { this.visitsHtml = '<div style=\'padding:16px;color:#9ca3af;font-size:13px;\'>Не удалось загрузить данные</div>'; this.visitsLoaded = true; })
+                .finally(() => this.visitsLoading = false);
+        },
+        loadKmp() {
+            if (this.kmpLoaded || this.kmpLoading) return;
+            this.kmpLoading = true;
+            fetch('{{ route('employees.kmpStats', $employee->id) }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.text())
+                .then(html => { this.kmpHtml = html; this.kmpLoaded = true; })
+                .catch(() => { this.kmpHtml = '<div style=\'padding:16px;color:#9ca3af;font-size:13px;\'>Не удалось загрузить данные</div>'; this.kmpLoaded = true; })
+                .finally(() => this.kmpLoading = false);
+        },
+     }" style="width:100%;padding:4px 0;">
 
     {{-- Назад + вкладки в одной строке --}}
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
@@ -45,12 +69,12 @@
                 Профиль
         </button>
         @if($hasVisits)
-        <button class="emp-tab" :data-active="tab === 'visits'" @click="tab = 'visits'">
+        <button class="emp-tab" :data-active="tab === 'visits'" @click="tab = 'visits'; loadVisits()">
             Визиты CRM
         </button>
         @endif
         @if($hasKmp)
-        <button class="emp-tab" :data-active="tab === 'kmp'" @click="tab = 'kmp'">
+        <button class="emp-tab" :data-active="tab === 'kmp'" @click="tab = 'kmp'; loadKmp()">
             KMP Продажи
         </button>
         @endif
@@ -131,8 +155,15 @@
     {{-- ── Визиты CRM ── --}}
     @if($hasVisits)
     <div x-show="tab === 'visits'" style="max-width:560px;">
-        <x-visit-stats :stats="$visitStats" />
-        @if($employee->crm_employee_id)
+        <template x-if="!visitsLoaded">
+            <div class="skeleton-card">
+                <div class="skeleton-line" style="width:40%;"></div>
+                <div class="skeleton-line" style="height:52px;"></div>
+                <div class="skeleton-line" style="height:52px;"></div>
+                <div class="skeleton-line" style="width:70%;"></div>
+            </div>
+        </template>
+        <div x-show="visitsLoaded" x-html="visitsHtml"></div>
         <div style="margin-top:12px;text-align:right;">
             <a href="{{ route('calls.index', ['crm_employee_id' => $employee->crm_employee_id]) }}"
                style="font-size:13px;color:#2563eb;text-decoration:none;font-weight:500;"
@@ -141,14 +172,21 @@
                 Открыть полный отчёт по визитам →
             </a>
         </div>
-        @endif
     </div>
     @endif
 
     {{-- ── KMP Продажи ── --}}
     @if($hasKmp)
     <div x-show="tab === 'kmp'" style="max-width:560px;">
-        <x-kmp-stats :stats="$kmpStats" />
+        <template x-if="!kmpLoaded">
+            <div class="skeleton-card">
+                <div class="skeleton-line" style="width:40%;"></div>
+                <div class="skeleton-line" style="height:52px;"></div>
+                <div class="skeleton-line" style="height:52px;"></div>
+                <div class="skeleton-line" style="width:70%;"></div>
+            </div>
+        </template>
+        <div x-show="kmpLoaded" x-html="kmpHtml"></div>
     </div>
     @endif
 

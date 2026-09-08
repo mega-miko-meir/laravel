@@ -11,6 +11,8 @@ Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.
 Route::middleware('auth')->group(function () {
     Route::get('/employees', [EmployeeController::class, 'index']);
     Route::get('/employee/{id}', [EmployeeController::class, 'showEmployee'])->name('employees.show');
+    Route::get('/employee/{employee}/visit-stats', [EmployeeController::class, 'visitStatsPartial'])->name('employees.visitStats');
+    Route::get('/employee/{employee}/kmp-stats', [EmployeeController::class, 'kmpStatsPartial'])->name('employees.kmpStats');
     Route::get('/my-team', [EmployeeController::class, 'myTeam'])->name('employees.my-team');
 });
 

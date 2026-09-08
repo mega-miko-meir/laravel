@@ -4,12 +4,12 @@
 @auth
 
 @php
-    $totalAllCount = \App\Models\Tablet::where('status', 'active')->count();
-    $freeCount     = \App\Models\Tablet::free()->count();
-    $newCount      = \App\Models\Tablet::where('status', 'new')->count();
-    $damagedCount  = \App\Models\Tablet::whereIn('status', ['damaged', 'lost'])->count();
-    $adminCount    = \App\Models\Tablet::whereIn('status', ['admin'])->count();
-    $totalCount    = $tablets->count();
+    $totalAllCount = $tabletStats['active'];
+    $freeCount     = $tabletStats['free'];
+    $newCount      = $tabletStats['new'];
+    $damagedCount  = $tabletStats['damaged'];
+    $adminCount    = $tabletStats['admin'];
+    $totalCount    = $tablets->total();
 
     $stats = [
         ['label'=>'Всего исправных', 'value'=>$totalAllCount, 'color'=>'#374151', 'search'=>'active'],
@@ -273,7 +273,7 @@
                             @endif
                         </td>
                         <td style="padding:9px 14px;color:#6b7280;">
-                            {{ $tablet->responsible?->employee_territory()->latest('assigned_at')->first()?->city ?? '—' }}
+                            {{ $tablet->responsible?->employee_territory->first()?->city ?? '—' }}
                         </td>
                     </tr>
                 @endforeach
@@ -374,6 +374,12 @@
         </tbody>
     </table>
 </div>
+
+@if($tablets->hasPages())
+    <div style="margin-top:12px;">
+        {{ $tablets->onEachSide(1)->links() }}
+    </div>
+@endif
 
 @else
     <x-auth-container />

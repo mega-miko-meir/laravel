@@ -120,7 +120,13 @@ class TerritoryController extends Controller
             $sort = 'territory_name';
         }
 
-        $territories = Territory::where(function ($q) use ($query) {
+        $territories = Territory::with([
+                'parent.employee',
+                'employeeTerritories' => fn ($q) => $q->whereNull('unassigned_at')
+                    ->orderByDesc('assigned_at')
+                    ->with('employee'),
+            ])
+            ->where(function ($q) use ($query) {
                 $q->where('territory_name', 'like', "%{$query}%")
                 ->orWhere('city', 'like', "%{$query}%")
                 ->orWhere('department', 'like', "%{$query}%")
@@ -131,7 +137,8 @@ class TerritoryController extends Controller
                 });
             })
             ->orderBy($sort, $order)
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
 
         $availableEmployees = $this->available->getAvailableForTerritory();
 

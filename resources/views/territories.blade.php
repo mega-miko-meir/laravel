@@ -9,7 +9,7 @@
 
     <h1 style="font-size:20px;font-weight:700;color:#111827;">
         Территории
-        <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $territories->count() }}</span>
+        <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $territories->total() }}</span>
     </h1>
 
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -128,8 +128,7 @@
         <tbody>
             @forelse($territories as $territory)
                 @php
-                    $emp = \App\Models\EmployeeTerritory::where('territory_id', $territory->id)
-                        ->whereNull('unassigned_at')->latest('assigned_at')->first()?->employee;
+                    $emp = $territory->employeeTerritories->first()?->employee;
 
                     $roleColors = [
                         'Rep'     => ['bg'=>'#dcfce7','color'=>'#15803d'],
@@ -184,7 +183,7 @@
                     <td style="padding:11px 16px;color:#374151;">{{ $territory->city ?? '—' }}</td>
 
                     <td style="padding:11px 16px;color:#374151;">
-                        {{ $territory->parent->employee->full_name ?? '—' }}
+                        {{ $territory->parent?->employee?->full_name ?? '—' }}
                     </td>
                 </tr>
             @empty
@@ -197,6 +196,12 @@
         </tbody>
     </table>
 </div>
+
+@if($territories->hasPages())
+    <div style="margin-top:12px;">
+        {{ $territories->onEachSide(1)->links() }}
+    </div>
+@endif
 
 @endauth
 @endsection

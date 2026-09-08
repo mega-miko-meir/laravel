@@ -53,7 +53,7 @@ class Tablet extends Model
 
     public function getCurrentEmployeeAttribute()
     {
-        $assignment = $this->latestAssignment()->first();
+        $assignment = $this->latestAssignment;
 
         if (!$assignment || $assignment->returned_at !== null) {
             return null; // не назначен
