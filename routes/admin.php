@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\CrmMappingController;
 use App\Http\Controllers\KmpMappingController;
+use App\Http\Controllers\DataQualityController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -37,5 +38,7 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/kmp-mapping', [KmpMappingController::class, 'index'])->name('admin.kmp-mapping');
     Route::post('/admin/kmp-mapping/auto-match', [KmpMappingController::class, 'autoMatch'])->name('admin.kmp-mapping.auto');
     Route::post('/admin/kmp-mapping/link', [KmpMappingController::class, 'link'])->name('admin.kmp-mapping.link');
+
+    Route::get('/admin/data-quality', [DataQualityController::class, 'index'])->name('admin.data-quality');
 
 });
