@@ -128,29 +128,52 @@
             <p style="font-size:13px;color:#9ca3af;margin-bottom:12px;">Нет назначенной территории</p>
 
             <form action="/assign-territory/{{ $employee->id }}" method="POST"
+                  x-data="{
+                      query: '', selected: null, open: false,
+                      options: @js($availableTerritories->map(function ($territory) {
+                          $lastEmp = $territory->employeeTerritories->sortByDesc('assigned_at')->first()?->employee;
+                          return [
+                              'id'    => $territory->id,
+                              'label' => $territory->territory_name
+                                  . ($territory->parent?->employee ? ' — ' . $territory->parent->employee->sh_name : ' — без РМ')
+                                  . ($lastEmp ? ' (был: ' . $lastEmp->sh_name . ')' : ''),
+                          ];
+                      })->values()),
+                      get filtered() {
+                          const q = this.query.trim().toLowerCase();
+                          if (!q) return this.options.slice(0, 100);
+                          return this.options.filter(o => o.label.toLowerCase().includes(q)).slice(0, 100);
+                      },
+                      choose(opt) { this.selected = opt.id; this.query = opt.label; this.open = false; },
+                      clear() { this.selected = null; this.query = ''; },
+                  }"
+                  @click.outside="open = false"
                   style="display:flex;flex-direction:column;gap:8px;">
                 @csrf
-                <div>
+                <div style="position:relative;">
                     <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
-                                  letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Территория</label>
-                    <select name="territory_id"
-                            style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
-                                   font-size:13px;outline:none;background:#fff;color:#374151;">
-                        <option value="">— выберите территорию —</option>
-                        @foreach($availableTerritories as $territory)
-                            @php
-                                $lastEmp = $territory->employeeTerritories
-                                    ->sortByDesc('assigned_at')->first()?->employee;
-                            @endphp
-                            <option value="{{ $territory->id }}">
-                                {{ $territory->territory_name }}
-                                {{ $territory->parent?->employee
-                                    ? '— ' . $territory->parent->employee->sh_name
-                                    : '' }}
-                                {{ $lastEmp ? '(был: ' . $lastEmp->sh_name . ')' : '' }}
-                            </option>
-                        @endforeach
-                    </select>
+                                  letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Территория (сортировка по РМ)</label>
+                    <div style="position:relative;">
+                        <input type="text" x-model="query" @focus="open = true" @input="open = true"
+                               autocomplete="off" placeholder="Поиск по территории или РМ..."
+                               style="width:100%;padding:8px 26px 8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                                      font-size:13px;outline:none;background:#fff;color:#374151;box-sizing:border-box;">
+                        <span x-show="query" @click="clear()"
+                              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+                                     cursor:pointer;color:#9ca3af;font-size:15px;line-height:1;user-select:none;">×</span>
+                    </div>
+                    <input type="hidden" name="territory_id" :value="selected ?? ''">
+                    <div x-show="open" x-cloak
+                         style="position:absolute;top:100%;left:0;right:0;z-index:50;margin-top:2px;
+                                background:#fff;border:1px solid #e5e7eb;border-radius:8px;
+                                box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;">
+                        <template x-for="opt in filtered" :key="opt.id">
+                            <div @click="choose(opt)" x-text="opt.label"
+                                 style="padding:7px 10px;font-size:12px;color:#1e293b;cursor:pointer;"
+                                 onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'"></div>
+                        </template>
+                        <div x-show="filtered.length===0" style="padding:8px 10px;font-size:12px;color:#9ca3af;">Не найдено</div>
+                    </div>
                 </div>
                 <div>
                     <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
