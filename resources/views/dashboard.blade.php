@@ -79,6 +79,62 @@
     @endforeach
 </div>
 
+{{-- Период: принято / уволено / в декрете за произвольный диапазон дат --}}
+<div style="background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:14px;
+            margin-top:14px;max-width:1000px;">
+    <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">За период</p>
+
+    <form method="GET" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <div>
+            <label style="display:block;font-size:11px;color:#9ca3af;margin-bottom:4px;">С</label>
+            <input type="date" name="date_from" value="{{ $periodFrom }}"
+                   style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none;">
+        </div>
+        <div>
+            <label style="display:block;font-size:11px;color:#9ca3af;margin-bottom:4px;">По</label>
+            <input type="date" name="date_to" value="{{ $periodTo }}"
+                   style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none;">
+        </div>
+        <button type="submit"
+                style="padding:7px 18px;background:#2563eb;color:#fff;border:none;
+                       border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;"
+                onmouseover="this.style.background='#1d4ed8';"
+                onmouseout="this.style.background='#2563eb';">
+            Показать
+        </button>
+    </form>
+
+    @if($hasPeriod)
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            @foreach([
+                ['type' => 'hired',           'label' => 'Принято',   'value' => $periodStats['hired'],           'color' => '#16a34a', 'bg' => '#f0fdf4'],
+                ['type' => 'dismissed',       'label' => 'Уволено',   'value' => $periodStats['dismissed'],       'color' => '#dc2626', 'bg' => '#fef2f2'],
+                ['type' => 'maternity_leave', 'label' => 'В декрете', 'value' => $periodStats['maternity_leave'], 'color' => '#9333ea', 'bg' => '#faf5ff'],
+            ] as $pc)
+                <a href="{{ route('employees.periodList', ['type' => $pc['type'], 'date_from' => $periodFrom, 'date_to' => $periodTo]) }}"
+                   style="display:block;background:{{ $pc['bg'] }};border-radius:8px;padding:12px 14px;text-decoration:none;"
+                   onmouseover="this.style.opacity='0.85';" onmouseout="this.style.opacity='1';">
+                    <p style="font-size:11px;color:#6b7280;font-weight:500;margin-bottom:4px;">{{ $pc['label'] }}</p>
+                    <p style="font-size:24px;font-weight:700;color:{{ $pc['color'] }};line-height:1;">{{ $pc['value'] }}</p>
+                </a>
+            @endforeach
+        </div>
+
+        <a href="{{ route('employees.periodList', ['type' => 'all', 'date_from' => $periodFrom, 'date_to' => $periodTo]) }}"
+           style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:600;
+                  color:#2563eb;text-decoration:none;"
+           onmouseover="this.style.textDecoration='underline';"
+           onmouseout="this.style.textDecoration='none';">
+            Показать всех одним списком ({{ $periodStats['hired'] + $periodStats['dismissed'] + $periodStats['maternity_leave'] }})
+            <svg style="width:12px;height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+            </svg>
+        </a>
+    @else
+        <p style="font-size:12px;color:#9ca3af;">Укажите даты «С» и «По», чтобы увидеть принятых/уволенных/ушедших в декрет за этот период.</p>
+    @endif
+</div>
+
 @can('admin')
 
 {{-- Фильтр по должности (глобальный) --}}

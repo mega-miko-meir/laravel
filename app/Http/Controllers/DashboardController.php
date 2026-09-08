@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Services\EmployeeEventStatsService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class DashboardController extends Controller
 {
-    public function showDashboard(EmployeeEventStatsService $stats)
+    public function showDashboard(Request $request, EmployeeEventStatsService $stats)
     {
         $now       = now();
         $lastMonth = now()->subMonth();
@@ -128,7 +132,25 @@ class DashboardController extends Controller
         $firedThisYear = $stats->countByYear('dismissed', $now->year);
         $turnoverPct   = $totalActive > 0 ? round($firedThisYear / $totalActive * 100, 1) : 0;
 
+        // ── Принято/уволено/в декрете за произвольный период ────────────
+        $periodFrom = $request->input('date_from');
+        $periodTo   = $request->input('date_to');
+        $hasPeriod  = (bool) ($periodFrom && $periodTo);
+
+        $periodStats = null;
+        if ($hasPeriod) {
+            $periodStats = [
+                'hired'           => $stats->countByDateRange('hired', $periodFrom, $periodTo),
+                'dismissed'       => $stats->countByDateRange('dismissed', $periodFrom, $periodTo),
+                'maternity_leave' => $stats->countByDateRange('maternity_leave', $periodFrom, $periodTo),
+            ];
+        }
+
         return view('dashboard', [
+            'periodFrom'  => $periodFrom,
+            'periodTo'    => $periodTo,
+            'hasPeriod'   => $hasPeriod,
+            'periodStats' => $periodStats,
             'hired_total'        => $totalActive,
             'fired_this_month'   => $stats->countByMonth('dismissed', $now->month, $now->year),
             'hired_this_month'   => $stats->countByMonth('hired', $now->month, $now->year),
@@ -177,8 +199,144 @@ class DashboardController extends Controller
         [$employeesCallback, $title] = $config[$type];
 
         return view('employees-filtered-list', [
-            'employees' => $employeesCallback(),
-            'title'     => $title,
+            'employees'  => $employeesCallback(),
+            'title'      => $title,
+            'exportUrl'  => route('employees.filtered.export', $type),
         ]);
+    }
+
+    public function filteredListExport(string $type, EmployeeEventStatsService $stats)
+    {
+        $config = [
+            'hired_total'        => [fn() => $stats->getWithLatestEvent(['hired', 'return_from_leave']), 'Активные сотрудники'],
+            'fired_this_month'   => [fn() => $stats->getByMonth('dismissed', now()->month, now()->year),        'Уволенные в этом месяце'],
+            'hired_this_month'   => [fn() => $stats->getByMonth('hired', now()->month, now()->year),            'Нанятые в этом месяце'],
+            'on_maternity_leave' => [fn() => $stats->getWithLatestEvent('maternity_leave'),                     'В декрете'],
+            'fired_last_month'   => [fn() => $stats->getByMonth('dismissed', now()->subMonth()->month, now()->subMonth()->year), 'Уволенные в прошлом месяце'],
+            'hired_last_month'   => [fn() => $stats->getByMonth('hired', now()->subMonth()->month, now()->subMonth()->year),     'Нанятые в прошлом месяце'],
+            'fired_this_year'    => [fn() => $stats->getByYear('dismissed', now()->year),                       'Уволенные в этом году'],
+            'hired_this_year'    => [fn() => $stats->getByYear('hired', now()->year),                           'Нанятые в этом году'],
+        ];
+
+        if (!isset($config[$type])) {
+            abort(404);
+        }
+
+        [$employeesCallback, $title] = $config[$type];
+
+        return $this->exportEventsToExcel($employeesCallback(), $title);
+    }
+
+    /**
+     * Ключ типа события из URL -> [заголовок, event_type(ы) для запроса].
+     * 'all' объединяет все три события в один список/файл (по запросу — чтобы
+     * не скачивать 3 отдельных файла для рассылки коллегам).
+     */
+    private function periodTypeConfig(string $type): ?array
+    {
+        return [
+            'hired'           => ['Принято', 'hired'],
+            'dismissed'       => ['Уволено', 'dismissed'],
+            'maternity_leave' => ['В декрете', 'maternity_leave'],
+            'all'             => ['Все события (принятые, уволенные, в декрете)', ['hired', 'dismissed', 'maternity_leave']],
+        ][$type] ?? null;
+    }
+
+    public function periodList(string $type, Request $request, EmployeeEventStatsService $stats)
+    {
+        $config = $this->periodTypeConfig($type);
+
+        if (!$config) {
+            abort(404);
+        }
+        [$label, $eventTypes] = $config;
+
+        $from = $request->input('date_from');
+        $to   = $request->input('date_to');
+
+        if (!$from || !$to) {
+            abort(400, 'Не указан период');
+        }
+
+        $title = $label . ': '
+            . \Carbon\Carbon::parse($from)->format('d.m.Y') . ' — '
+            . \Carbon\Carbon::parse($to)->format('d.m.Y');
+
+        return view('employees-filtered-list', [
+            'employees' => $stats->getByDateRange($eventTypes, $from, $to),
+            'title'     => $title,
+            'exportUrl' => route('employees.periodList.export', ['type' => $type, 'date_from' => $from, 'date_to' => $to]),
+        ]);
+    }
+
+    public function periodListExport(string $type, Request $request, EmployeeEventStatsService $stats)
+    {
+        $config = $this->periodTypeConfig($type);
+
+        if (!$config) {
+            abort(404);
+        }
+        [$label, $eventTypes] = $config;
+
+        $from = $request->input('date_from');
+        $to   = $request->input('date_to');
+
+        if (!$from || !$to) {
+            abort(400, 'Не указан период');
+        }
+
+        $title = $label . ' ' . $from . ' — ' . $to;
+
+        return $this->exportEventsToExcel($stats->getByDateRange($eventTypes, $from, $to), $title);
+    }
+
+    /**
+     * Экспорт списка сотрудников по событию (ФИО / Тип события / Дата) в Excel.
+     * Используется и для пресетов дашборда, и для произвольного периода.
+     */
+    private function exportEventsToExcel(Collection $employees, string $title): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $eventLabels = [
+            'hired'             => 'Принят',
+            'dismissed'         => 'Уволен',
+            'maternity_leave'   => 'В декрете',
+            'return_from_leave' => 'Вышел из декрета',
+            'change_position'   => 'Смена должности',
+            'long_vacation'     => 'Длительный отпуск',
+            'new'               => 'Новый',
+        ];
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $sheet->setCellValue('A1', 'ФИО');
+        $sheet->setCellValue('B1', 'ФИО англ');
+        $sheet->setCellValue('C1', 'Должность');
+        $sheet->setCellValue('D1', 'Почта');
+        $sheet->setCellValue('E1', 'Тип события');
+        $sheet->setCellValue('F1', 'Дата');
+
+        $row = 2;
+        foreach ($employees as $employee) {
+            $sheet->setCellValue('A' . $row, $employee->full_name);
+            $sheet->setCellValue('B' . $row, trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')));
+            $sheet->setCellValue('C' . $row, $employee->territory_role ?? '');
+            $sheet->setCellValue('D' . $row, $employee->email ?? '');
+            $sheet->setCellValue('E' . $row, $eventLabels[$employee->event_type] ?? $employee->event_type);
+            $sheet->setCellValue('F' . $row, \Carbon\Carbon::parse($employee->event_date)->format('d.m.Y'));
+            $row++;
+        }
+
+        foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'events_' . \Illuminate\Support\Str::slug($title) . '_' . now()->format('Y-m-d_H-i') . '.xlsx';
+        $filePath = storage_path('app/' . $fileName);
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($filePath);
+
+        return response()->download($filePath, $fileName)->deleteFileAfterSend(true);
     }
 }

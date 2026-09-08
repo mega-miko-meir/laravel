@@ -54,11 +54,40 @@ class EmployeeEventStatsService
         return $this->applyTypes($query, $types)->count();
     }
 
+    /**
+     * Считает события заданного типа, у которых event_date попадает в период —
+     * без ограничения "только последнее событие сотрудника" (в отличие от
+     * countByMonth/countByYear), т.к. за произвольный период нас интересуют
+     * все случившиеся события этого типа, даже если статус сотрудника с тех пор менялся.
+     */
+    public function countByDateRange(string|array $types, string $from, string $to): int
+    {
+        $query = DB::table('employee_events as ee1')
+            ->whereBetween('ee1.event_date', [$from, $to]);
+
+        return $this->applyTypes($query, $types)->count();
+    }
+
     private function baseListQuery(): \Illuminate\Database\Query\Builder
     {
+        // Должность берём с последней территории сотрудника (та же логика,
+        // что и везде в приложении), а не из статичного employees.position,
+        // которое может не совпадать с текущей ролью после переназначения.
+        // Скалярный подзапрос (не JOIN) — чтобы при нескольких записях
+        // employee_territory с одинаковым assigned_at строки не задваивались.
+        $roleSubquery = "(
+            SELECT t.role
+            FROM employee_territory et
+            JOIN territories t ON t.id = et.territory_id
+            WHERE et.employee_id = e.id
+            ORDER BY et.assigned_at DESC, et.id DESC
+            LIMIT 1
+        ) as territory_role";
+
         return DB::table('employees as e')
             ->join('employee_events as ev', 'ev.employee_id', '=', 'e.id')
             ->select('e.*', 'ev.event_type', 'ev.event_date')
+            ->selectRaw($roleSubquery)
             ->orderBy('ev.event_date', 'DESC');
     }
 
@@ -88,6 +117,14 @@ class EmployeeEventStatsService
     {
         $query = $this->baseListQuery()
             ->whereYear('ev.event_date', $year);
+
+        return $this->applyTypesToList($query, $types)->get();
+    }
+
+    public function getByDateRange(string|array $types, string $from, string $to): Collection
+    {
+        $query = $this->baseListQuery()
+            ->whereBetween('ev.event_date', [$from, $to]);
 
         return $this->applyTypesToList($query, $types)->get();
     }

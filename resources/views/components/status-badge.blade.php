@@ -7,7 +7,7 @@
         'dismissed'         => ['bg' => '#fee2e2', 'text' => '#b91c1c', 'label' => 'Уволен'],
         'maternity_leave'   => ['bg' => '#fef9c3', 'text' => '#854d0e', 'label' => 'Декрет'],
         'long_vacation'     => ['bg' => '#fce7f3', 'text' => '#9d174d', 'label' => 'Отпуск'],
-        'changed_position'  => ['bg' => '#d1fae5', 'text' => '#065f46', 'label' => 'Смена роли'],
+        'change_position'   => ['bg' => '#d1fae5', 'text' => '#065f46', 'label' => 'Смена роли'],
     ];
     $s = $map[$status] ?? ['bg' => '#f3f4f6', 'text' => '#374151', 'label' => ucfirst(str_replace('_', ' ', $status))];
 @endphp
