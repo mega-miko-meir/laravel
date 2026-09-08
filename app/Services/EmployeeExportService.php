@@ -11,6 +11,16 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 class EmployeeExportService
 {
     /**
+     * Соответствие выбираемого в UI статуса и event_type из employee_events,
+     * по которому определяется этот статус (см. Employee::scopeActive()).
+     */
+    private const STATUS_EVENT_TYPES = [
+        'active'           => ['hired', 'return_from_leave'],
+        'maternity_leave'  => ['maternity_leave'],
+        'dismissed'        => ['dismissed'],
+    ];
+
+    /**
      * Get the export mapping for employee fields.
      *
      * @return array
@@ -35,6 +45,16 @@ class EmployeeExportService
                     ? \Carbon\Carbon::parse($e->events()->where('event_type', 'hired')->latest('event_date')->first()->event_date)->format('d.m.Y')
                     : '',
             'role' => fn($e) => $e->employee_territory()->latest('assigned_at')->first()->role ?? '',
+            'status' => fn($e) => match ($e->latestEvent?->event_type) {
+                'dismissed'        => 'Уволен',
+                'maternity_leave'  => 'В декрете',
+                'hired', 'return_from_leave' => 'Активен',
+                default            => '',
+            },
+            'status_event_date' => fn($e) =>
+                in_array($e->latestEvent?->event_type, ['dismissed', 'maternity_leave'])
+                    ? \Carbon\Carbon::parse($e->latestEvent->event_date)->format('d.m.Y')
+                    : '',
         ];
     }
 
@@ -55,7 +75,9 @@ class EmployeeExportService
             'department' => 'Департамент',
             'manager' => 'РМ',
             'hiring_date' => 'Дата приема',
-            'role' => 'Позиция'
+            'role' => 'Позиция',
+            'status' => 'Статус',
+            'status_event_date' => 'Дата увольнения/декрета',
         ][$key] ?? $key;
     }
 
@@ -73,8 +95,17 @@ class EmployeeExportService
             ? Carbon::parse($request->experience_date)
             : now();
 
+        $statuses = array_intersect(
+            $request->input('statuses', ['active']),
+            array_keys(self::STATUS_EVENT_TYPES)
+        ) ?: ['active'];
+
+        $eventTypes = array_unique(array_merge(
+            ...array_map(fn($status) => self::STATUS_EVENT_TYPES[$status], $statuses)
+        ));
+
         $employees = Employee::withLatestEvent()
-            ->active()
+            ->whereHas('latestEvent', fn($q) => $q->whereIn('event_type', $eventTypes))
             ->get();
 
         $spreadsheet = new Spreadsheet();

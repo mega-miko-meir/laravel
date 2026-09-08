@@ -10,7 +10,7 @@
     <h1 style="font-size:20px;font-weight:700;color:#111827;">
         Сотрудники
         <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">
-            <span id="employee-count">{{ $employees->count() }}</span>
+            <span id="employee-count">{{ $employees->total() }}</span>
         </span>
     </h1>
 
@@ -45,6 +45,24 @@
 
                 <form action="{{ route('export.excel') }}" method="POST">
                     @csrf
+
+                    <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">Статус сотрудников:</p>
+                    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;margin-bottom:14px;">
+                        @foreach([
+                            ['active','Активные',true],
+                            ['maternity_leave','В декрете',false],
+                            ['dismissed','Уволенные',false],
+                        ] as [$val,$lbl,$chk])
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" name="statuses[]" value="{{ $val }}" {{ $chk ? 'checked' : '' }}
+                                       style="width:14px;height:14px;accent-color:#2563eb;">
+                                {{ $lbl }}
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <hr style="border:none;border-top:1px solid #f0f0f0;margin:6px 0 10px;">
+
                     <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">Выберите колонки:</p>
 
                     <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;">
@@ -54,6 +72,8 @@
                             ['email','Почта',false],['team','Группа',true],
                             ['department','Департамент',true],['manager','Менеджер',false],
                             ['hiring_date','Дата приема',false],
+                            ['status','Статус',false],
+                            ['status_event_date','Дата увольнения/декрета',false],
                         ] as [$val,$lbl,$chk])
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                                 <input type="checkbox" name="columns[]" value="{{ $val }}" {{ $chk ? 'checked' : '' }}
@@ -158,13 +178,6 @@
         return cb ? (cb.checked ? 1 : 0) : 1;
     }
 
-    function updateCounter() {
-        const rows = container.querySelectorAll('tbody tr');
-        // Если одна строка с colspan — это «не найдено», показываем 0
-        const isEmpty = rows.length === 1 && rows[0].querySelector('td[colspan]');
-        counter.textContent = isEmpty ? 0 : rows.length;
-    }
-
     function doSearch() {
         const params = new URLSearchParams({
             search:      input.value,
@@ -176,10 +189,13 @@
         fetch('/?' + params.toString(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(r => r.text())
+        .then(r => {
+            const total = r.headers.get('X-Total-Count');
+            if (total !== null) counter.textContent = total;
+            return r.text();
+        })
         .then(html => {
             container.innerHTML = html;
-            updateCounter();
         })
         .catch(console.error);
     }
