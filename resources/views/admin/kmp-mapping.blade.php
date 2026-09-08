@@ -129,7 +129,7 @@
                 <tbody>
                 @foreach($kmpEmployees as $kmp)
                     @php
-                        $linked   = $linkedByName->get($kmp->name);
+                        $linked   = $kmpLinks->get($kmp->name)?->employee;
                         $isMapped = !is_null($linked);
                         $nameLower = mb_strtolower(trim($kmp->name));
                     @endphp

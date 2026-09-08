@@ -14,7 +14,9 @@ Laravel 11 HR/CRM система для Nobel. Деплой на Linux-серв�
 ## Архитектура БД
 
 ### Основная БД (Laravel default)
-- `employees` — сотрудники (rep/rm/ffm), есть поле `crm_employee_id` (FK → nobeldb.qs_calls.employee_id)
+- `employees` — сотрудники (rep/rm/ffm)
+- `employee_crm_ids` — привязка к CRM-аккаунтам (`crm_employee_id` → nobeldb.qs_calls.employee_id), **many-to-one**: у одного сотрудника может быть несколько строк (напр. повторный найм — CRM заводит новую учётку). `crm_employee_id` уникален в этой таблице (один внешний аккаунт → максимум один сотрудник), `employee_id` — нет.
+- `employee_kmp_names` — привязка к именам КМП (`kmp_employee_name` → kmp.Медпредставитель), та же many-to-one логика и та же уникальность на `kmp_employee_name`.
 - `territories`, `employee_territory` — территории и назначения
 - `tablets`, `employee_tablet` — планшеты
 - `employee_events` — история событий (hired/dismissed/maternity_leave/...)
@@ -48,13 +50,13 @@ Laravel 11 HR/CRM система для Nobel. Деплой на Linux-серв�
 - `/admin/crm-mapping` — привязка CRM-сотрудников к сотрудникам системы
 
 ## Контроллеры
-- `CallController` — дашборд визитов. `filtered(Request)` — базовый запрос с постоянными фильтрами (тип + статус). Поддерживает фильтры: `date_from/to`, `province`, `town`, `employee` (LIKE), `crm_employee_id` (exact), `organization_type`, `customer_spesiality`, `employee_department`. KPI-метрики — один `selectRaw` запрос. Опции фильтров кэшируются на 1 час через `Cache::remember`. Весь `index()` обёрнут в try-catch.
-- `CrmMappingController` — страница привязки CRM-сотрудников. CRM-список первичен. `getCrmEmployees()` кэшируется на 1 час. Весь Nobel DB код в try-catch.
-- `EmployeeController::showEmployee()` — карточка сотрудника. Если у сотрудника есть `crm_employee_id`, загружает `$visitStats` из nobeldb. Nobel DB блок обёрнут в try-catch.
+- `CallController` — дашборд визитов. `filtered(Request)` — базовый запрос с постоянными фильтрами (тип + статус). Поддерживает фильтры: `date_from/to`, `province`, `town`, `employee` (LIKE), `employee_id` (внутренний id сотрудника — резолвится во ВСЕ его `crm_employee_id` через `whereIn`), `organization_type`, `customer_spesiality`, `employee_department`. KPI-метрики — один `selectRaw` запрос. Опции фильтров кэшируются на 1 час через `Cache::remember`. Весь `index()` обёрнут в try-catch.
+- `CrmMappingController` — страница привязки CRM-сотрудников. CRM-список первичен. `getCrmEmployees()` кэшируется на 1 час. Пишет/читает `employee_crm_ids` (many-to-one). Весь Nobel DB код в try-catch.
+- `EmployeeController::showEmployee()` — карточка сотрудника. Если у сотрудника есть хотя бы одна привязка в `employee_crm_ids`, статистика визитов (`getVisitStats`) агрегирует данные по ВСЕМ его `crm_employee_id` через `whereIn`. Аналогично `employee_kmp_names`/`getKmpStats`. Nobel DB блок обёрнут в try-catch.
 - `ClientController` — База OneKey. `export()` выгружает Excel через PhpSpreadsheet. Использует `chunk(500)` для обхода больших VIEW.
 
 ## Компоненты
-- `resources/views/components/visit-stats.blade.php` — блок визитов в карточке сотрудника. Props: `$stats` (массив с ключами: `total`, `avgDur`, `lastDate`, `thisMonth`, `lastMonth`, `monthly`, `topSpec`, `crmId`, `doctorVisits`, `pharmacyVisits`). Ссылка "Подробнее" ведёт на `/calls?crm_employee_id={crmId}`.
+- `resources/views/components/visit-stats.blade.php` — блок визитов в карточке сотрудника. Props: `$stats` (массив с ключами: `total`, `avgDur`, `lastDate`, `thisMonth`, `lastMonth`, `monthly`, `topSpec`, `employeeId`, `doctorVisits`, `pharmacyVisits`). Ссылка "Подробнее" ведёт на `/calls?employee_id={employeeId}`.
 
 ## ETL
 - `scripts/nobel_etl.py` — загружает данные из Nobel CRM API в nobeldb
@@ -62,10 +64,13 @@ Laravel 11 HR/CRM система для Nobel. Деплой на Linux-серв�
 - `routes/console.php` — расписание: каждый день в 02:00
 - Cron на сервере: `* * * * * cd /var/www/laravel && php artisan schedule:run`
 
-## Привязка сотрудников CRM
-- Поле `employees.crm_employee_id` → `qs_calls.employee_id`
-- Авто-матчинг: `php artisan crm:match-employees` (по первым двум словам имени). Опция `--force` перепривязывает уже привязанных.
-- Ручная привязка: `/admin/crm-mapping` — список CRM-сотрудников с поиском по имени (Alpine.js combobox с `position:fixed` dropdown). Вкладки: Все / Не привязано (по умолчанию) / Привязано.
+## Привязка сотрудников CRM/KMP (many-to-one)
+- `employee_crm_ids` (`employee_id`, `crm_employee_id`, `confirmed`) и `employee_kmp_names` (`employee_id`, `kmp_employee_name`, `confirmed`) — один сотрудник может иметь несколько привязанных внешних аккаунтов одновременно (напр. повторный найм — CRM/KMP заводит новую учётку, иногда с другим написанием имени). Уникальность — на внешнем ключе (`crm_employee_id`/`kmp_employee_name`), не на `employee_id`.
+- `confirmed = true` — привязано вручную через админку, `false` — предложено авто-мэтчем (`crm:match-employees` или `KmpMappingController::autoMatch()`).
+- Модель `Employee`: `crmIds()`/`kmpNames()` — hasMany-связи; `$employee->crm_employee_ids`/`$employee->kmp_employee_names` — плоские массивы всех привязанных внешних id/имён (accessor).
+- Авто-матчинг: `php artisan crm:match-employees` (по первым двум словам имени). По умолчанию берёт только сотрудников без единой привязки; `--force` пробует довязать доп. аккаунт и уже привязанным. Никогда не переопределяет уже занятый внешний id — только добавляет новую строку.
+- Ручная привязка: `/admin/crm-mapping`, `/admin/kmp-mapping` — список внешних аккаунтов (один ряд = один внешний id/имя) с поиском и привязкой к сотруднику системы (Alpine.js combobox с `position:fixed` dropdown). Вкладки: Все / Не привязано (по умолчанию) / Привязано. Сохранение конкретного ряда снимает только его собственную старую привязку, не трогая остальные аккаунты того же сотрудника.
+- На карточке сотрудника (`/employee/{id}`) в блоке «Внешние системы» показываются ВСЕ привязанные id/имена через запятую.
 - На сервере для долгих команд: `nohup php artisan crm:match-employees >> /tmp/crm_match.log 2>&1 &`
 
 ## UI-стиль

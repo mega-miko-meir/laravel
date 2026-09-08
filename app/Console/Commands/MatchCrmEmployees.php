@@ -3,13 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Models\Employee;
+use App\Models\EmployeeCrmId;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class MatchCrmEmployees extends Command
 {
-    protected $signature = 'crm:match-employees {--dry-run : Show matches without saving} {--force : Re-match already linked employees too}';
-    protected $description = 'Auto-match employees to Nobel CRM by first two name words';
+    protected $signature = 'crm:match-employees {--dry-run : Show matches without saving} {--force : Also process employees who already have at least one linked CRM account}';
+    protected $description = 'Auto-match employees to Nobel CRM by first two name words (many-to-one: adds a new linked account, does not replace existing ones)';
 
     public function handle(): int
     {
@@ -31,24 +32,28 @@ class MatchCrmEmployees extends Command
 
         $this->info('Найдено ' . count($crmByName) . ' уникальных сотрудников в CRM');
 
+        // CRM-аккаунты, уже привязанные к кому бы то ни было — не переопределяем
+        $alreadyLinkedCrmIds = EmployeeCrmId::pluck('crm_employee_id')->flip();
+
         $query = $force
             ? Employee::all()
-            : Employee::whereNull('crm_employee_id')->get();
+            : Employee::whereDoesntHave('crmIds')->get();
 
         $this->info('Сотрудников системы для обработки: ' . $query->count());
 
         $updates = [];
         $matched = 0;
-        $skipped = 0;
 
         foreach ($query as $emp) {
             $shName = $emp->sh_name;
             if (!$shName) continue;
 
             foreach ($crmByName as $crmName => $crmId) {
+                if ($alreadyLinkedCrmIds->has($crmId)) continue;
                 if (str_starts_with($crmName, $shName)) {
                     $this->line("  + [{$emp->id}] {$emp->full_name} → [{$crmId}] {$crmName}");
-                    $updates[$emp->id] = $crmId;
+                    $updates[] = ['employee_id' => $emp->id, 'crm_employee_id' => $crmId];
+                    $alreadyLinkedCrmIds->put($crmId, true);
                     $matched++;
                     break;
                 }
@@ -67,16 +72,20 @@ class MatchCrmEmployees extends Command
             return self::SUCCESS;
         }
 
-        // Bulk update in one transaction
-        DB::transaction(function () use ($updates, &$skipped) {
-            foreach ($updates as $empId => $crmId) {
-                $affected = DB::table('employees')->where('id', $empId)->update(['crm_employee_id' => $crmId]);
-                if (!$affected) $skipped++;
+        $now = now();
+        DB::transaction(function () use ($updates, $now) {
+            foreach ($updates as $u) {
+                DB::table('employee_crm_ids')->insert([
+                    'employee_id'     => $u['employee_id'],
+                    'crm_employee_id' => $u['crm_employee_id'],
+                    'confirmed'       => false,
+                    'created_at'      => $now,
+                    'updated_at'      => $now,
+                ]);
             }
         });
 
-        $saved = count($updates) - $skipped;
-        $this->info("Сохранено: {$saved} | Пропущено: {$skipped}");
+        $this->info('Сохранено: ' . count($updates));
 
         return self::SUCCESS;
     }

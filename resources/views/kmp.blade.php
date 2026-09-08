@@ -154,10 +154,10 @@
             <div style="display:flex;flex-direction:column;gap:4px;">
                 <label style="font-size:11px;font-weight:600;color:#64748b;">МП</label>
                 @php
-                    $selEmp = collect($empList)->firstWhere('value', request('kmp_employee_name'));
+                    $selEmp = collect($empList)->firstWhere('value', request('employee_id'));
                     $initEmpLabel = $selEmp ? $selEmp['label'] : '';
                 @endphp
-                <div x-data="filterPicker(@js($empList), @js(request('kmp_employee_name')), @js($initEmpLabel))"
+                <div x-data="filterPicker(@js($empList), @js(request('employee_id')), @js($initEmpLabel))"
                      style="position:relative;width:190px;">
                     <div style="position:relative;">
                         <input type="text" x-model="query"
@@ -168,7 +168,7 @@
                         <span x-show="selected" @click="clear($el.closest('form'))"
                               style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;user-select:none;">×</span>
                     </div>
-                    <input type="hidden" name="kmp_employee_name" x-ref="hiddenVal"
+                    <input type="hidden" name="employee_id" x-ref="hiddenVal"
                            x-effect="$refs.hiddenVal.value = selected ?? ''">
                     <div x-show="open && filtered.length" x-cloak
                          style="position:absolute;top:calc(100% + 2px);left:0;width:100%;z-index:999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:200px;overflow-y:auto;">

@@ -20,7 +20,7 @@ class CallController extends Controller
             // Данные обновляются раз в сутки через ETL — кэшируем на 10 минут,
             // ключ учитывает все фильтры, влияющие на эти запросы.
             $filterKey = 'calls_summary_' . md5(json_encode($request->only([
-                'date_from', 'date_to', 'province', 'town', 'employee', 'crm_employee_id',
+                'date_from', 'date_to', 'province', 'town', 'employee', 'employee_id',
                 'employee_department', 'organization_type', 'customer_spesiality',
             ])));
 
@@ -89,10 +89,12 @@ class CallController extends Controller
             $specialties = Cache::remember('calls_filter_specialties', 3600, fn() => $base('customer_spesiality'));
             $departments = Cache::remember('calls_filter_departments', 3600, fn() => $base('employee_department'));
 
-            $empList = \App\Models\Employee::whereNotNull('crm_employee_id')
+            // value — внутренний id сотрудника (не внешний crm id): у одного
+            // сотрудника может быть несколько CRM-аккаунтов, фильтр агрегирует все.
+            $empList = \App\Models\Employee::whereHas('crmIds')
                 ->orderBy('full_name')
-                ->get(['full_name', 'crm_employee_id'])
-                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->crm_employee_id])
+                ->get(['id', 'full_name'])
+                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->id])
                 ->values();
 
             // OneKey coverage — общие фильтры для обоих запросов
@@ -100,7 +102,13 @@ class CallController extends Controller
             $covBindings = [];
             if ($request->filled('date_from')) { $covWhere .= " AND c.appointment_Date >= ?"; $covBindings[] = $request->input('date_from'); }
             if ($request->filled('date_to'))   { $covWhere .= " AND c.appointment_Date <= ?"; $covBindings[] = $request->input('date_to'); }
-            if ($request->filled('crm_employee_id')) { $covWhere .= " AND c.employee_id = ?"; $covBindings[] = $request->input('crm_employee_id'); }
+            if ($request->filled('employee_id')) {
+                $crmIds = \App\Models\Employee::find($request->input('employee_id'))?->crm_employee_ids ?? [];
+                $covWhere .= $crmIds
+                    ? " AND c.employee_id IN (" . implode(',', array_fill(0, count($crmIds), '?')) . ")"
+                    : " AND 1=0";
+                array_push($covBindings, ...$crmIds);
+            }
             if ($request->filled('province')) {
                 $provs = (array) $request->input('province');
                 $covWhere .= " AND c.province IN (" . implode(',', array_fill(0, count($provs), '?')) . ")";
@@ -200,7 +208,10 @@ class CallController extends Controller
         if ($request->filled('province'))             $q->whereIn('province', (array) $request->input('province'));
         if ($request->filled('town'))                 $q->whereIn('town', (array) $request->input('town'));
         if ($request->filled('employee'))             $q->where('employee', 'like', '%' . $request->input('employee') . '%');
-        if ($request->filled('crm_employee_id'))        $q->where('employee_id', $request->input('crm_employee_id'));
+        if ($request->filled('employee_id')) {
+            $crmIds = \App\Models\Employee::find($request->input('employee_id'))?->crm_employee_ids ?? [];
+            $q->whereIn('employee_id', $crmIds ?: [-1]);
+        }
         if ($request->filled('employee_department'))    $q->whereIn('employee_department', (array) $request->input('employee_department'));
         if ($request->filled('organization_type'))    $q->whereIn('organization_type', (array) $request->input('organization_type'));
         if ($request->filled('appointment_status'))   $q->whereIn('appointment_status', (array) $request->input('appointment_status'));

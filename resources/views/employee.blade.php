@@ -100,28 +100,32 @@
                     <div class="bind-row">
                         <div>
                             <div class="bind-label">CRM</div>
-                            @if($employee->crm_employee_id)
-                                <div class="bind-value">ID: {{ $employee->crm_employee_id }}</div>
+                            @if($employee->crmIds->isNotEmpty())
+                                <div class="bind-value">
+                                    ID: {{ $employee->crmIds->pluck('crm_employee_id')->implode(', ') }}
+                                </div>
                             @else
                                 <div class="bind-empty">Не привязан</div>
                             @endif
                         </div>
                         <a href="{{ route('admin.crm-mapping') }}" class="bind-action">
-                            {{ $employee->crm_employee_id ? 'Изменить' : 'Привязать' }}
+                            {{ $employee->crmIds->isNotEmpty() ? 'Изменить' : 'Привязать' }}
                         </a>
                     </div>
 
                     <div class="bind-row">
                         <div>
                             <div class="bind-label">KMP</div>
-                            @if($employee->kmp_employee_name)
-                                <div class="bind-value">{{ $employee->kmp_employee_name }}</div>
+                            @if($employee->kmpNames->isNotEmpty())
+                                <div class="bind-value">
+                                    {{ $employee->kmpNames->pluck('kmp_employee_name')->implode(', ') }}
+                                </div>
                             @else
                                 <div class="bind-empty">Не привязан</div>
                             @endif
                         </div>
                         <a href="{{ route('admin.kmp-mapping') }}" class="bind-action">
-                            {{ $employee->kmp_employee_name ? 'Изменить' : 'Привязать' }}
+                            {{ $employee->kmpNames->isNotEmpty() ? 'Изменить' : 'Привязать' }}
                         </a>
                     </div>
                 </div>
@@ -165,7 +169,7 @@
         </template>
         <div x-show="visitsLoaded" x-html="visitsHtml"></div>
         <div style="margin-top:12px;text-align:right;">
-            <a href="{{ route('calls.index', ['crm_employee_id' => $employee->crm_employee_id]) }}"
+            <a href="{{ route('calls.index', ['employee_id' => $employee->id]) }}"
                style="font-size:13px;color:#2563eb;text-decoration:none;font-weight:500;"
                onmouseover="this.style.textDecoration='underline'"
                onmouseout="this.style.textDecoration='none'">

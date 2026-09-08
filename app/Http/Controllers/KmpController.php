@@ -17,7 +17,7 @@ class KmpController extends Controller
             $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
             // Кеш агрегатов по набору фильтров (кроме сортировки и пагинации)
-            $filterParams = $request->only(['year', 'date_from', 'date_to', 'employee', 'kmp_employee_name', 'city', 'brand', 'dept']);
+            $filterParams = $request->only(['year', 'date_from', 'date_to', 'employee', 'employee_id', 'city', 'brand', 'dept']);
             if (empty($filterParams['year'])) $filterParams['year'] = '2026';
             $aggCacheKey  = 'kmp_agg_' . md5(json_encode($filterParams));
 
@@ -78,10 +78,12 @@ class KmpController extends Controller
             $years  = Cache::remember('kmp_filter_years',  3600, fn() => Kmp::distinct()->where('Статус заказа', 'Доставлено')->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год'));
             $depts  = Cache::remember('kmp_filter_depts',  3600, fn() => $this->distinctValues('Бизнес-подразделение'));
 
-            $empList = \App\Models\Employee::whereNotNull('kmp_employee_name')
+            // value — внутренний id сотрудника: у одного сотрудника может быть
+            // несколько имён КМП (повторный найм), фильтр агрегирует все.
+            $empList = \App\Models\Employee::whereHas('kmpNames')
                 ->orderBy('full_name')
-                ->get(['full_name', 'kmp_employee_name'])
-                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->kmp_employee_name])
+                ->get(['id', 'full_name'])
+                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->id])
                 ->values();
 
         } catch (\Exception $e) {
@@ -121,7 +123,7 @@ class KmpController extends Controller
 
         $parts = array_filter([
             $request->input('year'),
-            $request->input('kmp_employee_name') ? 'emp' : null,
+            $request->input('employee_id') ? 'emp' : null,
             $request->input('date_from'),
             $request->input('date_to'),
         ]);
@@ -165,7 +167,10 @@ class KmpController extends Controller
         if ($request->filled('date_from'))         $q->where('Дата', '>=', $request->input('date_from'));
         if ($request->filled('date_to'))           $q->where('Дата', '<=', $request->input('date_to'));
         if ($request->filled('employee'))          $q->where('Медпредставитель', 'like', '%' . $request->input('employee') . '%');
-        if ($request->filled('kmp_employee_name')) $q->where('Медпредставитель', $request->input('kmp_employee_name'));
+        if ($request->filled('employee_id')) {
+            $kmpNames = \App\Models\Employee::find($request->input('employee_id'))?->kmp_employee_names ?? [];
+            $q->whereIn('Медпредставитель', $kmpNames ?: ['__none__']);
+        }
         if ($request->filled('city'))              $q->whereIn('Город', (array) $request->input('city'));
         if ($request->filled('brand'))             $q->whereIn('Брэнд', (array) $request->input('brand'));
         if ($request->filled('dept'))              $q->whereIn('Бизнес-подразделение', (array) $request->input('dept'));

@@ -127,7 +127,7 @@
                 <tbody>
                 @foreach($crmEmployees as $crm)
                     @php
-                        $linked = $linkedByCrmId->get($crm->employee_id);
+                        $linked = $crmLinks->get($crm->employee_id)?->employee;
                         $isMapped = !is_null($linked);
                         $crmNameLower = mb_strtolower(trim($crm->employee));
                     @endphp

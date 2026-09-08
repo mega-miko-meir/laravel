@@ -111,7 +111,7 @@ class LeaderboardController extends Controller
                 ->selectRaw('TRIM(employee) as employee, COUNT(DISTINCT customer_id) as base_count')
                 ->groupBy('employee')
                 ->get()
-                ->keyBy(fn($r) => trim($r->employee));
+                ->keyBy(fn($r) => trim($r->employee ?? ''));
 
             $stgPharmacies = DB::connection('nobel')
                 ->table('stg_nobel_report_1')
@@ -119,7 +119,7 @@ class LeaderboardController extends Controller
                 ->selectRaw('TRIM(employee) as employee, COUNT(DISTINCT organization_id) as base_count')
                 ->groupBy('employee')
                 ->get()
-                ->keyBy(fn($r) => trim($r->employee));
+                ->keyBy(fn($r) => trim($r->employee ?? ''));
 
         } catch (\Exception) {}
 
@@ -132,18 +132,27 @@ class LeaderboardController extends Controller
         \Illuminate\Support\Collection $stgPharmacies,
         int $callTarget
     ): \Illuminate\Support\Collection {
-        return Employee::whereNotNull('crm_employee_id')
+        return Employee::whereHas('crmIds')
+            ->with('crmIds')
             ->orderBy('full_name')
-            ->get(['id', 'full_name', 'position', 'crm_employee_id'])
+            ->get(['id', 'full_name', 'position'])
             ->map(function ($emp) use ($crmStats, $stgDoctors, $stgPharmacies, $callTarget) {
-                $crm            = $crmStats->get($emp->crm_employee_id);
-                $empName        = trim($crm?->employee_name ?? '');
-                $totalVisits    = (int)($crm?->total_visits    ?? 0);
-                $doctorVisits   = (int)($crm?->doctor_visits   ?? 0);
-                $pharmacyVisits = (int)($crm?->pharmacy_visits ?? 0);
+                // Сотрудник может иметь несколько CRM-аккаунтов (повторный найм) —
+                // суммируем метрики по всем его id вместо единственного lookup.
+                $crmRows        = $emp->crmIds->map(fn($c) => $crmStats->get($c->crm_employee_id))->filter();
+                $totalVisits    = (int) $crmRows->sum('total_visits');
+                $doctorVisits   = (int) $crmRows->sum('doctor_visits');
+                $pharmacyVisits = (int) $crmRows->sum('pharmacy_visits');
+                $avgDuration    = $totalVisits > 0
+                    ? (int) round($crmRows->sum(fn($r) => (int)$r->avg_duration * (int)$r->total_visits) / $totalVisits)
+                    : 0;
 
-                $baseDoctors    = (int)($stgDoctors->get($empName)?->base_count    ?? 0);
-                $basePharmacies = (int)($stgPharmacies->get($empName)?->base_count ?? 0);
+                // Разные CRM-аккаунты одного человека (напр. после смены написания
+                // имени при повторном найме) могут звучать в stg-таблицах баз по-разному —
+                // суммируем базу врачей/аптек по всем встречавшимся именам.
+                $empNames       = $crmRows->pluck('employee_name')->map(fn($n) => trim($n ?? ''))->filter()->unique();
+                $baseDoctors    = (int) $empNames->sum(fn($n) => $stgDoctors->get($n)?->base_count ?? 0);
+                $basePharmacies = (int) $empNames->sum(fn($n) => $stgPharmacies->get($n)?->base_count ?? 0);
                 $freqTargetDoc  = $baseDoctors    * self::FREQUENCY;
                 $freqTargetPhar = $basePharmacies * self::FREQUENCY;
 
@@ -155,7 +164,7 @@ class LeaderboardController extends Controller
                     'call_pct'        => $callTarget > 0 ? round($totalVisits    / $callTarget  * 100) : 0,
                     'doctor_visits'   => $doctorVisits,
                     'pharmacy_visits' => $pharmacyVisits,
-                    'avg_duration'    => (int)($crm?->avg_duration ?? 0),
+                    'avg_duration'    => $avgDuration,
                     'base_doctors'    => $baseDoctors,
                     'base_pharmacies' => $basePharmacies,
                     'freq_target_doc' => $freqTargetDoc,

@@ -10,7 +10,7 @@
     $topSpec        = $stats['topSpec'];
     $doctorVisits   = $stats['doctorVisits'];
     $pharmacyVisits = $stats['pharmacyVisits'];
-    $crmId          = $stats['crmId'];
+    $employeeId     = $stats['employeeId'];
 
     $monthDiff = $lastMonth > 0 ? round(($thisMonth - $lastMonth) / $lastMonth * 100) : null;
     $maxVal    = $monthly->max('total') ?: 1;
@@ -32,7 +32,7 @@
             </svg>
             <span style="font-size:14px;font-weight:600;color:#1f2937;">Визиты</span>
         </div>
-        <a href="{{ route('calls.index', ['crm_employee_id' => $crmId]) }}"
+        <a href="{{ route('calls.index', ['employee_id' => $employeeId]) }}"
            style="font-size:11px;color:#6366f1;text-decoration:none;"
            onmouseover="this.style.textDecoration='underline';"
            onmouseout="this.style.textDecoration='none';">

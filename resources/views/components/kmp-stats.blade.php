@@ -6,7 +6,7 @@
     $lastMonth    = $stats['lastMonth'];
     $monthly      = $stats['monthly'];
     $topBrands    = $stats['topBrands'];
-    $kmpName      = $stats['kmpName'];
+    $employeeId   = $stats['employeeId'];
     $year         = $stats['year'] ?? date('Y');
 
     $monthDiff = $lastMonth > 0 ? round(($thisMonth - $lastMonth) / $lastMonth * 100) : null;
@@ -29,7 +29,7 @@
             </svg>
             <span style="font-size:14px;font-weight:600;color:#1f2937;">KMP Продажи</span>
         </div>
-        <a href="{{ route('kmp.index', ['kmp_employee_name' => $kmpName, 'year' => $year]) }}"
+        <a href="{{ route('kmp.index', ['employee_id' => $employeeId, 'year' => $year]) }}"
            style="font-size:11px;color:#0ea5e9;text-decoration:none;"
            onmouseover="this.style.textDecoration='underline';"
            onmouseout="this.style.textDecoration='none';">

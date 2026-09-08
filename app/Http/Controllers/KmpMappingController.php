@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\EmployeeKmpName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,17 +32,19 @@ class KmpMappingController extends Controller
     {
         $kmpEmployees = $this->getKmpEmployees();
 
-        $sysEmployees = Employee::orderBy('full_name')
-            ->get(['id', 'full_name', 'position', 'kmp_employee_name']);
+        $sysEmployees = Employee::orderBy('full_name')->get(['id', 'full_name', 'position']);
 
-        $linkedByName = $sysEmployees->whereNotNull('kmp_employee_name')
-            ->keyBy('kmp_employee_name');
+        // kmp_employee_name => EmployeeKmpName (с подгруженным сотрудником).
+        // kmp_employee_name уникально в этой таблице (1:1 в эту сторону), а у одного
+        // сотрудника таких строк может быть несколько (many-to-one) — ровно случай
+        // повторного найма с новой учёткой КМП, под который всё это и делается.
+        $kmpLinks = EmployeeKmpName::with('employee:id,full_name,position')->get()->keyBy('kmp_employee_name');
 
         $kmpTotal = count($kmpEmployees);
-        $mapped   = $linkedByName->count();
+        $mapped   = $kmpLinks->count();
 
         return view('admin.kmp-mapping', compact(
-            'kmpEmployees', 'sysEmployees', 'linkedByName', 'kmpTotal', 'mapped'
+            'kmpEmployees', 'sysEmployees', 'kmpLinks', 'kmpTotal', 'mapped'
         ));
     }
 
@@ -56,13 +59,18 @@ class KmpMappingController extends Controller
             $kmpName    = trim($request->input('kmp_name'));
             $employeeId = $request->input('employee_id');
 
-            Employee::where('kmp_employee_name', $kmpName)->update(['kmp_employee_name' => null]);
+            // Снимаем текущую привязку именно этого имени КМП (если была) —
+            // остальные имена, привязанные к тому же сотруднику, не трогаем.
+            EmployeeKmpName::where('kmp_employee_name', $kmpName)->delete();
 
             if ($employeeId !== null && $employeeId !== '') {
                 $emp = Employee::findOrFail((int) $employeeId);
-                $emp->kmp_employee_name = $kmpName;
-                $emp->save();
-                return back()->with('success', "KMP-сотрудник привязан к «{$emp->full_name}».");
+                EmployeeKmpName::create([
+                    'employee_id'       => $emp->id,
+                    'kmp_employee_name' => $kmpName,
+                    'confirmed'         => true,
+                ]);
+                return back()->with('success', "KMP-аккаунт привязан к «{$emp->full_name}».");
             }
 
             return back()->with('success', 'Привязка сброшена.');
@@ -88,21 +96,23 @@ class KmpMappingController extends Controller
             }
         }
 
-        // Уже привязанные (не перезаписывать)
-        $alreadyLinked = Employee::whereNotNull('kmp_employee_name')
-            ->pluck('kmp_employee_name')
-            ->flip();
+        // Имена КМП, уже привязанные к кому бы то ни было — не переопределяем
+        $alreadyLinked = EmployeeKmpName::pluck('kmp_employee_name')->flip();
 
         $matched = 0;
         foreach (Employee::all() as $emp) {
-            if ($emp->kmp_employee_name) continue;
             $shName = $emp->sh_name;
             if (!$shName) continue;
 
             if (isset($kmpByShName[$shName])) {
                 $kmpName = $kmpByShName[$shName];
                 if ($alreadyLinked->has($kmpName)) continue;
-                $emp->update(['kmp_employee_name' => $kmpName]);
+
+                EmployeeKmpName::create([
+                    'employee_id'       => $emp->id,
+                    'kmp_employee_name' => $kmpName,
+                    'confirmed'         => false,
+                ]);
                 $alreadyLinked->put($kmpName, true);
                 $matched++;
             }

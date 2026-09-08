@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\EmployeeCrmId;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -30,23 +31,26 @@ class CrmMappingController extends Controller
     {
         $crmEmployees = $this->getCrmEmployees();
 
-        // Main system employees for dropdown (id => full_name)
-        $sysEmployees = Employee::orderBy('full_name')
-            ->get(['id', 'full_name', 'position', 'crm_employee_id']);
+        // Все сотрудники системы — для поиска в комбобоксе
+        $sysEmployees = Employee::orderBy('full_name')->get(['id', 'full_name', 'position']);
 
-        // Build reverse map: crm_employee_id => Employee
-        $linkedByCrmId = $sysEmployees->whereNotNull('crm_employee_id')
-            ->keyBy('crm_employee_id');
+        // crm_employee_id => EmployeeCrmId (с подгруженным сотрудником).
+        // crm_employee_id уникален в этой таблице, поэтому keyBy тут безопасен —
+        // это направление связи остаётся 1:1, many-to-one работает в обратную сторону
+        // (у одного сотрудника может быть несколько таких строк с разными crm_employee_id).
+        $crmLinks = EmployeeCrmId::with('employee:id,full_name,position')->get()->keyBy('crm_employee_id');
 
         $crmTotal = count($crmEmployees);
-        $mapped   = $linkedByCrmId->count();
+        $mapped   = $crmLinks->count();
 
         return view('admin.crm-mapping', compact(
-            'crmEmployees', 'sysEmployees', 'linkedByCrmId', 'crmTotal', 'mapped'
+            'crmEmployees', 'sysEmployees', 'crmLinks', 'crmTotal', 'mapped'
         ));
     }
 
-    // Link a main system employee to a CRM employee_id
+    // Привязать CRM-аккаунт (employee_id из qs_calls) к сотруднику системы.
+    // Один сотрудник системы может иметь несколько таких привязок (many-to-one) —
+    // например, если CRM завела новую учётку при повторном найме.
     public function link(Request $request)
     {
         $request->validate([
@@ -56,13 +60,18 @@ class CrmMappingController extends Controller
 
         $crmId = (int) $request->input('crm_employee_id');
 
-        // Unlink any employee that previously had this crm_employee_id
-        Employee::where('crm_employee_id', $crmId)->update(['crm_employee_id' => null]);
+        // Снимаем текущую привязку именно этого CRM-аккаунта (если была) —
+        // остальные аккаунты, привязанные к тому же или другому сотруднику, не трогаем.
+        EmployeeCrmId::where('crm_employee_id', $crmId)->delete();
 
         if ($request->filled('employee_id')) {
             $emp = Employee::findOrFail($request->input('employee_id'));
-            $emp->update(['crm_employee_id' => $crmId]);
-            return back()->with('success', "CRM-сотрудник привязан к «{$emp->full_name}».");
+            EmployeeCrmId::create([
+                'employee_id'     => $emp->id,
+                'crm_employee_id' => $crmId,
+                'confirmed'       => true,
+            ]);
+            return back()->with('success', "CRM-аккаунт привязан к «{$emp->full_name}».");
         }
 
         return back()->with('success', 'Привязка сброшена.');
@@ -72,7 +81,7 @@ class CrmMappingController extends Controller
     {
         $crmEmployees = $this->getCrmEmployees();
 
-        // Build lookup: first two words of CRM name => crm_employee_id
+        // Lookup: первые два слова CRM-имени => crm_employee_id
         $crmByShName = [];
         foreach ($crmEmployees as $r) {
             $parts = preg_split('/\s+/', trim($r->employee));
@@ -80,21 +89,23 @@ class CrmMappingController extends Controller
             $crmByShName[$sh] = (int) $r->employee_id;
         }
 
-        // Already linked crm_employee_ids (don't overwrite)
-        $alreadyLinked = Employee::whereNotNull('crm_employee_id')
-            ->pluck('crm_employee_id')
-            ->flip();
+        // CRM-аккаунты, уже привязанные к кому бы то ни было — не переопределяем
+        $alreadyLinked = EmployeeCrmId::pluck('crm_employee_id')->flip();
 
         $matched = 0;
         foreach (Employee::all() as $emp) {
-            if ($emp->crm_employee_id) continue;
             $shName = $emp->sh_name;
             if (!$shName) continue;
 
             if (isset($crmByShName[$shName])) {
                 $crmId = $crmByShName[$shName];
                 if ($alreadyLinked->has($crmId)) continue;
-                $emp->update(['crm_employee_id' => $crmId]);
+
+                EmployeeCrmId::create([
+                    'employee_id'     => $emp->id,
+                    'crm_employee_id' => $crmId,
+                    'confirmed'       => false,
+                ]);
                 $alreadyLinked->put($crmId, true);
                 $matched++;
             }

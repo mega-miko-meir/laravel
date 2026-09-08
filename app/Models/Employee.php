@@ -20,9 +20,36 @@ class Employee extends Model
         'position',
         'status',
         'photo_path',
-        'crm_employee_id',
-        'kmp_employee_name',
     ];
+
+    /**
+     * Все привязанные аккаунты CRM (many-to-one: несколько CRM id → один сотрудник,
+     * например при повторном найме КМП/CRM заводит новую учётку на того же человека).
+     */
+    public function crmIds()
+    {
+        return $this->hasMany(EmployeeCrmId::class);
+    }
+
+    /**
+     * Все привязанные аккаунты KMP (many-to-one, та же логика, что и crmIds()).
+     */
+    public function kmpNames()
+    {
+        return $this->hasMany(EmployeeKmpName::class);
+    }
+
+    /** Плоский массив всех привязанных crm_employee_id этого сотрудника. */
+    public function getCrmEmployeeIdsAttribute(): array
+    {
+        return $this->crmIds->pluck('crm_employee_id')->all();
+    }
+
+    /** Плоский массив всех привязанных kmp_employee_name этого сотрудника. */
+    public function getKmpEmployeeNamesAttribute(): array
+    {
+        return $this->kmpNames->pluck('kmp_employee_name')->all();
+    }
 
     public function territories(){
         return $this->hasMany(Territory::class, 'employee_id');

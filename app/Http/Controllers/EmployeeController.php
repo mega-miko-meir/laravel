@@ -10,6 +10,7 @@ use App\Models\EmployeeCredential;
 use App\Models\EmployeeEvent;
 use App\Models\Nobel\Call;
 use App\Models\Nobel\Kmp;
+use App\Notifications\EmployeeDeletedNotification;
 use App\Services\TeamService;
 use Illuminate\Http\Request;
 
@@ -63,7 +64,7 @@ class EmployeeController extends Controller
      */
     public function showEmployee(int $id)
     {
-        $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials', 'events'])->findOrFail($id);
+        $employee = Employee::with(['tablets', 'territories', 'employee_territory', 'employee_tablet', 'credentials', 'events', 'crmIds', 'kmpNames'])->findOrFail($id);
 
         $lastTerritory  = $employee->employee_territory()
             ->with(['children.employeeTerritories.employee'])
@@ -76,21 +77,27 @@ class EmployeeController extends Controller
             'lastTablet'           => $lastTablet,
             'selectedBricks'       => $lastTerritory?->bricks ?? collect(),
             'bricks'               => \App\Models\Brick::all(),
-            'availableTablets'     => \App\Models\Tablet::free()->with(['oldEmployee', 'latestAssignment.employee'])->get(),
+            // Сортировка — по медпреду, который последним пользовался планшетом
+            'availableTablets'     => \App\Models\Tablet::free()->with(['oldEmployee', 'latestAssignment.employee'])->get()
+                ->sortBy(fn($t) => $t->latestAssignment?->employee?->full_name ?? '~')
+                ->values(),
+            // Сортировка — по региональному менеджеру (сотруднику на родительской территории)
             'availableTerritories' => \App\Models\Territory::whereNull('employee_id')
                 ->with([
                     'employeeTerritories' => fn($q) => $q->with('employee')->latest('assigned_at'),
                     'parent.employee',
                 ])
-                ->get(),
+                ->get()
+                ->sortBy(fn($t) => $t->parent?->employee?->full_name ?? '~')
+                ->values(),
             'territoriesHistory'   => $employee->employee_territory()->withPivot('assigned_at', 'unassigned_at', 'id')->orderByDesc('assigned_at')->get(),
             'tabletHistories'      => \App\Models\EmployeeTablet::where('employee_id', $employee->id)->with('tablet')->orderByDesc('assigned_at')->get(),
             'currentStatus'        => $employee->events()->latest('event_date')->value('event_type'),
             // Наличие CRM/KMP-блоков определяется по локальным полям сотрудника —
             // без обращения к внешним БД, чтобы карточка открывалась мгновенно.
             // Сами данные подгружаются отдельными запросами (см. visitStatsPartial/kmpStatsPartial).
-            'hasVisits'             => (bool) $employee->crm_employee_id,
-            'hasKmp'                => (bool) $employee->kmp_employee_name,
+            'hasVisits'             => $employee->crmIds->isNotEmpty(),
+            'hasKmp'                => $employee->kmpNames->isNotEmpty(),
         ]);
     }
 
@@ -126,18 +133,22 @@ class EmployeeController extends Controller
 
     private function getVisitStats(Employee $employee): ?array
     {
-        if (!$employee->crm_employee_id) {
+        $crmIds = $employee->crm_employee_ids;
+        if (empty($crmIds)) {
             return null;
         }
 
         try {
-            $crmId = $employee->crm_employee_id;
+            sort($crmIds);
+            $employeeId = $employee->id;
 
             return \Illuminate\Support\Facades\Cache::remember(
-                "employee_visit_stats_{$crmId}",
+                'employee_visit_stats_' . implode('-', $crmIds),
                 3600,
-                function () use ($crmId) {
-                    $base = Call::where('employee_id', $crmId)
+                function () use ($crmIds, $employeeId) {
+                    // whereIn по всем привязанным CRM-аккаунтам сотрудника —
+                    // метрики агрегируются по истории найма/увольнения/повторного найма.
+                    $base = Call::whereIn('employee_id', $crmIds)
                         ->where('appointment_status', 'Выполнено')
                         ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку']);
 
@@ -173,7 +184,7 @@ class EmployeeController extends Controller
                         'pharmacyVisits' => (int) ($kpi->pharmacyVisits ?? 0),
                         'monthly'        => $monthly,
                         'topSpec'        => $topSpec,
-                        'crmId'          => $crmId,
+                        'employeeId'     => $employeeId,
                     ];
                 }
             );
@@ -185,19 +196,23 @@ class EmployeeController extends Controller
 
     private function getKmpStats(Employee $employee): ?array
     {
-        if (!$employee->kmp_employee_name) {
+        $kmpNames = $employee->kmp_employee_names;
+        if (empty($kmpNames)) {
             return null;
         }
 
         try {
-            $kmpName = $employee->kmp_employee_name;
+            sort($kmpNames);
+            $employeeId = $employee->id;
 
             return \Illuminate\Support\Facades\Cache::remember(
-                'employee_kmp_stats_' . md5($kmpName),
+                'employee_kmp_stats_' . md5(implode('|', $kmpNames)),
                 3600,
-                function () use ($kmpName) {
+                function () use ($kmpNames, $employeeId) {
                     $currentYear = (int) now()->year;
-                    $base = Kmp::where('Медпредставитель', $kmpName)
+                    // whereIn по всем привязанным именам КМП сотрудника — агрегация
+                    // покрывает случай, когда КМП завёл новую учётку при повторном найме.
+                    $base = Kmp::whereIn('Медпредставитель', $kmpNames)
                         ->where('Статус заказа', 'Доставлено')
                         ->where('Год', $currentYear);
 
@@ -224,7 +239,7 @@ class EmployeeController extends Controller
                         'lastMonth'   => (int) ($kpi->lastMonth ?? 0),
                         'monthly'     => $monthly,
                         'topBrands'   => $topBrands,
-                        'kmpName'     => $kmpName,
+                        'employeeId'  => $employeeId,
                         'year'        => $currentYear,
                     ];
                 }
@@ -270,8 +285,17 @@ class EmployeeController extends Controller
      */
     public function deleteEmployee(Employee $employee)
     {
+        $fullName = $employee->full_name;
+        $admin    = auth()->user();
+
         try {
             $employee->delete();
+
+            // Тестовая обкатка email-отправки: письмо тому же админу, который удалил.
+            if ($admin) {
+                $admin->notify(new EmployeeDeletedNotification($fullName, $admin->full_name));
+            }
+
             return redirect('/')->with('success', 'Employee deleted successfully!');
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == '23000') {

@@ -59,7 +59,14 @@ DATA_QUERY: <только SQL-запрос, без пояснений, без ma
 === СХЕМА БД (основная) ===
 
 Таблица: employees — сотрудники системы
-  id, full_name, position, crm_employee_id, phone, email
+  id, full_name, position, phone, email
+
+Таблица: employee_crm_ids — привязка сотрудников к CRM-аккаунтам (many-to-one:
+  у одного сотрудника может быть несколько строк, например после повторного найма)
+  employee_id, crm_employee_id
+
+Таблица: employee_kmp_names — привязка сотрудников к именам КМП (аналогично, many-to-one)
+  employee_id, kmp_employee_name
 
 === ПРАВИЛА SQL ===
 - Только SELECT запросы
