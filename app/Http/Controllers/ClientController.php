@@ -35,46 +35,57 @@ class ClientController extends Controller
     {
         $isPharmacy = $request->input('organization_type') === 'Аптека';
 
-        $query = $isPharmacy ? OnekeyPharmacy::query() : OnekeyDoctor::query();
-        $this->applyFilters($query, $request, $isPharmacy);
-        $idCol = $isPharmacy ? 'organization_id' : 'customer_id';
+        try {
+            $query = $isPharmacy ? OnekeyPharmacy::query() : OnekeyDoctor::query();
+            $this->applyFilters($query, $request, $isPharmacy);
+            $idCol = $isPharmacy ? 'organization_id' : 'customer_id';
 
-        // COUNT(DISTINCT id) на некэшируемом filtered-запросе — дёшево (индекс по id).
-        // Обычный paginate() тут в разы дороже: Laravel оборачивает GROUP BY + все
-        // MAX(...)-колонки в подзапрос ради подсчёта total, пересчитывая все агрегаты.
-        $total = (clone $query)->selectRaw("COUNT(DISTINCT `$idCol`) as cnt")->value('cnt');
+            // COUNT(DISTINCT id) на некэшируемом filtered-запросе — дёшево (индекс по id).
+            // Обычный paginate() тут в разы дороже: Laravel оборачивает GROUP BY + все
+            // MAX(...)-колонки в подзапрос ради подсчёта total, пересчитывая все агрегаты.
+            $total = (clone $query)->selectRaw("COUNT(DISTINCT `$idCol`) as cnt")->value('cnt');
 
-        $this->groupByUnique($query, array_keys($isPharmacy ? self::PHARMACY_COLUMNS : self::DOCTOR_COLUMNS), $idCol);
-        $perPage = 50;
-        $page    = LengthAwarePaginator::resolveCurrentPage();
-        $items   = $query->forPage($page, $perPage)->get();
+            $this->groupByUnique($query, array_keys($isPharmacy ? self::PHARMACY_COLUMNS : self::DOCTOR_COLUMNS), $idCol);
+            $perPage = 50;
+            $page    = LengthAwarePaginator::resolveCurrentPage();
+            $items   = $query->forPage($page, $perPage)->get();
 
-        $clients = new LengthAwarePaginator($items, $total, $perPage, $page, [
-            'path'  => $request->url(),
-            'query' => $request->query(),
-        ]);
+            $clients = new LengthAwarePaginator($items, $total, $perPage, $page, [
+                'path'  => $request->url(),
+                'query' => $request->query(),
+            ]);
 
-        // DISTINCT+ORDER BY по TEXT-колонкам без индекса — дорого (temp table на диске),
-        // а список специальностей/городов/регионов меняется редко. Кэшируем на 1 час,
-        // как и фильтры /calls (см. CallController).
-        $specialties = $isPharmacy
-            ? collect()
-            : Cache::remember('clients_filter_specialties', 3600, fn() => OnekeyDoctor::distinct()
-                ->whereNotNull('customer_spesiality')
-                ->where('customer_spesiality', '<>', '')
-                ->orderBy('customer_spesiality')
-                ->pluck('customer_spesiality'));
+            // DISTINCT+ORDER BY по TEXT-колонкам без индекса — дорого (temp table на диске),
+            // а список специальностей/городов/регионов меняется редко. Кэшируем на 1 час,
+            // как и фильтры /calls (см. CallController).
+            $specialties = $isPharmacy
+                ? collect()
+                : Cache::remember('clients_filter_specialties', 3600, fn() => OnekeyDoctor::distinct()
+                    ->whereNotNull('customer_spesiality')
+                    ->where('customer_spesiality', '<>', '')
+                    ->orderBy('customer_spesiality')
+                    ->pluck('customer_spesiality'));
 
-        $model     = $isPharmacy ? OnekeyPharmacy::class : OnekeyDoctor::class;
-        $cacheType = $isPharmacy ? 'pharmacy' : 'doctors';
+            $model     = $isPharmacy ? OnekeyPharmacy::class : OnekeyDoctor::class;
+            $cacheType = $isPharmacy ? 'pharmacy' : 'doctors';
 
-        $cities = Cache::remember("clients_filter_towns_$cacheType", 3600, fn() => $model::distinct()
-            ->whereNotNull('town')->where('town', '<>', '')
-            ->orderBy('town')->pluck('town'));
+            $cities = Cache::remember("clients_filter_towns_$cacheType", 3600, fn() => $model::distinct()
+                ->whereNotNull('town')->where('town', '<>', '')
+                ->orderBy('town')->pluck('town'));
 
-        $regions = Cache::remember("clients_filter_provinces_$cacheType", 3600, fn() => $model::distinct()
-            ->whereNotNull('province')->where('province', '<>', '')
-            ->orderBy('province')->pluck('province'));
+            $regions = Cache::remember("clients_filter_provinces_$cacheType", 3600, fn() => $model::distinct()
+                ->whereNotNull('province')->where('province', '<>', '')
+                ->orderBy('province')->pluck('province'));
+        } catch (\Exception $e) {
+            // Nobel DB недоступна — показываем страницу без данных вместо падения
+            $clients = new LengthAwarePaginator(collect(), 0, 50, 1, [
+                'path'  => $request->url(),
+                'query' => $request->query(),
+            ]);
+            $specialties = collect();
+            $cities      = collect();
+            $regions     = collect();
+        }
 
         return view('clients', compact(
             'clients', 'specialties', 'cities', 'regions', 'isPharmacy'
