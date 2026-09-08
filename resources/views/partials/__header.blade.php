@@ -6,16 +6,135 @@
             background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#2563eb 100%);
             box-shadow:0 1px 0 rgba(255,255,255,.08),0 2px 8px rgba(0,0,0,.18);">
 
-    {{-- Логотип --}}
-    <a href="/dashboard"
-       style="display:flex;align-items:center;text-decoration:none;opacity:.95;transition:opacity .15s;"
-       onmouseover="this.style.opacity='1';"
-       onmouseout="this.style.opacity='.95';">
-        <img src="/images/nobel-logo.png" alt="Nobel" style="height:32px;width:auto;">
-    </a>
+    {{-- Логотип + глобальный поиск --}}
+    <div style="display:flex;align-items:center;gap:20px;">
+        <a href="/dashboard"
+           style="display:flex;align-items:center;text-decoration:none;opacity:.95;transition:opacity .15s;"
+           onmouseover="this.style.opacity='1';"
+           onmouseout="this.style.opacity='.95';">
+            <img src="/images/nobel-logo.png" alt="Nobel" style="height:32px;width:auto;">
+        </a>
+
+        <div x-data="{
+                open: false, query: '', results: null, loading: false, timer: null,
+                doSearch() {
+                    clearTimeout(this.timer);
+                    const q = this.query.trim();
+                    if (q.length < 2) { this.results = null; return; }
+                    this.timer = setTimeout(() => {
+                        this.loading = true;
+                        fetch('/api/global-search?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(r => r.json())
+                            .then(data => { this.results = data; })
+                            .catch(() => { this.results = null; })
+                            .finally(() => { this.loading = false; });
+                    }, 300);
+                },
+                clear() {
+                    this.query = ''; this.results = null; this.open = false;
+                },
+                get hasResults() {
+                    return this.results && (this.results.employees.length || this.results.territories.length || this.results.tablets.length);
+                },
+             }"
+             @click.outside="open = false"
+             style="position:relative;">
+
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;
+                        background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);width:240px;">
+                <svg style="width:14px;height:14px;flex-shrink:0;color:rgba(255,255,255,.65);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input x-model="query" @input="doSearch()" @focus="open = true" @keydown.escape="clear()"
+                       type="text" autocomplete="off"
+                       placeholder="Сотрудники, территории, планшеты..."
+                       style="flex:1;border:none;outline:none;background:transparent;font-size:13px;
+                              color:#fff;">
+                <span x-show="query" @click="clear()"
+                      style="cursor:pointer;color:rgba(255,255,255,.6);font-size:15px;line-height:1;user-select:none;">×</span>
+            </div>
+
+            {{-- Выпадающая панель результатов --}}
+            <div x-show="open && query.trim().length > 0" x-cloak
+                 style="position:absolute;top:calc(100% + 6px);left:0;width:340px;z-index:200;
+                        background:#fff;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.25);
+                        max-height:60vh;overflow-y:auto;padding:6px 0;">
+
+                <template x-if="loading">
+                    <div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Ищу...</div>
+                </template>
+
+                <template x-if="!loading && query.trim().length >= 2 && !hasResults">
+                    <div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Ничего не найдено</div>
+                </template>
+
+                <template x-if="!loading && query.trim().length < 2">
+                    <div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Введите минимум 2 символа</div>
+                </template>
+
+                <template x-if="!loading && results">
+                    <div>
+                        <template x-if="results.employees.length">
+                            <div style="margin-bottom:4px;">
+                                <div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;
+                                            letter-spacing:.06em;color:#9ca3af;">Сотрудники</div>
+                                <template x-for="item in results.employees" :key="item.url">
+                                    <a :href="item.url"
+                                       style="display:flex;flex-direction:column;padding:7px 16px;text-decoration:none;"
+                                       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'">
+                                        <span x-text="item.title" style="font-size:13px;font-weight:500;color:#1f2937;"></span>
+                                        <span x-show="item.subtitle" x-text="item.subtitle" style="font-size:11px;color:#9ca3af;"></span>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template x-if="results.territories.length">
+                            <div style="margin-bottom:4px;">
+                                <div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;
+                                            letter-spacing:.06em;color:#9ca3af;">Территории</div>
+                                <template x-for="item in results.territories" :key="item.url">
+                                    <a :href="item.url"
+                                       style="display:flex;flex-direction:column;padding:7px 16px;text-decoration:none;"
+                                       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'">
+                                        <span x-text="item.title" style="font-size:13px;font-weight:500;color:#1f2937;"></span>
+                                        <span x-show="item.subtitle" x-text="item.subtitle" style="font-size:11px;color:#9ca3af;"></span>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template x-if="results.tablets.length">
+                            <div>
+                                <div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;
+                                            letter-spacing:.06em;color:#9ca3af;">Планшеты</div>
+                                <template x-for="item in results.tablets" :key="item.url">
+                                    <a :href="item.url"
+                                       style="display:flex;flex-direction:column;padding:7px 16px;text-decoration:none;"
+                                       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'">
+                                        <span x-text="item.title" style="font-size:13px;font-weight:500;color:#1f2937;"></span>
+                                        <span x-show="item.subtitle" x-text="item.subtitle" style="font-size:11px;color:#9ca3af;"></span>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
 
     {{-- Правая часть --}}
     <div style="display:flex;align-items:center;gap:4px;">
+
+        {{-- Статус Nobel CRM (появляется только если недоступна) --}}
+        <div id="nobel-status-badge" style="display:none;align-items:center;gap:6px;padding:4px 10px;
+                    border-radius:20px;background:rgba(239,68,68,.18);border:1px solid rgba(248,113,113,.4);
+                    font-size:11px;font-weight:600;color:#fecaca;margin-right:6px;white-space:nowrap;"
+             title="Nobel CRM недоступна — данные визитов, OneKey и KMP могут не загружаться">
+            <span style="width:6px;height:6px;border-radius:50%;background:#f87171;flex-shrink:0;"></span>
+            Nobel CRM недоступен
+        </div>
 
         {{-- Уведомления (только admin) --}}
         @can('admin')
@@ -89,4 +208,18 @@
         @endif
     </div>
 </div>
+
+<script>
+(function () {
+    fetch('/api/nobel-status', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.available) {
+                const el = document.getElementById('nobel-status-badge');
+                if (el) el.style.display = 'inline-flex';
+            }
+        })
+        .catch(() => {});
+})();
+</script>
 

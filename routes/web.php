@@ -13,6 +13,8 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\KmpController;
 use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\SystemStatusController;
+use App\Http\Controllers\GlobalSearchController;
 
 // Auth
 Route::post('/logout', [UserController::class, 'logout']);
@@ -47,6 +49,12 @@ Route::middleware('auth')->group(function () {
 
     // Feedback
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+
+    // System status
+    Route::get('/api/nobel-status', [SystemStatusController::class, 'nobelStatus'])->name('api.nobel-status');
+
+    // Global search (Ctrl+K)
+    Route::get('/api/global-search', [GlobalSearchController::class, 'search'])->name('api.global-search');
 });
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
