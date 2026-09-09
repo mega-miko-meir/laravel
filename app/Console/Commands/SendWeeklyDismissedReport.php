@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Notification;
 class SendWeeklyDismissedReport extends Command
 {
     protected $signature = 'report:weekly-dismissed';
-    protected $description = 'Отправить админам еженедельный список уволенных сотрудников (прошедшая пн-вс) на почту';
+    protected $description = 'Отправить админам еженедельный список уволенных и ушедших в декрет сотрудников (прошедшая пн-вс) на почту';
 
     public function handle(EmployeeEventStatsService $stats): int
     {
@@ -26,14 +26,17 @@ class SendWeeklyDismissedReport extends Command
             return self::SUCCESS;
         }
 
-        // По updated_at, а не по event_date: увольнение, отмеченное постфактум
+        // По updated_at, а не по event_date: событие, отмеченное постфактум
         // (event_date — месяцы назад), должно попасть в ближайший отчёт, а не
-        // быть пропущено из-за того, что сама дата увольнения вне диапазона недели.
-        $employees = $stats->getByUpdatedRange('dismissed', $weekStart->toDateTimeString(), $weekEnd->toDateTimeString());
-        $filePath  = $stats->buildEventsExcelFile($employees, "Уволенные, отмечено {$from} — {$to}");
+        // быть пропущено из-за того, что сама дата события вне диапазона недели.
+        $employees = $stats->getByUpdatedRange(['dismissed', 'maternity_leave'], $weekStart->toDateTimeString(), $weekEnd->toDateTimeString());
+        $dismissedCount = $employees->where('event_type', 'dismissed')->count();
+        $maternityCount = $employees->where('event_type', 'maternity_leave')->count();
+        $filePath  = $stats->buildEventsExcelFile($employees, "Уволенные и в декрете, отмечено {$from} — {$to}");
 
         Notification::send($admins, new WeeklyDismissedReportNotification(
-            $employees->count(),
+            $dismissedCount,
+            $maternityCount,
             $from,
             $to,
             $filePath,
@@ -41,7 +44,7 @@ class SendWeeklyDismissedReport extends Command
 
         @unlink($filePath);
 
-        $this->info("Отправлено {$admins->count()} админам. Уволенных за период {$from} — {$to}: {$employees->count()}.");
+        $this->info("Отправлено {$admins->count()} админам. За период {$from} — {$to}: уволено {$dismissedCount}, в декрете {$maternityCount}.");
         return self::SUCCESS;
     }
 }
