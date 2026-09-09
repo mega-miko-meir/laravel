@@ -6,8 +6,6 @@ use App\Services\EmployeeEventStatsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class DashboardController extends Controller
 {
@@ -224,7 +222,7 @@ class DashboardController extends Controller
 
         [$employeesCallback, $title] = $config[$type];
 
-        return $this->exportEventsToExcel($employeesCallback(), $title);
+        return $this->exportEventsToExcel($stats, $employeesCallback(), $title);
     }
 
     /**
@@ -287,56 +285,19 @@ class DashboardController extends Controller
 
         $title = $label . ' ' . $from . ' — ' . $to;
 
-        return $this->exportEventsToExcel($stats->getByDateRange($eventTypes, $from, $to), $title);
+        return $this->exportEventsToExcel($stats, $stats->getByDateRange($eventTypes, $from, $to), $title);
     }
 
     /**
      * Экспорт списка сотрудников по событию (ФИО / Тип события / Дата) в Excel.
      * Используется и для пресетов дашборда, и для произвольного периода.
+     * Сборка файла — в EmployeeEventStatsService::buildEventsExcelFile(),
+     * она же переиспользуется в плановой email-рассылке (SendWeeklyDismissedReport).
      */
-    private function exportEventsToExcel(Collection $employees, string $title): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    private function exportEventsToExcel(EmployeeEventStatsService $stats, Collection $employees, string $title): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        $eventLabels = [
-            'hired'             => 'Принят',
-            'dismissed'         => 'Уволен',
-            'maternity_leave'   => 'В декрете',
-            'return_from_leave' => 'Вышел из декрета',
-            'change_position'   => 'Смена должности',
-            'long_vacation'     => 'Длительный отпуск',
-            'new'               => 'Новый',
-        ];
+        $filePath = $stats->buildEventsExcelFile($employees, $title);
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-
-        $sheet->setCellValue('A1', 'ФИО');
-        $sheet->setCellValue('B1', 'ФИО англ');
-        $sheet->setCellValue('C1', 'Должность');
-        $sheet->setCellValue('D1', 'Почта');
-        $sheet->setCellValue('E1', 'Тип события');
-        $sheet->setCellValue('F1', 'Дата');
-
-        $row = 2;
-        foreach ($employees as $employee) {
-            $sheet->setCellValue('A' . $row, $employee->full_name);
-            $sheet->setCellValue('B' . $row, trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')));
-            $sheet->setCellValue('C' . $row, $employee->territory_role ?? '');
-            $sheet->setCellValue('D' . $row, $employee->email ?? '');
-            $sheet->setCellValue('E' . $row, $eventLabels[$employee->event_type] ?? $employee->event_type);
-            $sheet->setCellValue('F' . $row, \Carbon\Carbon::parse($employee->event_date)->format('d.m.Y'));
-            $row++;
-        }
-
-        foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        $fileName = 'events_' . \Illuminate\Support\Str::slug($title) . '_' . now()->format('Y-m-d_H-i') . '.xlsx';
-        $filePath = storage_path('app/' . $fileName);
-
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($filePath);
-
-        return response()->download($filePath, $fileName)->deleteFileAfterSend(true);
+        return response()->download($filePath, basename($filePath))->deleteFileAfterSend(true);
     }
 }

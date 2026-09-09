@@ -128,4 +128,55 @@ class EmployeeEventStatsService
 
         return $this->applyTypesToList($query, $types)->get();
     }
+
+    /**
+     * Собирает Excel-файл (ФИО / ФИО англ / Должность / Почта / Тип события / Дата)
+     * из коллекции, возвращённой getByDateRange/getByMonth/getByYear/getWithLatestEvent.
+     * Используется и для ручного скачивания (DashboardController), и для плановых
+     * email-рассылок (см. SendWeeklyDismissedReport). Возвращает абсолютный путь к файлу.
+     */
+    public function buildEventsExcelFile(Collection $employees, string $title): string
+    {
+        $eventLabels = [
+            'hired'             => 'Принят',
+            'dismissed'         => 'Уволен',
+            'maternity_leave'   => 'В декрете',
+            'return_from_leave' => 'Вышел из декрета',
+            'change_position'   => 'Смена должности',
+            'long_vacation'     => 'Длительный отпуск',
+            'new'               => 'Новый',
+        ];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $sheet->setCellValue('A1', 'ФИО');
+        $sheet->setCellValue('B1', 'ФИО англ');
+        $sheet->setCellValue('C1', 'Должность');
+        $sheet->setCellValue('D1', 'Почта');
+        $sheet->setCellValue('E1', 'Тип события');
+        $sheet->setCellValue('F1', 'Дата');
+
+        $row = 2;
+        foreach ($employees as $employee) {
+            $sheet->setCellValue('A' . $row, $employee->full_name);
+            $sheet->setCellValue('B' . $row, trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')));
+            $sheet->setCellValue('C' . $row, $employee->territory_role ?? '');
+            $sheet->setCellValue('D' . $row, $employee->email ?? '');
+            $sheet->setCellValue('E' . $row, $eventLabels[$employee->event_type] ?? $employee->event_type);
+            $sheet->setCellValue('F' . $row, \Carbon\Carbon::parse($employee->event_date)->format('d.m.Y'));
+            $row++;
+        }
+
+        foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'events_' . \Illuminate\Support\Str::slug($title) . '_' . now()->format('Y-m-d_H-i') . '.xlsx';
+        $filePath = storage_path('app/' . $fileName);
+
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($filePath);
+
+        return $filePath;
+    }
 }
