@@ -31,14 +31,15 @@ class WeeklyDismissedReportNotification extends Notification
         $toFmt   = \Carbon\Carbon::parse($this->to)->format('d.m.Y');
 
         $message = (new MailMessage)
-            ->subject("Уволенные за неделю ({$fromFmt} — {$toFmt})")
+            ->subject("Уволенные — отмечено на неделе {$fromFmt} — {$toFmt}")
             ->greeting('Здравствуйте!');
 
         if ($this->count > 0) {
-            $message->line("За период {$fromFmt} — {$toFmt} уволено сотрудников: {$this->count}.")
+            $message->line("На неделе {$fromFmt} — {$toFmt} в системе отмечено уволенных сотрудников: {$this->count}.")
+                     ->line('Обратите внимание: дата отметки в системе может отличаться от фактической даты увольнения (см. колонку «Дата» во вложении) — в отчёт попадают все увольнения, зафиксированные за эту неделю, включая отмеченные задним числом.')
                      ->line('Полный список — во вложении.');
         } else {
-            $message->line("За период {$fromFmt} — {$toFmt} увольнений не было.");
+            $message->line("На неделе {$fromFmt} — {$toFmt} новых увольнений в системе отмечено не было.");
         }
 
         if (is_file($this->filePath)) {

@@ -15,8 +15,10 @@ class SendWeeklyDismissedReport extends Command
 
     public function handle(EmployeeEventStatsService $stats): int
     {
-        $from = now()->subWeek()->startOfWeek()->toDateString();
-        $to   = now()->subWeek()->endOfWeek()->toDateString();
+        $weekStart = now()->subWeek()->startOfWeek();
+        $weekEnd   = now()->subWeek()->endOfWeek();
+        $from      = $weekStart->toDateString();
+        $to        = $weekEnd->toDateString();
 
         $admins = User::whereHas('role', fn($q) => $q->where('name', 'admin'))->get();
         if ($admins->isEmpty()) {
@@ -24,8 +26,11 @@ class SendWeeklyDismissedReport extends Command
             return self::SUCCESS;
         }
 
-        $employees = $stats->getByDateRange('dismissed', $from, $to);
-        $filePath  = $stats->buildEventsExcelFile($employees, "Уволенные {$from} — {$to}");
+        // По updated_at, а не по event_date: увольнение, отмеченное постфактум
+        // (event_date — месяцы назад), должно попасть в ближайший отчёт, а не
+        // быть пропущено из-за того, что сама дата увольнения вне диапазона недели.
+        $employees = $stats->getByUpdatedRange('dismissed', $weekStart->toDateTimeString(), $weekEnd->toDateTimeString());
+        $filePath  = $stats->buildEventsExcelFile($employees, "Уволенные, отмечено {$from} — {$to}");
 
         Notification::send($admins, new WeeklyDismissedReportNotification(
             $employees->count(),

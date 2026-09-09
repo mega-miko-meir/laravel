@@ -130,6 +130,21 @@ class EmployeeEventStatsService
     }
 
     /**
+     * Как getByDateRange(), но фильтрует по updated_at (когда запись реально
+     * появилась/изменилась в БД), а не по event_date (когда событие произошло
+     * по факту). Нужно для еженедельного дайджеста: админ иногда отмечает
+     * увольнение постфактум (event_date — месяцы назад), и такая запись должна
+     * попасть в ближайший отчёт, а не быть пропущена из-за старой даты события.
+     */
+    public function getByUpdatedRange(string|array $types, string $from, string $to): Collection
+    {
+        $query = $this->baseListQuery()
+            ->whereBetween('ev.updated_at', [$from, $to]);
+
+        return $this->applyTypesToList($query, $types)->get();
+    }
+
+    /**
      * Собирает Excel-файл (ФИО / ФИО англ / Должность / Почта / Тип события / Дата)
      * из коллекции, возвращённой getByDateRange/getByMonth/getByYear/getWithLatestEvent.
      * Используется и для ручного скачивания (DashboardController), и для плановых
