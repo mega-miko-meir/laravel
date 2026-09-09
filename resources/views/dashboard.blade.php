@@ -3,7 +3,28 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<h1 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:16px;">Дашборд</h1>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:20px;font-weight:700;color:#111827;margin:0;">Дашборд</h1>
+
+    @can('admin')
+        <form action="{{ route('admin.reports.weekly-dismissed') }}" method="POST"
+              onsubmit="return confirm('Отправить еженедельный отчёт об увольнениях (прошлая пн-вс) прямо сейчас, не дожидаясь понедельника?');">
+            @csrf
+            <button type="submit"
+                   style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                          background:#fff;color:#374151;border:1px solid #e2e8f0;border-radius:8px;
+                          font-size:13px;font-weight:600;cursor:pointer;"
+                   onmouseover="this.style.background='#f9fafb';this.style.borderColor='#c7d2fe';"
+                   onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0';">
+                <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Отправить еженедельный отчёт сейчас
+            </button>
+        </form>
+    @endcan
+</div>
 
 @php
     $cards = [

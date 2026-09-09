@@ -9,6 +9,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\CrmMappingController;
 use App\Http\Controllers\KmpMappingController;
 use App\Http\Controllers\DataQualityController;
+use App\Http\Controllers\ReportController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -40,5 +41,7 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::post('/admin/kmp-mapping/link', [KmpMappingController::class, 'link'])->name('admin.kmp-mapping.link');
 
     Route::get('/admin/data-quality', [DataQualityController::class, 'index'])->name('admin.data-quality');
+
+    Route::post('/admin/reports/weekly-dismissed', [ReportController::class, 'sendWeeklyDismissed'])->name('admin.reports.weekly-dismissed');
 
 });
