@@ -26,12 +26,14 @@ Route::middleware(['auth', 'can:editor'])->group(function () {
     Route::resource('tasks', TaskController::class);
 });
 
-Route::middleware('auth')->group(function () {
-
-    // Chatbot
+Route::middleware(['auth', 'can:admin'])->group(function () {
+    // Chatbot — пока доступен только админам
     Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot');
     Route::post('/chatbot', [ChatbotController::class, 'handle']);
     Route::delete('/chatbot/history', [ChatbotController::class, 'clearHistory'])->name('chatbot.clear');
+});
+
+Route::middleware('auth')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
