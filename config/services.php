@@ -41,12 +41,17 @@ return [
 
     'gemini' => [
         'key'   => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
     ],
 
     'anthropic' => [
         'key'   => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
+    ],
+
+    'grok' => [
+        'key'   => env('GROK_API_KEY'),
+        'model' => env('GROK_MODEL', 'grok-4-fast'),
     ],
 
 ];
