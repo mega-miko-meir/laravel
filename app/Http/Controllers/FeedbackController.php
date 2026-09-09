@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 use App\Notifications\NewFeedbackNotification;
 
 class FeedbackController extends Controller
@@ -27,12 +28,12 @@ class FeedbackController extends Controller
                 $q->where('name', 'admin');
             })->get();
 
-        // foreach ($admins as $admin) {
-        //     info("Отправляем уведомление админу: {$admin->full_name}, email: {$admin->email}");
-        // }
-
-        Notification::send($admins, new NewFeedbackNotification($feedback));
-
+        try {
+            Notification::send($admins, new NewFeedbackNotification($feedback));
+        } catch (\Exception $e) {
+            // Обратная связь уже сохранена в БД — сбой отправки письма не должен ломать запрос пользователя
+            Log::error('Feedback notification send failed', ['feedback_id' => $feedback->id, 'error' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Сообщение отправлено');
 

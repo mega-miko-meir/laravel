@@ -42,7 +42,7 @@ class NewFeedbackNotification extends Notification
             ->line('Заголовок: ' . $this->feedback->title)
             ->line('Сообщение:')
             ->line($this->feedback->message)
-            ->action('Открыть в системе', route('admin.notifications.show', $this->feedback->id))
+            ->action('Открыть в системе', route('admin.notifications.show', $this->id))
             ->salutation('— ' . config('app.name'));
     }
 
