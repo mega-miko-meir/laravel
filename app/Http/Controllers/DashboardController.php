@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Notifications\EmployeeExportEmailNotification;
 use App\Services\EmployeeEventStatsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -200,6 +202,7 @@ class DashboardController extends Controller
             'employees'  => $employeesCallback(),
             'title'      => $title,
             'exportUrl'  => route('employees.filtered.export', $type),
+            'emailUrl'   => route('employees.filtered.email', $type),
         ]);
     }
 
@@ -223,6 +226,28 @@ class DashboardController extends Controller
         [$employeesCallback, $title] = $config[$type];
 
         return $this->exportEventsToExcel($stats, $employeesCallback(), $title);
+    }
+
+    public function filteredListEmail(string $type, EmployeeEventStatsService $stats)
+    {
+        $config = [
+            'hired_total'        => [fn() => $stats->getWithLatestEvent(['hired', 'return_from_leave']), 'Активные сотрудники'],
+            'fired_this_month'   => [fn() => $stats->getByMonth('dismissed', now()->month, now()->year),        'Уволенные в этом месяце'],
+            'hired_this_month'   => [fn() => $stats->getByMonth('hired', now()->month, now()->year),            'Нанятые в этом месяце'],
+            'on_maternity_leave' => [fn() => $stats->getWithLatestEvent('maternity_leave'),                     'В декрете'],
+            'fired_last_month'   => [fn() => $stats->getByMonth('dismissed', now()->subMonth()->month, now()->subMonth()->year), 'Уволенные в прошлом месяце'],
+            'hired_last_month'   => [fn() => $stats->getByMonth('hired', now()->subMonth()->month, now()->subMonth()->year),     'Нанятые в прошлом месяце'],
+            'fired_this_year'    => [fn() => $stats->getByYear('dismissed', now()->year),                       'Уволенные в этом году'],
+            'hired_this_year'    => [fn() => $stats->getByYear('hired', now()->year),                           'Нанятые в этом году'],
+        ];
+
+        if (!isset($config[$type])) {
+            abort(404);
+        }
+
+        [$employeesCallback, $title] = $config[$type];
+
+        return $this->emailEventsExcel($stats, $employeesCallback(), $title);
     }
 
     /**
@@ -264,6 +289,7 @@ class DashboardController extends Controller
             'employees' => $stats->getByDateRange($eventTypes, $from, $to),
             'title'     => $title,
             'exportUrl' => route('employees.periodList.export', ['type' => $type, 'date_from' => $from, 'date_to' => $to]),
+            'emailUrl'  => route('employees.periodList.email', ['type' => $type, 'date_from' => $from, 'date_to' => $to]),
         ]);
     }
 
@@ -288,6 +314,27 @@ class DashboardController extends Controller
         return $this->exportEventsToExcel($stats, $stats->getByDateRange($eventTypes, $from, $to), $title);
     }
 
+    public function periodListEmail(string $type, Request $request, EmployeeEventStatsService $stats)
+    {
+        $config = $this->periodTypeConfig($type);
+
+        if (!$config) {
+            abort(404);
+        }
+        [$label, $eventTypes] = $config;
+
+        $from = $request->input('date_from');
+        $to   = $request->input('date_to');
+
+        if (!$from || !$to) {
+            abort(400, 'Не указан период');
+        }
+
+        $title = $label . ' ' . $from . ' — ' . $to;
+
+        return $this->emailEventsExcel($stats, $stats->getByDateRange($eventTypes, $from, $to), $title);
+    }
+
     /**
      * Экспорт списка сотрудников по событию (ФИО / Тип события / Дата) в Excel.
      * Используется и для пресетов дашборда, и для произвольного периода.
@@ -299,5 +346,27 @@ class DashboardController extends Controller
         $filePath = $stats->buildEventsExcelFile($employees, $title);
 
         return response()->download($filePath, basename($filePath))->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Тот же Excel, что и exportEventsToExcel(), но отправляется письмом на почту
+     * текущего пользователя, а не скачивается. Сбой отправки не должен ронять
+     * запрос — файл уже собран, просто сообщаем об ошибке через флэш-сообщение.
+     */
+    private function emailEventsExcel(EmployeeEventStatsService $stats, Collection $employees, string $title)
+    {
+        $filePath = $stats->buildEventsExcelFile($employees, $title);
+
+        try {
+            auth()->user()->notify(new EmployeeExportEmailNotification($title, $employees->count(), $filePath));
+            $result = back()->with('success', 'Файл отправлен на почту');
+        } catch (\Exception $e) {
+            Log::error('Export email send failed', ['title' => $title, 'error' => $e->getMessage()]);
+            $result = back()->with('error', 'Не удалось отправить письмо. Попробуйте позже.');
+        } finally {
+            @unlink($filePath);
+        }
+
+        return $result;
     }
 }

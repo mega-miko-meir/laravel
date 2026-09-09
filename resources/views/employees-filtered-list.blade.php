@@ -26,20 +26,40 @@
         </h1>
     </div>
 
-    @if(!empty($exportUrl))
-        <a href="{{ $exportUrl }}"
-           style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
-                  background:#2563eb;color:#fff;border:none;border-radius:8px;
-                  font-size:13px;font-weight:600;text-decoration:none;"
-           onmouseover="this.style.background='#1d4ed8';"
-           onmouseout="this.style.background='#2563eb';">
-            <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            Выгрузить в Excel
-        </a>
-    @endif
+    <div style="display:flex;align-items:center;gap:8px;">
+        @if(!empty($emailUrl))
+            <form action="{{ $emailUrl }}" method="POST">
+                @csrf
+                <button type="submit"
+                       style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                              background:#fff;color:#374151;border:1px solid #e2e8f0;border-radius:8px;
+                              font-size:13px;font-weight:600;cursor:pointer;"
+                       onmouseover="this.style.background='#f9fafb';this.style.borderColor='#c7d2fe';"
+                       onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0';">
+                    <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    Отправить на почту
+                </button>
+            </form>
+        @endif
+
+        @if(!empty($exportUrl))
+            <a href="{{ $exportUrl }}"
+               style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                      background:#2563eb;color:#fff;border:none;border-radius:8px;
+                      font-size:13px;font-weight:600;text-decoration:none;"
+               onmouseover="this.style.background='#1d4ed8';"
+               onmouseout="this.style.background='#2563eb';">
+                <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Выгрузить в Excel
+            </a>
+        @endif
+    </div>
 </div>
 
 {{-- Поиск --}}

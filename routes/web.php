@@ -39,8 +39,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
     Route::get('employees/list/{type}', [DashboardController::class, 'filteredList'])->name('employees.filtered');
     Route::get('employees/list/{type}/export', [DashboardController::class, 'filteredListExport'])->name('employees.filtered.export');
+    Route::post('employees/list/{type}/email', [DashboardController::class, 'filteredListEmail'])->name('employees.filtered.email');
     Route::get('employees/period-list/{type}', [DashboardController::class, 'periodList'])->name('employees.periodList');
     Route::get('employees/period-list/{type}/export', [DashboardController::class, 'periodListExport'])->name('employees.periodList.export');
+    Route::post('employees/period-list/{type}/email', [DashboardController::class, 'periodListEmail'])->name('employees.periodList.email');
 
     // Exports
     Route::post('/export-excel', [EmployeeDataController::class, 'exportToExcel'])->name('export.excel');
