@@ -50,6 +50,9 @@
             request()->except('_token', 'sort', 'dir', 'page'),
             fn($v) => $v !== '' && $v !== null && (!is_array($v) || count($v) > 0)
         ));
+        function kmpNum($n) {
+            return number_format($n ?? 0, 0, '.', ' ');
+        }
     @endphp
     <div x-data="{ exportOpen: false }" style="margin-bottom:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -249,19 +252,19 @@
 
         <div class="kmp-card">
             <div class="kmp-label">Сумма (KZT)</div>
-            <div class="kmp-val" style="color:#0ea5e9;">{{ number_format($kpi->total_amount ?? 0) }}</div>
+            <div class="kmp-val" style="color:#0ea5e9;">{{ kmpNum($kpi->total_amount) }}</div>
             <div class="kmp-sub">после скидок</div>
         </div>
 
         <div class="kmp-card">
             <div class="kmp-label">Заказы</div>
-            <div class="kmp-val">{{ number_format($kpi->total_orders ?? 0) }}</div>
+            <div class="kmp-val">{{ kmpNum($kpi->total_orders) }}</div>
             <div class="kmp-sub">строк</div>
         </div>
 
         <div class="kmp-card">
             <div class="kmp-label">Упаковки</div>
-            <div class="kmp-val" style="color:#16a34a;">{{ number_format($kpi->total_qty ?? 0) }}</div>
+            <div class="kmp-val" style="color:#16a34a;">{{ kmpNum($kpi->total_qty) }}</div>
             <div class="kmp-sub">доставлено</div>
         </div>
 
@@ -305,7 +308,7 @@
                             $pct = max(4, round($m->amount / $maxAmt * 100));
                         @endphp
                         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"
-                             title="{{ $lbl }}: {{ number_format($m->amount) }} KZT / {{ number_format($m->qty) }} уп.">
+                             title="{{ $lbl }}: {{ kmpNum($m->amount) }} KZT / {{ kmpNum($m->qty) }} уп.">
                             <div style="width:100%;height:80px;display:flex;align-items:flex-end;">
                                 <div style="width:100%;height:{{ $pct }}%;background:linear-gradient(180deg,#38bdf8,#0ea5e9);border-radius:3px 3px 0 0;min-height:3px;"></div>
                             </div>
@@ -395,8 +398,8 @@
                         <td class="kmp-td" style="color:#94a3b8;width:32px;">{{ $i + 1 }}</td>
                         <td class="kmp-td" style="font-weight:500;">{{ $ph->name }}</td>
                         <td class="kmp-td" style="color:#64748b;">{{ $ph->city }}</td>
-                        <td class="kmp-td" style="text-align:right;color:#374151;font-weight:500;">{{ number_format($ph->qty) }}</td>
-                        <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;">{{ number_format($ph->amount) }}</td>
+                        <td class="kmp-td" style="text-align:right;color:#374151;font-weight:500;">{{ kmpNum($ph->qty) }}</td>
+                        <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;">{{ kmpNum($ph->amount) }}</td>
                         <td class="kmp-td" style="text-align:right;color:#64748b;">{{ $ph->orders }}</td>
                     </tr>
                 @endforeach
@@ -448,8 +451,8 @@
                         <td class="kmp-td" style="white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;">{{ $row->{'Медпредставитель'} }}</td>
                         <td class="kmp-td" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $row->{'Название аптеки'} }}</td>
                         <td class="kmp-td">{{ $row->{'Брэнд'} }}</td>
-                        <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;white-space:nowrap;">{{ number_format($row->{'Amount_disc'}, 0, '.', ' ') }}</td>
-                        <td class="kmp-td" style="text-align:right;">{{ (int) $row->{'Дост_колво'} }}</td>
+                        <td class="kmp-td" style="text-align:right;font-weight:600;color:#0ea5e9;white-space:nowrap;">{{ kmpNum($row->{'Amount_disc'}) }}</td>
+                        <td class="kmp-td" style="text-align:right;">{{ kmpNum($row->{'Дост_колво'}) }}</td>
                         <td class="kmp-td">
                             @php $st = $row->{'Статус заказа'}; @endphp
                             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;
