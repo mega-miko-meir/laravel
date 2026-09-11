@@ -78,9 +78,10 @@
                                       d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2"/>
                             </svg>
                         </div>
-                        <div style="max-width:70%; background:#fff; color:#111827; padding:10px 14px;
+                        <div class="bot-bubble" data-raw="{{ $msg['content'] }}"
+                             style="max-width:80%; background:#fff; color:#111827; padding:10px 14px;
                                     border-radius:14px 14px 14px 4px; font-size:14px; line-height:1.5;
-                                    border:1px solid #e5e7eb; white-space:pre-wrap;">{{ $msg['content'] }}</div>
+                                    border:1px solid #e5e7eb;"></div>
                     </div>
                 @endif
             @endforeach
@@ -160,8 +161,122 @@ const csrfToken   = '{{ csrf_token() }}';
 
 // Прокрутка вниз при загрузке если есть история
 window.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.bot-bubble[data-raw]').forEach(el => {
+        renderMessageContent(el, el.dataset.raw);
+    });
     chatBox.scrollTop = chatBox.scrollHeight;
 });
+
+// Копирование в буфер с фолбэком для не-HTTPS окружений (navigator.clipboard требует secure context)
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+    return Promise.resolve();
+}
+
+// Парсинг Markdown-таблицы: возвращает {header, rows} или null, если это не таблица
+function parseMarkdownTable(block) {
+    const lines = block.trim().split('\n').filter(l => l.trim() !== '');
+    if (lines.length < 2) return null;
+    const isRow = l => /^\s*\|.*\|\s*$/.test(l);
+    if (!lines.every(isRow)) return null;
+    if (!/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[1])) return null;
+
+    const parseRow = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+    return { header: parseRow(lines[0]), rows: lines.slice(2).map(parseRow) };
+}
+
+function buildTableElement(table) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin:6px 0;overflow-x:auto;';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Скопировать таблицу';
+    btn.style.cssText = 'font-size:11px;padding:4px 9px;margin-bottom:6px;border:1px solid #e5e7eb;' +
+        'border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;';
+    btn.onmouseover = () => btn.style.background = '#f0f4ff';
+    btn.onmouseout  = () => btn.style.background = '#f9fafb';
+    btn.onclick = () => {
+        const tsv = [table.header, ...table.rows].map(r => r.join('\t')).join('\n');
+        copyToClipboard(tsv).then(() => {
+            const old = btn.textContent;
+            btn.textContent = 'Скопировано! Вставьте в Excel (Ctrl+V)';
+            setTimeout(() => { btn.textContent = old; }, 2000);
+        });
+    };
+    wrap.appendChild(btn);
+
+    const tableEl = document.createElement('table');
+    tableEl.style.cssText = 'border-collapse:collapse;width:100%;font-size:13px;';
+
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    table.header.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        th.style.cssText = 'border:1px solid #e5e7eb;padding:5px 9px;background:#f9fafb;text-align:left;white-space:nowrap;';
+        trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    tableEl.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    table.rows.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+            td.style.cssText = 'border:1px solid #e5e7eb;padding:5px 9px;';
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+    tableEl.appendChild(tbody);
+    wrap.appendChild(tableEl);
+
+    return wrap;
+}
+
+// Рендерит текст ответа бота в контейнер: markdown-таблицы -> <table>, остальное -> обычный текст
+function renderMessageContent(container, text) {
+    container.innerHTML = '';
+    container.style.whiteSpace = 'normal';
+    const lines = String(text).split('\n');
+    const isTableLine = l => /^\s*\|.*\|\s*$/.test(l);
+    let i = 0;
+
+    while (i < lines.length) {
+        if (isTableLine(lines[i])) {
+            let j = i;
+            while (j < lines.length && isTableLine(lines[j])) j++;
+            const table = parseMarkdownTable(lines.slice(i, j).join('\n'));
+            if (table) {
+                container.appendChild(buildTableElement(table));
+                i = j;
+                continue;
+            }
+        }
+        let j = i;
+        while (j < lines.length && !isTableLine(lines[j])) j++;
+        const textBlock = lines.slice(i, j).join('\n');
+        if (textBlock.trim() !== '') {
+            const p = document.createElement('div');
+            p.style.whiteSpace = 'pre-wrap';
+            p.textContent = textBlock;
+            container.appendChild(p);
+        }
+        i = j;
+    }
+}
 
 // Enter отправляет, Shift+Enter — новая строка
 userInput.addEventListener('keydown', e => {
@@ -223,10 +338,13 @@ function appendMessage(sender, text) {
     }
 
     const bubble = document.createElement('div');
-    bubble.style.cssText = sender === 'user'
-        ? 'max-width:70%;background:#2563eb;color:#fff;padding:10px 14px;border-radius:14px 14px 4px 14px;font-size:14px;line-height:1.5;'
-        : 'max-width:70%;background:#fff;color:#111827;padding:10px 14px;border-radius:14px 14px 14px 4px;font-size:14px;line-height:1.5;border:1px solid #e5e7eb;white-space:pre-wrap;';
-    bubble.textContent = text;
+    if (sender === 'user') {
+        bubble.style.cssText = 'max-width:70%;background:#2563eb;color:#fff;padding:10px 14px;border-radius:14px 14px 4px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap;';
+        bubble.textContent = text;
+    } else {
+        bubble.style.cssText = 'max-width:80%;background:#fff;color:#111827;padding:10px 14px;border-radius:14px 14px 14px 4px;font-size:14px;line-height:1.5;border:1px solid #e5e7eb;';
+        renderMessageContent(bubble, text);
+    }
 
     wrap.appendChild(bubble);
     chatBox.appendChild(wrap);
