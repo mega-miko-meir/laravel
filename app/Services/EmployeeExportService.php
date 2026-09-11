@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Employee;
+use App\Models\Nobel\Call;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -55,7 +57,44 @@ class EmployeeExportService
                 in_array($e->latestEvent?->event_type, ['dismissed', 'maternity_leave'])
                     ? \Carbon\Carbon::parse($e->latestEvent->event_date)->format('d.m.Y')
                     : '',
+            'kmp_full_name' => fn($e) => implode(', ', $e->kmp_employee_names),
+            'crm_full_name' => fn($e) => implode(', ', array_map(
+                fn($id) => $this->crmNameMap[$id] ?? "#{$id}",
+                $e->crm_employee_ids
+            )),
         ];
+    }
+
+    /** @var array<int|string, string> crm_employee_id => ФИО из qs_calls, заполняется перед выгрузкой */
+    private array $crmNameMap = [];
+
+    /**
+     * Разово подтягивает реальные ФИО из Nobel CRM (qs_calls.employee) для всех
+     * crm_employee_id, привязанных к выгружаемым сотрудникам — одним запросом,
+     * а не по одному на сотрудника. employee_crm_ids хранит только числовой ID,
+     * само ФИО есть только в CRM. Деградирует тихо, если Nobel DB недоступна —
+     * тогда в колонке останется "#<id>" вместо имени (см. exportMap: crm_full_name).
+     */
+    private function preloadCrmNames(\Illuminate\Support\Collection $employees): void
+    {
+        $ids = $employees->flatMap(fn($e) => $e->crm_employee_ids)->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        try {
+            $this->crmNameMap = Call::whereIn('employee_id', $ids)
+                ->whereNotNull('employee')
+                ->select('employee_id', 'employee')
+                ->distinct()
+                ->get()
+                ->mapWithKeys(fn($row) => [$row->employee_id => trim($row->employee)])
+                ->all();
+        } catch (\Exception $e) {
+            Log::warning('Не удалось подтянуть ФИО из Nobel CRM для экспорта сотрудников', ['error' => $e->getMessage()]);
+            $this->crmNameMap = [];
+        }
     }
 
     /**
@@ -78,6 +117,8 @@ class EmployeeExportService
             'role' => 'Позиция',
             'status' => 'Статус',
             'status_event_date' => 'Дата увольнения/декрета',
+            'kmp_full_name' => 'ФИО по КМП',
+            'crm_full_name' => 'ФИО по CRM',
         ][$key] ?? $key;
     }
 
@@ -105,8 +146,13 @@ class EmployeeExportService
         ));
 
         $employees = Employee::withLatestEvent()
+            ->with(['crmIds', 'kmpNames'])
             ->whereHas('latestEvent', fn($q) => $q->whereIn('event_type', $eventTypes))
             ->get();
+
+        if (in_array('crm_full_name', $columns)) {
+            $this->preloadCrmNames($employees);
+        }
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();

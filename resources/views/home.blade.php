@@ -74,6 +74,8 @@
                             ['hiring_date','Дата приема',false],
                             ['status','Статус',false],
                             ['status_event_date','Дата увольнения/декрета',false],
+                            ['crm_full_name','ФИО по CRM',false],
+                            ['kmp_full_name','ФИО по КМП',false],
                         ] as [$val,$lbl,$chk])
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                                 <input type="checkbox" name="columns[]" value="{{ $val }}" {{ $chk ? 'checked' : '' }}
