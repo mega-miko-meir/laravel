@@ -38,11 +38,10 @@ class WeeklyDismissedReportNotification extends Notification
             ->greeting('Здравствуйте!');
 
         if ($total > 0) {
-            $message->line("На неделе {$fromFmt} — {$toFmt} в системе отмечено: уволено — {$this->dismissedCount}, ушло в декрет — {$this->maternityCount}.")
-                     ->line('Обратите внимание: дата отметки в системе может отличаться от фактической даты события (см. колонку «Дата» во вложении) — в отчёт попадают все события, зафиксированные за эту неделю, включая отмеченные задним числом.')
-                     ->line('Полный список — во вложении.');
+            $message->line("За неделю {$fromFmt} — {$toFmt}: уволено — {$this->dismissedCount}, в декрете — {$this->maternityCount}.")
+                     ->line('Список — во вложении. Дата в файле — фактическая дата события, она может отличаться от даты добавления в систему.');
         } else {
-            $message->line("На неделе {$fromFmt} — {$toFmt} новых увольнений и уходов в декрет в системе отмечено не было.");
+            $message->line("За неделю {$fromFmt} — {$toFmt} увольнений и декретов не было.");
         }
 
         if (is_file($this->filePath)) {
