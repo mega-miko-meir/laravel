@@ -140,6 +140,8 @@
                 <li>{!! $navLink('/users', 'Пользователи', $icons['users'], request()->is('users')) !!}</li>
                 <li>{!! $navLink(route('activity.logs'), 'Активность', $icons['activity'], request()->is('activity')) !!}</li>
                 <li>{!! $navLink(route('admin.data-quality'), 'Проверка данных', $icons['dq'], request()->is('admin/data-quality')) !!}</li>
+                <li>{!! $navLink(route('admin.territory-changes'), 'Смена территорий', $icons['territory'], request()->is('admin/territory-changes*')) !!}</li>
+                <li>{!! $navLink(route('admin.double-visit-plan'), 'План двойных визитов', $icons['calls'], request()->is('admin/double-visit-plan*')) !!}</li>
             </ul>
         </li>
         @endcan

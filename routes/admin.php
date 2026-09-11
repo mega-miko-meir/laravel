@@ -10,6 +10,8 @@ use App\Http\Controllers\CrmMappingController;
 use App\Http\Controllers\KmpMappingController;
 use App\Http\Controllers\DataQualityController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TerritoryChangeController;
+use App\Http\Controllers\DoubleVisitPlanController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -43,5 +45,11 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/data-quality', [DataQualityController::class, 'index'])->name('admin.data-quality');
 
     Route::post('/admin/reports/weekly-dismissed', [ReportController::class, 'sendWeeklyDismissed'])->name('admin.reports.weekly-dismissed');
+
+    Route::get('/admin/territory-changes', [TerritoryChangeController::class, 'index'])->name('admin.territory-changes');
+    Route::get('/admin/territory-changes/export', [TerritoryChangeController::class, 'export'])->name('admin.territory-changes.export');
+
+    Route::get('/admin/double-visit-plan', [DoubleVisitPlanController::class, 'index'])->name('admin.double-visit-plan');
+    Route::get('/admin/double-visit-plan/export', [DoubleVisitPlanController::class, 'export'])->name('admin.double-visit-plan.export');
 
 });
