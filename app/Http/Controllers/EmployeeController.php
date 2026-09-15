@@ -435,7 +435,15 @@ class EmployeeController extends Controller
 
     public function myTeam(TeamService $teamService)
     {
+        // getTeamStructure() уже eager-load'ит всё дерево территорий одним проходом
+        // и готовит $ffm->ffmStats/$ffm->preparedRms; groupByDepartment() строит
+        // готовую по-департаментную разбивку (включая team-view) из ЭТИХ же данных,
+        // без единого дополнительного запроса. Раньше view игнорировал это и сам
+        // дёргал ->employeeTerritories() (со скобками — свежий SQL, а не обращение
+        // к уже загрученной связи) внутри вложенных циклов, по несколько раз на
+        // одну и ту же территорию — N+1, упиравшийся в лимит 30 секунд.
         $ffms = $teamService->getTeamStructure();
+        $grouped = $teamService->groupByDepartment($ffms);
 
         $productTerritories = \App\Models\Territory::where('role', 'Product')
             ->with(['employeeTerritories.employee.latestEvent'])
@@ -445,7 +453,7 @@ class EmployeeController extends Controller
             ->get()
             ->groupBy(fn($t) => $t->department ?? 'Без департамента');
 
-        return view('my-team', compact('ffms', 'productTerritories'));
+        return view('my-team', compact('grouped', 'productTerritories'));
     }
 
 

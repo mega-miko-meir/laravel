@@ -6,70 +6,8 @@
 </h2>
 
 
-@foreach($ffms->sortByDesc(fn($f) => $f->lastTerritory?->department)->groupBy(fn($f) => $f->lastTerritory->department ?? 'Без департамента') as $deptName => $groupedFfms)
+@foreach($grouped as $deptName => $dept)
 <div x-data="{ open2: false }">
-
-        @php
-            $rmTotal = 0;
-            $rmUsed  = 0;
-
-            $repTotal = 0;
-            $repUsed  = 0;
-
-            // team => ['used' => 0, 'total' => 0]
-            $teamsStats = [];
-
-            foreach ($groupedFfms as $ffm) {
-                if (!$ffm->lastTerritory) continue;
-
-                // 🔹 RM — дочерние территории FFM
-                foreach ($ffm->lastTerritory->children as $rmTerritory) {
-                    $rmTotal++;
-
-                    $rmActive = $rmTerritory->employeeTerritories()
-                        ->whereNull('unassigned_at')
-                        ->latest('assigned_at')
-                        ->first();
-
-                    if ($rmActive) {
-                        $rmUsed++;
-                    }
-
-                    // 🔹 Rep — дочерние территории RM
-                    foreach ($rmTerritory->children as $repTerritory) {
-                        $repTotal++;
-
-                        $repActive = $repTerritory->employeeTerritories()
-                            ->whereNull('unassigned_at')
-                            ->latest('assigned_at')
-                            ->first();
-
-                        if ($repActive) {
-                            $repUsed++;
-                        }
-
-                        $team = $repTerritory->team ?? 'Без группы';
-
-                        if (!isset($teamsStats[$team])) {
-                            $teamsStats[$team] = [
-                                'used'  => 0,
-                                'total' => 0,
-                            ];
-                        }
-
-                        $teamsStats[$team]['total']++;
-
-                        if ($repActive) {
-                            $teamsStats[$team]['used']++;
-                        }
-                    }
-                }
-            }
-
-            // 🔤 сортировка team по алфавиту
-            ksort($teamsStats, SORT_NATURAL | SORT_FLAG_CASE);
-        @endphp
-
 
     <div @click="open2 = !open2" class="cursor-pointer flex flex-wrap items-center gap-2 font-bold uppercase text-xs mb-2 mt-6">
         {{-- Название департамента --}}
@@ -79,18 +17,18 @@
 
         {{-- RM --}}
         <span class="text-blue-600">
-            RM {{ $rmUsed }}/{{ $rmTotal }}
+            RM {{ $dept['stats']['rmUsed'] }}/{{ $dept['stats']['rmTotal'] }}
         </span>
 
         {{-- Rep --}}
         <span class="text-green-600">
-            Rep {{ $repUsed }}/{{ $repTotal }}
+            Rep {{ $dept['stats']['repUsed'] }}/{{ $dept['stats']['repTotal'] }}
         </span>
 
         {{-- Teams --}}
-        @foreach($teamsStats as $teamName => $stat)
+        @foreach($dept['stats']['teams'] as $teamName => $stat)
             <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-800">
-                {{ $teamName }} {{ $stat['used'] }}/{{ $stat['total'] }}
+                {{ $teamName }} {{ $stat['used'] ?? 0 }}/{{ $stat['total'] }}
             </span>
         @endforeach
 
@@ -124,74 +62,8 @@
 
         <div x-show="viewMode === 'ffm'" x-cloak>
             <div  x-show="open2">
-                @foreach($groupedFfms as $ffm)
-                    @php
-                        $lastTerritory = $ffm->lastTerritory;
-
-                        // RM
-                        $rmTotal = 0;
-                        $rmUsed  = 0;
-
-                        // Rep (общие)
-                        $repTotal = 0;
-                        $repUsed  = 0;
-
-                        // Rep по team
-                        // team => ['total' => 0, 'used' => 0]
-                        $teamsStats = [];
-
-                        if ($lastTerritory) {
-                            foreach ($lastTerritory->children as $rmTerritory) {
-
-                                // 🔹 RM
-                                $rmTotal++;
-
-                                $rmActive = $rmTerritory->employeeTerritories()
-                                    ->whereNull('unassigned_at')
-                                    ->latest('assigned_at')
-                                    ->first();
-
-                                if ($rmActive) {
-                                    $rmUsed++;
-                                }
-
-                                // 🔹 Rep внутри RM
-                                foreach ($rmTerritory->children as $repTerritory) {
-
-                                    $repTotal++;
-
-                                    $repActive = $repTerritory->employeeTerritories()
-                                        ->whereNull('unassigned_at')
-                                        ->latest('assigned_at')
-                                        ->first();
-
-                                    if ($repActive) {
-                                        $repUsed++;
-                                    }
-
-                                    $team = $repTerritory->team ?? 'Без группы';
-
-                                    if (!isset($teamsStats[$team])) {
-                                        $teamsStats[$team] = [
-                                            'total' => 0,
-                                            'used'  => 0,
-                                        ];
-                                    }
-
-                                    $teamsStats[$team]['total']++;
-
-                                    if ($repActive) {
-                                        $teamsStats[$team]['used']++;
-                                    }
-                                }
-                            }
-                        }
-
-                        // 🔤 сортировка team по алфавиту
-                        ksort($teamsStats, SORT_NATURAL | SORT_FLAG_CASE);
-                    @endphp
-
-
+                @foreach($dept['ffms'] as $ffm)
+                    @continue(!$ffm->lastTerritory)
 
                     <h2 class="mb-3 mt-4 flex flex-wrap items-center gap-2">
 
@@ -204,52 +76,31 @@
                         {{-- RM --}}
                         <span class="px-2 py-0.5 rounded-full text-xs font-medium
                                     bg-blue-100 text-blue-700">
-                            RM {{ $rmUsed }}/{{ $rmTotal }}
+                            RM {{ $ffm->ffmStats['rmUsed'] }}/{{ $ffm->ffmStats['rmTotal'] }}
                         </span>
 
                         {{-- Rep --}}
                         <span class="px-2 py-0.5 rounded-full text-xs font-medium
                                     bg-green-100 text-green-700">
-                            Rep {{ $repUsed }}/{{ $repTotal }}
+                            Rep {{ $ffm->ffmStats['repUsed'] }}/{{ $ffm->ffmStats['repTotal'] }}
                         </span>
 
                         {{-- Rep по team --}}
-                        @foreach($teamsStats as $teamName => $stat)
+                        @foreach($ffm->ffmStats['teams'] as $teamName => $stat)
                             <span class="px-2 py-0.5 rounded-full text-xs font-medium
                                         bg-gray-100 text-gray-800">
-                                {{ $teamName }} {{ $stat['used'] }}/{{ $stat['total'] }}
+                                {{ $teamName }} {{ $stat['used'] ?? 0 }}/{{ $stat['total'] }}
                             </span>
                         @endforeach
 
                     </h2>
 
-
-
-                    @if($lastTerritory && $lastTerritory->children->isNotEmpty())
+                    @if($ffm->preparedRms->isNotEmpty())
                         <div x-data="{ open: false }" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.75rem">
 
-                            @foreach($lastTerritory->children->sortBy('city') as $child)
+                            @foreach($ffm->preparedRms->sortBy('city') as $rm)
 
                                 <div class="w-full bg-white rounded-xl shadow p-2">
-                                    @php
-                                        $allPlaces = 0;
-                                        $occupiedPlaces = 0;
-
-                                        foreach ($child->children as $memberTerritory) {
-                                            $allPlaces++;
-
-                                            $activeAssignment = $memberTerritory->employeeTerritories()
-                                                ->whereNull('unassigned_at')
-                                                ->latest('assigned_at')
-                                                ->first();
-
-                                            if ($activeAssignment) {
-                                                $occupiedPlaces++;
-                                            }
-                                        }
-
-                                        $freePlaces = $allPlaces - $occupiedPlaces;
-                                    @endphp
 
                                     <div @click="open = !open"
                                         class="cursor-pointer relative flex justify-between items-center p-3">
@@ -257,48 +108,31 @@
                                         {{-- Левая часть --}}
                                         <div>
                                             <div class="font-bold text-gray-800 text-sm">
-                                                @php
-                                                    $activeAssignment = $child->employeeTerritories()
-                                                        ->whereNull('unassigned_at')
-                                                        ->latest('assigned_at')
-                                                        ->first();
-
-                                                    $dismissedAssignment = $child->employeeTerritories()
-                                                        ->whereNotNull('unassigned_at')
-                                                        ->latest('assigned_at')
-                                                        ->first();
-
-                                                    $employee = $activeAssignment?->employee;
-                                                    $employeeDismissed = $dismissedAssignment?->employee;
-                                                @endphp
-
-
-                                                @if ($employee)
-                                                    {{ $employee->sh_name_sh }}
-                                                @elseif ($employeeDismissed)
+                                                @if ($rm->activeEmployee)
+                                                    {{ $rm->activeEmployee->sh_name_sh }}
+                                                @elseif ($rm->dismissedEmployee)
                                                     <em class="text-gray-500">
-                                                        ({{ $employeeDismissed->sh_name_sh }})
+                                                        ({{ $rm->dismissedEmployee->sh_name_sh }})
                                                     </em>
                                                 @else
                                                     <em class="text-gray-400">—</em>
                                                 @endif
-
                                             </div>
 
                                             <div class="text-sm text-gray-500">
-                                                {{ $child->city }}
+                                                {{ $rm->city }}
                                             </div>
                                         </div>
 
                                         {{-- Красный бейдж в самом углу --}}
-                                        @if($freePlaces > 0)
+                                        @if($rm->freePlaces > 0)
                                             <div class="absolute top-0 right-0
                                                         text-white text-[5px] font-semibold
                                                         rounded-full w-4 h-4
                                                         flex items-center justify-center
                                                         -translate-y-1 translate-x-1 z-10"
                                                         style="background-color: #dc2626;">
-                                                {{ $freePlaces }}
+                                                {{ $rm->freePlaces }}
                                             </div>
                                         @endif
 
@@ -310,7 +144,7 @@
                                     <div x-show="open" x-cloak class="mt-3 space-y-4">
 
                                         {{-- 🔹 группировка по team --}}
-                                        @foreach($child->children->sortBy('team')->groupBy('team') as $teamName => $groupTerritories)
+                                        @foreach($rm->preparedReps as $teamName => $repsInTeam)
 
                                             <div class="ml-2 border-l-2 border-gray-200 pl-3">
                                                 <div class="text-sm font-semibold text-gray-700">
@@ -318,31 +152,17 @@
                                                 </div>
 
                                                 <div class="mt-2 space-y-1">
-                                                    @foreach($groupTerritories as $memberTerritory)
+                                                    @foreach($repsInTeam as $repRow)
 
                                                         <div class="ml-2 mb-2 border-l pl-3">
                                                             <div class="text-sm">
-                                                                @php
-                                                                    $activeAssignment = $memberTerritory->employeeTerritories()
-                                                                        ->whereNull('unassigned_at')
-                                                                        ->latest('assigned_at')
-                                                                        ->first();
-
-                                                                    $lastAssignment = $memberTerritory->employeeTerritories()
-                                                                        ->latest('assigned_at')
-                                                                        ->first();
-
-                                                                    $employee = $activeAssignment?->employee;
-                                                                    $lastEmployee = $lastAssignment?->employee;
-                                                                @endphp
-
-                                                                @if($employee)
-                                                                    <a href="{{ route('employees.show', $employee->id) }}"
+                                                                @if($repRow->employee)
+                                                                    <a href="{{ route('employees.show', $repRow->employee->id) }}"
                                                                     class="text-blue-600 hover:underline flex items-center gap-1">
 
-                                                                        {{ $employee->sh_name }}
+                                                                        {{ $repRow->employee->sh_name }}
 
-                                                                        @if($employee->latestEvent->event_date && \Carbon\Carbon::parse($employee->latestEvent->event_date)->greaterThanOrEqualTo(now()->subDays(30)))
+                                                                        @if($repRow->isNew)
                                                                         <span class="ml-1 inline-flex items-center justify-center
                                                                                         min-w-[22px] px-2 py-0.5 text-[10px] font-bold
                                                                                         text-white rounded-lg"
@@ -353,10 +173,10 @@
                                                                         @endif
                                                                     </a>
 
-                                                                @elseif($lastEmployee)
-                                                                    <a href="{{ route('employees.show', $lastEmployee->id) }}"
+                                                                @elseif($repRow->fallback)
+                                                                    <a href="{{ route('employees.show', $repRow->fallback->id) }}"
                                                                     class="text-gray-500 hover:underline italic">
-                                                                        ({{ $lastEmployee->sh_name }})
+                                                                        ({{ $repRow->fallback->sh_name }})
                                                                     </a>
                                                                 @else
                                                                     <span class="text-gray-400 italic">Нет сотрудника</span>
@@ -381,94 +201,40 @@
         </div>
         <div x-show="viewMode === 'team'" x-cloak>
             <div x-show="open2">
-                @php
-                    $repTerritories = collect();
-
-                    foreach ($groupedFfms as $ffm) {
-                        if (!$ffm->lastTerritory) continue;
-
-                        foreach ($ffm->lastTerritory->children as $rm) {
-                            foreach ($rm->children as $rep) {
-                                $repTerritories->push($rep);
-                            }
-                        }
-                    }
-
-                    $groupedByTeam = $repTerritories
-                        ->sortBy('team')
-                        ->groupBy('team');
-                @endphp
-
                 <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.75rem">
-                    @foreach($groupedByTeam as $teamName => $teamTerritories)
-                        @php
-                            $teamTerritories = $teamTerritories
-                                ->sortBy('city', SORT_NATURAL | SORT_FLAG_CASE);
-
-                            $totalRep = $teamTerritories->count();
-                            $usedRep  = 0;
-
-                            foreach ($teamTerritories as $repTerritory) {
-                                $active = $repTerritory->employeeTerritories()
-                                    ->whereNull('unassigned_at')
-                                    ->latest('assigned_at')
-                                    ->first();
-
-                                if ($active) {
-                                    $usedRep++;
-                                }
-                            }
-                        @endphp
+                    @foreach($dept['teamView'] as $teamData)
 
                         <div class="w-full bg-white rounded-xl shadow p-2">
 
                             <div class="relative flex justify-between items-center p-3">
                                 <div>
                                     <div class="font-bold text-gray-800 text-sm uppercase">
-                                        {{ $teamName ?? 'Без команды' }}
+                                        {{ $teamData->name ?? 'Без команды' }}
                                     </div>
                                     <div class="text-xs text-gray-500">
-                                        Rep {{ $usedRep }}/{{ $totalRep }}
+                                        Rep {{ $teamData->usedRep }}/{{ $teamData->total }}
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mt-3 space-y-2">
 
-                                @foreach($teamTerritories as $repTerritory)
-
-                                    @php
-                                        $active = $repTerritory->employeeTerritories()
-                                            ->whereNull('unassigned_at')
-                                            ->latest('assigned_at')
-                                            ->first();
-
-                                        $last   = $repTerritory->employeeTerritories()
-                                            ->latest('assigned_at')
-                                            ->first();
-
-                                        $employee = $active?->employee;
-                                        $fallback = $last?->employee;
-                                    @endphp
+                                @foreach($teamData->reps as $repRow)
 
                                     <div class="ml-2 border-l pl-3 text-sm">
 
-                                        @if($employee)
+                                        @if($repRow->employee)
                                             <div class="flex items-center gap-1">
-                                                <a href="{{ route('employees.show', $employee->id) }}"
+                                                <a href="{{ route('employees.show', $repRow->employee->id) }}"
                                                 class="text-blue-600 hover:underline">
-                                                    {{ $employee->sh_name }}
+                                                    {{ $repRow->employee->sh_name }}
                                                 </a>
 
                                                 <span class="text-gray-500 text-xs">
-                                                    &nbsp;({{ $repTerritory->city }})
+                                                    &nbsp;({{ $repRow->city }})
                                                 </span>
 
-                                                @if(
-                                                    $employee->latestEvent?->event_date &&
-                                                    \Carbon\Carbon::parse($employee->latestEvent->event_date)
-                                                        ->greaterThanOrEqualTo(now()->subDays(30))
-                                                )
+                                                @if($repRow->isNew)
                                                     <span class="ml-1 px-2 py-0.5 text-[10px] font-bold text-white rounded-lg"
                                                         style="background-color:#50C878">
                                                         new
@@ -476,18 +242,18 @@
                                                 @endif
                                             </div>
 
-                                        @elseif($fallback)
-                                            <a href="{{ route('employees.show', $fallback->id) }}"
+                                        @elseif($repRow->fallback)
+                                            <a href="{{ route('employees.show', $repRow->fallback->id) }}"
                                             class="text-gray-500 italic hover:underline">
-                                                ({{ $fallback->sh_name }})
+                                                ({{ $repRow->fallback->sh_name }})
                                             </a>
-                                            <span class="text-gray-500 text-xs">({{ $repTerritory->city }})</span>
+                                            <span class="text-gray-500 text-xs">({{ $repRow->city }})</span>
 
                                         @else
-                                            <a href="{{ route('territories.show', $repTerritory->id) }}"
+                                            <a href="{{ route('territories.show', $repRow->territoryId) }}"
                                             class="text-gray-500 italic hover:underline">
                                                 Нет сотрудника
-                                                <span class="text-xs">({{ $repTerritory->city }})</span>
+                                                <span class="text-xs">({{ $repRow->city }})</span>
                                             </a>
                                         @endif
 
