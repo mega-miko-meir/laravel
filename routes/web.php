@@ -64,15 +64,18 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'can:admin'])->group(function () {
     // Calls (визиты) — только для админа
     Route::get('/calls', [CallController::class, 'index'])->name('calls.index');
+    Route::get('/calls/data', [CallController::class, 'data'])->name('calls.data');
     Route::post('/calls/export', [CallController::class, 'export'])->name('calls.export');
 
     // KMP продажи
     Route::get('/kmp', [KmpController::class, 'index'])->name('kmp.index');
+    Route::get('/kmp/data', [KmpController::class, 'data'])->name('kmp.data');
     Route::post('/kmp/export', [KmpController::class, 'export'])->name('kmp.export');
 
     // Рейтинг МП
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
-    Route::post('/leaderboard/export', [LeaderboardController::class, 'export'])->name('leaderboard.export');
+    Route::get('/leaderboard/data', [LeaderboardController::class, 'data'])->name('leaderboard.data');
+    Route::get('/leaderboard/export', [LeaderboardController::class, 'export'])->name('leaderboard.export');
 });
 
 // Dev/misc

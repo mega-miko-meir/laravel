@@ -12,6 +12,7 @@ use App\Http\Controllers\DataQualityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TerritoryChangeController;
 use App\Http\Controllers\DoubleVisitPlanController;
+use App\Http\Controllers\TargetClientsController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -50,6 +51,12 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/territory-changes/export', [TerritoryChangeController::class, 'export'])->name('admin.territory-changes.export');
 
     Route::get('/admin/double-visit-plan', [DoubleVisitPlanController::class, 'index'])->name('admin.double-visit-plan');
+    Route::get('/admin/double-visit-plan/data', [DoubleVisitPlanController::class, 'data'])->name('admin.double-visit-plan.data');
     Route::get('/admin/double-visit-plan/export', [DoubleVisitPlanController::class, 'export'])->name('admin.double-visit-plan.export');
+
+    Route::get('/admin/target-clients', [TargetClientsController::class, 'index'])->name('admin.target-clients');
+    Route::get('/admin/target-clients/data', [TargetClientsController::class, 'data'])->name('admin.target-clients.data');
+    Route::get('/admin/target-clients/export/doctors', [TargetClientsController::class, 'exportDoctors'])->name('admin.target-clients.export.doctors');
+    Route::get('/admin/target-clients/export/pharmacies', [TargetClientsController::class, 'exportPharmacies'])->name('admin.target-clients.export.pharmacies');
 
 });

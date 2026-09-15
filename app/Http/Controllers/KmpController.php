@@ -2,99 +2,157 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\Nobel\Kmp;
+use App\Support\Etl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class KmpController extends Controller
 {
+    private const CACHE_VERSION = 'v1';
+
     public function index(Request $request)
     {
+        $year = (string) $request->input('year', now()->year);
+
         try {
-            $allowedSorts = ['Дата', 'Медпредставитель', 'Название аптеки', 'Брэнд', 'Amount_disc', 'Дост_колво'];
-            $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'Дата';
-            $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
-
-            // Кеш агрегатов по набору фильтров (кроме сортировки и пагинации)
-            $filterParams = $request->only(['year', 'date_from', 'date_to', 'employee', 'employee_id', 'city', 'brand', 'dept']);
-            if (empty($filterParams['year'])) $filterParams['year'] = '2026';
-            $aggCacheKey  = 'kmp_agg_' . md5(json_encode($filterParams));
-
-            $agg = Cache::remember($aggCacheKey, 1800, function () use ($request) {
-                $kpi = $this->filtered($request)
-                    ->selectRaw('
-                        COUNT(*) as total_orders,
-                        ROUND(SUM(`Amount_disc`)) as total_amount,
-                        ROUND(SUM(`Дост_колво`)) as total_qty,
-                        COUNT(DISTINCT `Медпредставитель`) as emp_count,
-                        COUNT(DISTINCT `ID аптеки`) as pharmacy_count,
-                        COUNT(DISTINCT `Брэнд`) as brand_count
-                    ')
-                    ->first();
-
-                $monthlyTrend = $this->filtered($request)
-                    ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders")
-                    ->whereNotNull('Дата')
-                    ->groupBy('month')
-                    ->orderBy('month')
-                    ->limit(24)
-                    ->get();
-
-                $topBrands = $this->filtered($request)
-                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
-                    ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
-                    ->groupBy('Брэнд')
-                    ->orderByDesc('amount')
-                    ->limit(15)
-                    ->get();
-
-                $topBrandsByQty = $this->filtered($request)
-                    ->selectRaw('`Брэнд` as brand, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
-                    ->whereNotNull('Брэнд')->where('Брэнд', '<>', '')
-                    ->groupBy('Брэнд')
-                    ->orderByDesc('qty')
-                    ->limit(15)
-                    ->get();
-
-                $topPharmacies = $this->filtered($request)
-                    ->selectRaw('`Название аптеки` as name, `Город аптеки` as city, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders')
-                    ->whereNotNull('Название аптеки')->where('Название аптеки', '<>', '')
-                    ->groupBy('Название аптеки', 'Город аптеки')
-                    ->orderByDesc('amount')
-                    ->limit(10)
-                    ->get();
-
-                return compact('kpi', 'monthlyTrend', 'topBrands', 'topBrandsByQty', 'topPharmacies');
-            });
-
-            ['kpi' => $kpi, 'monthlyTrend' => $monthlyTrend, 'topBrands' => $topBrands, 'topBrandsByQty' => $topBrandsByQty, 'topPharmacies' => $topPharmacies] = $agg;
-
-            // Таблица — не кешируется (зависит от сортировки и страницы)
-            $rows = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
-
-            $brands = Cache::remember('kmp_filter_brands', 3600, fn() => $this->distinctValues('Брэнд'));
-            $cities = Cache::remember('kmp_filter_cities', 3600, fn() => $this->distinctValues('Город'));
-            $years  = Cache::remember('kmp_filter_years',  3600, fn() => Kmp::distinct()->where('Статус заказа', 'Доставлено')->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год'));
-            $depts  = Cache::remember('kmp_filter_depts',  3600, fn() => $this->distinctValues('Бизнес-подразделение'));
-
-            // value — внутренний id сотрудника: у одного сотрудника может быть
-            // несколько имён КМП (повторный найм), фильтр агрегирует все.
-            $empList = \App\Models\Employee::whereHas('kmpNames')
-                ->orderBy('full_name')
-                ->get(['id', 'full_name'])
-                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->id])
-                ->values();
-
+            $data = $this->loadYear($year);
         } catch (\Exception $e) {
-            return back()->withErrors(['nobel_db' => 'Nobel DB недоступна: ' . $e->getMessage()]);
+            return back()->withErrors(['nobel_db' => 'Не удалось получить данные из Nobel CRM. Попробуйте позже.']);
         }
 
-        return view('kmp', compact(
-            'rows', 'brands', 'cities', 'years', 'depts', 'empList',
-            'kpi', 'monthlyTrend', 'topBrands', 'topBrandsByQty', 'topPharmacies',
-            'sortCol', 'sortDir'
-        ));
+        return view('kmp', [
+            'year'        => $year,
+            'initialData' => $data,
+            'years'       => Cache::remember('kmp_filter_years', 3600, fn() => Kmp::distinct()->where('Статус заказа', 'Доставлено')->whereNotNull('Год')->orderBy('Год', 'desc')->pluck('Год')),
+            'brands'      => Cache::remember('kmp_filter_brands', 3600, fn() => $this->distinctValues('Брэнд')),
+            'cities'      => Cache::remember('kmp_filter_cities', 3600, fn() => $this->distinctValues('Город')),
+            'depts'       => Cache::remember('kmp_filter_depts', 3600, fn() => $this->distinctValues('Бизнес-подразделение')),
+            'empList'     => $this->empList(),
+        ]);
+    }
+
+    /**
+     * JSON-эндпоинт смены года без перезагрузки (тот же паттерн, что на
+     * Визитах/Таргетных клиентах/...). Списки для фильтров (бренды, города,
+     * подразделения, сотрудники, годы) не год-зависимы — грузятся один раз в
+     * index() и повторно не запрашиваются.
+     */
+    public function data(Request $request)
+    {
+        $year = (string) $request->input('year', now()->year);
+
+        try {
+            return response()->json($this->loadYear($year), 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Не удалось получить данные из Nobel CRM. Попробуйте позже.']);
+        }
+    }
+
+    /**
+     * Строки года — дикт-кодированные (как на Визитах): повторяющиеся строковые
+     * значения (МП, город, аптека, бренд, подразделение) выносятся в общий словарь,
+     * а сами строки — массивы индексов. Вся вторичная фильтрация (МП/город/бренд/
+     * подразделение), KPI-карточки, топ брендов/аптек считаются на клиенте из этого
+     * одного набора — за год ~60 тыс. строк, укладывается в разумный payload (~2.5МБ).
+     */
+    private function loadYear(string $year): array
+    {
+        [$from, $to] = $this->yearBounds($year);
+
+        return Cache::remember("kmp_year_" . self::CACHE_VERSION . "_{$year}", Etl::secondsUntilNextRun(), function () use ($from, $to) {
+            return [
+                'error' => null,
+                'rows'  => $this->buildRows($from, $to),
+                'trend' => $this->buildTrend($from, $to),
+            ];
+        });
+    }
+
+    private function buildRows(string $from, string $to): array
+    {
+        ini_set('memory_limit', '512M');
+
+        $query = DB::connection('nobel')->table('kmp')
+            ->where('Статус заказа', 'Доставлено')
+            ->where('Дата', '>=', $from)
+            ->where('Дата', '<=', $to)
+            ->select([
+                'Дата', 'Медпредставитель', 'Город', 'Название аптеки', 'ID аптеки',
+                'Город аптеки', 'Брэнд', 'Бизнес-подразделение',
+                'Amount_disc', 'Дост_колво',
+            ]);
+
+        $dict = [];
+        $idx  = function (string $col, ?string $val) use (&$dict) {
+            $val = $val ?? '';
+            $dict[$col] ??= [];
+            return $dict[$col][$val] ??= count($dict[$col]);
+        };
+
+        $rows = [];
+        foreach ($query->orderBy('Дата')->cursor() as $r) {
+            $rows[] = [
+                $idx('date', $r->{'Дата'} ? substr($r->{'Дата'}, 0, 10) : null),
+                $idx('employee', $r->{'Медпредставитель'}),
+                $idx('city', $r->{'Город'}),
+                $idx('pharmacy', $r->{'Название аптеки'}),
+                $idx('pharmacyCity', $r->{'Город аптеки'}),
+                $idx('brand', $r->{'Брэнд'}),
+                $idx('dept', $r->{'Бизнес-подразделение'}),
+                (float) $r->{'Amount_disc'},
+                (float) $r->{'Дост_колво'},
+                // отдельный ID аптеки — для точного подсчёта уникальных аптек
+                // (одинаковые название+город бывают у разных сетевых точек)
+                (string) $r->{'ID аптеки'},
+            ];
+        }
+
+        $dictionaries = [];
+        foreach ($dict as $col => $map) {
+            $dictionaries[$col] = array_keys($map);
+        }
+
+        return [
+            'cols'         => ['date', 'employee', 'city', 'pharmacy', 'pharmacyCity', 'brand', 'dept', 'amount', 'qty', 'pharmacyId'],
+            'dictionaries' => $dictionaries,
+            'data'         => $rows,
+        ];
+    }
+
+    /** Обзорный тренд по месяцам выбранного года — не зависит от вторичных фильтров. */
+    private function buildTrend(string $from, string $to): array
+    {
+        return DB::connection('nobel')->table('kmp')
+            ->where('Статус заказа', 'Доставлено')
+            ->where('Дата', '>=', $from)
+            ->where('Дата', '<=', $to)
+            ->selectRaw("DATE_FORMAT(`Дата`, '%Y-%m') as month, ROUND(SUM(`Amount_disc`)) as amount, ROUND(SUM(`Дост_колво`)) as qty, COUNT(*) as orders")
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->map(fn($r) => (array) $r)
+            ->all();
+    }
+
+    private function empList(): array
+    {
+        // value — внутренний id сотрудника; names — все его варианты написания
+        // в KMP (повторный найм) — на клиенте резолвим выбор в набор имён.
+        return Employee::whereHas('kmpNames')
+            ->with('kmpNames')
+            ->orderBy('full_name')
+            ->get(['id', 'full_name'])
+            ->map(fn($e) => [
+                'label' => $e->full_name,
+                'value' => $e->id,
+                'names' => $e->kmpNames->pluck('kmp_employee_name')->all(),
+            ])
+            ->values()
+            ->all();
     }
 
     private const COLUMNS = [
@@ -119,14 +177,14 @@ class KmpController extends Controller
     {
         set_time_limit(0);
 
-        $q = $this->filtered($request)->orderBy('Дата');
+        $year = (string) $request->input('year', now()->year);
+        [$defaultFrom, $defaultTo] = $this->yearBounds($year);
+        $dateFrom = $request->input('date_from') ?: $defaultFrom;
+        $dateTo   = $request->input('date_to') ?: $defaultTo;
 
-        $parts = array_filter([
-            $request->input('year'),
-            $request->input('employee_id') ? 'emp' : null,
-            $request->input('date_from'),
-            $request->input('date_to'),
-        ]);
+        $q = $this->filtered($request, $dateFrom, $dateTo)->orderBy('Дата');
+
+        $parts = array_filter([$dateFrom, $dateTo, $request->input('employee_id') ? 'emp' : null]);
         $fileName = 'kmp_' . (implode('_', $parts) ?: 'all') . '.csv';
 
         $numericSet = array_flip(self::NUMERIC_COLUMNS);
@@ -159,21 +217,19 @@ class KmpController extends Controller
         ]);
     }
 
-    private function filtered(Request $request)
+    private function filtered(Request $request, string $dateFrom, string $dateTo)
     {
-        $q = Kmp::query()->where('Статус заказа', 'Доставлено');
-        $year = $request->input('year', '2026');
-        if ($year !== '')                          $q->where('Год', $year);
-        if ($request->filled('date_from'))         $q->where('Дата', '>=', $request->input('date_from'));
-        if ($request->filled('date_to'))           $q->where('Дата', '<=', $request->input('date_to'));
-        if ($request->filled('employee'))          $q->where('Медпредставитель', 'like', '%' . $request->input('employee') . '%');
+        $q = Kmp::query()
+            ->where('Статус заказа', 'Доставлено')
+            ->where('Дата', '>=', $dateFrom)
+            ->where('Дата', '<=', $dateTo);
         if ($request->filled('employee_id')) {
-            $kmpNames = \App\Models\Employee::find($request->input('employee_id'))?->kmp_employee_names ?? [];
+            $kmpNames = Employee::find($request->input('employee_id'))?->kmp_employee_names ?? [];
             $q->whereIn('Медпредставитель', $kmpNames ?: ['__none__']);
         }
-        if ($request->filled('city'))              $q->whereIn('Город', (array) $request->input('city'));
-        if ($request->filled('brand'))             $q->whereIn('Брэнд', (array) $request->input('brand'));
-        if ($request->filled('dept'))              $q->whereIn('Бизнес-подразделение', (array) $request->input('dept'));
+        if ($request->filled('city'))  $q->whereIn('Город', (array) $request->input('city'));
+        if ($request->filled('brand')) $q->whereIn('Брэнд', (array) $request->input('brand'));
+        if ($request->filled('dept'))  $q->whereIn('Бизнес-подразделение', (array) $request->input('dept'));
         return $q;
     }
 
@@ -184,5 +240,12 @@ class KmpController extends Controller
             ->whereNotNull($col)->where($col, '<>', '')
             ->orderBy($col)
             ->pluck($col);
+    }
+
+    /** @return array{0: string, 1: string} [yearStart, yearEnd] в формате Y-m-d */
+    private function yearBounds(string $year): array
+    {
+        $date = Carbon::createFromDate((int) $year, 1, 1)->startOfYear();
+        return [$date->toDateString(), $date->copy()->endOfYear()->toDateString()];
     }
 }

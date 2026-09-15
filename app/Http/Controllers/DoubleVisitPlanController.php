@@ -3,42 +3,77 @@
 namespace App\Http\Controllers;
 
 use App\Services\DoubleVisitPlanService;
+use App\Support\Etl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DoubleVisitPlanController extends Controller
 {
-    public function index(Request $request, DoubleVisitPlanService $service)
+    public function __construct(private DoubleVisitPlanService $service)
     {
-        $from = $request->input('date_from', now()->subMonths(3)->startOfMonth()->toDateString());
-        $to   = $request->input('date_to', now()->toDateString());
+    }
 
-        $report = null;
-        $error  = null;
+    public function index(Request $request)
+    {
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
 
         try {
-            $report = $service->getReport($from, $to);
+            $data = $this->loadMonth($month);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('DoubleVisitPlan report failed', ['error' => $e->getMessage()]);
-            $error = 'Не удалось получить данные из Nobel CRM. Попробуйте позже.';
+            return back()->withErrors(['nobel_db' => 'Не удалось получить данные из Nobel CRM. Попробуйте позже.']);
         }
 
         return view('double-visit-plan', [
-            'report' => $report,
-            'error'  => $error,
-            'from'   => $from,
-            'to'     => $to,
+            'month'       => $month,
+            'initialData' => $data,
         ]);
     }
 
-    public function export(Request $request, DoubleVisitPlanService $service): BinaryFileResponse
+    /**
+     * JSON-эндпоинт смены месяца без перезагрузки страницы (тот же паттерн, что
+     * на «Визитах»/«Таргетных клиентах») — отдаёт закэшированный (или свежий)
+     * отчёт за выбранный месяц.
+     */
+    public function data(Request $request)
     {
-        $from = $request->input('date_from', now()->subMonths(3)->startOfMonth()->toDateString());
-        $to   = $request->input('date_to', now()->toDateString());
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
 
-        $report = $service->getReport($from, $to);
+        try {
+            return response()->json($this->loadMonth($month), 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Не удалось получить данные из Nobel CRM. Попробуйте позже.']);
+        }
+    }
+
+    private function loadMonth(string $month): array
+    {
+        [$from, $to] = $this->monthBounds($month);
+
+        // Раньше отчёт считался живьём при КАЖДОМ открытии страницы (запрос к
+        // qs_double_calls + вся ло­кальная логика плана) — данные из Nobel CRM
+        // обновляются раз в сутки ночным ETL, поэтому кэшируем до следующего
+        // запуска (Etl::secondsUntilNextRun()), как и на «Визитах».
+        return Cache::remember("double_visit_plan_{$month}", Etl::secondsUntilNextRun(), function () use ($from, $to) {
+            return [
+                'error'  => null,
+                'report' => $this->service->getReport($from, $to),
+            ];
+        });
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
+        [$from, $to] = $this->monthBounds($month);
+
+        // Переиспользуем тот же кэш, что и index()/data() — раньше export()
+        // гонял getReport() живьём заново, даже если тот же месяц только что
+        // считался для отображения на странице.
+        $report = collect($this->loadMonth($month)['report'] ?? []);
 
         $spreadsheet = new Spreadsheet();
 
@@ -95,5 +130,12 @@ class DoubleVisitPlanController extends Controller
         (new Xlsx($spreadsheet))->save($filePath);
 
         return response()->download($filePath, $fileName)->deleteFileAfterSend(true);
+    }
+
+    /** @return array{0: string, 1: string} [monthStart, monthEnd] в формате Y-m-d */
+    private function monthBounds(string $month): array
+    {
+        $date = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        return [$date->toDateString(), $date->copy()->endOfMonth()->toDateString()];
     }
 }

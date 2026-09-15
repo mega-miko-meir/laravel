@@ -28,6 +28,7 @@
 .btn:hover { background:var(--bg);color:var(--text1); }
 .btn-green { background:#16a34a;color:#fff;border-color:#16a34a; }
 .btn-green:hover { opacity:.9;background:#16a34a;color:#fff; }
+.btn[disabled] { opacity:.6;pointer-events:none; }
 
 .filter-panel { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;margin-bottom:20px;box-shadow:var(--shadow); }
 .filter-grid  { display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end; }
@@ -36,7 +37,8 @@
 .filter-input { background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:0 10px;height:30px;font-size:12px;color:var(--text1);outline:none; }
 .filter-input:focus { border-color:var(--blue); }
 
-.lb-card    { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden; }
+.lb-card    { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:opacity .15s; }
+.lb-loading { opacity:.6;pointer-events:none; }
 .lb-toolbar { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap; }
 .lb-info    { font-size:13px;color:var(--text2); }
 .lb-info strong { color:var(--text1); }
@@ -97,83 +99,54 @@
 .pct-bar-fill { height:100%;border-radius:2px;max-width:100%; }
 </style>
 
-<div class="lb-wrap" style="background:var(--bg);min-height:100%;">
+<div class="lb-wrap" style="background:var(--bg);min-height:100%;"
+     x-data='leaderboard(@json($initialData), "{{ $month }}")'>
 
 {{-- Header --}}
 <div class="lb-header">
     <div class="lb-title">
         Рейтинг МП
-        <span>{{ $rows->count() }} сотрудников</span>
+        <span x-text="data.rows.length + ' сотрудников'"></span>
     </div>
-    <form method="POST" action="{{ route('leaderboard.export') }}">
-        @csrf
-        @foreach(request()->except('_token','sort','dir') as $k => $v)
-            <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-        @endforeach
-        <button type="submit" class="btn btn-green">
-            <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Скачать CSV
-        </button>
-    </form>
+    <a :href="exportUrl()" class="btn btn-green">
+        <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Скачать CSV
+    </a>
 </div>
 
 {{-- Filters --}}
 <div class="filter-panel">
-    <form method="GET" action="{{ route('leaderboard.index') }}">
-        <div class="filter-grid">
-            <div class="filter-field">
-                <label class="filter-label">Дата от</label>
-                <input type="date" name="date_from" class="filter-input" value="{{ $dateFrom }}" style="width:130px;">
-            </div>
-            <div class="filter-field">
-                <label class="filter-label">Дата до</label>
-                <input type="date" name="date_to" class="filter-input" value="{{ $dateTo }}" style="width:130px;">
-            </div>
-            <div class="filter-field" style="flex-direction:row;gap:6px;align-items:flex-end;">
-                <input type="hidden" name="sort" value="{{ $sort }}">
-                <input type="hidden" name="dir" value="{{ $dir }}">
-                <button type="submit" class="btn" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8;height:30px;padding:0 14px;font-size:12px;">
-                    Применить
-                </button>
-                @if($dateFrom || $dateTo)
-                <a href="{{ route('leaderboard.index', ['sort' => $sort, 'dir' => $dir]) }}"
-                   class="btn" style="height:30px;padding:0 12px;font-size:12px;">Сбросить</a>
-                @endif
-            </div>
+    <div class="filter-grid">
+        <div class="filter-field">
+            <label class="filter-label">Месяц</label>
+            <input type="month" x-model="month" class="filter-input" style="width:150px;">
         </div>
-    </form>
+        <div class="filter-field" style="flex-direction:row;gap:6px;align-items:flex-end;">
+            <button type="button" @click="loadMonth()" :disabled="loading" class="btn"
+                    style="background:#1d4ed8;color:#fff;border-color:#1d4ed8;height:30px;padding:0 14px;font-size:12px;">
+                <span x-text="loading ? 'Загрузка…' : 'Показать'"></span>
+            </button>
+        </div>
+    </div>
 </div>
 
-{{-- Table --}}
-@php
-    $maxVisits = $rows->max('total_visits') ?: 1;
-    $thUrl = fn(string $col) => route('leaderboard.index', array_merge(
-        request()->except('sort','dir'),
-        ['sort' => $col, 'dir' => ($sort === $col && $dir === 'desc') ? 'asc' : 'desc']
-    ));
-    $sortIco  = fn(string $col) => $sort === $col ? ($dir === 'desc' ? '↓' : '↑') : '↕';
-    $pctColor = fn(int $pct) => $pct >= 80 ? '#16a34a' : ($pct >= 50 ? '#f59e0b' : '#ef4444');
-@endphp
+<div x-show="data.error" x-cloak style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px;color:#b91c1c;font-size:13px;margin-bottom:20px;" x-text="data.error"></div>
 
-<div class="lb-card">
+{{-- Table --}}
+<div class="lb-card" :class="{ 'lb-loading': loading }" x-show="!data.error">
     <div class="lb-toolbar">
         <div class="lb-info">
-            Показано <strong>{{ $rows->count() }}</strong> сотрудников
-            @if($dateFrom || $dateTo)
-                &nbsp;·&nbsp; {{ $dateFrom ?? '...' }} — {{ $dateTo ?? '...' }}
-            @else
-                &nbsp;·&nbsp; текущий месяц
-            @endif
+            Показано <strong x-text="data.rows.length"></strong> сотрудников
         </div>
         <div class="lb-meta">
             <div class="meta-chip">
-                Рабочих дней: <strong>{{ $workingDays }}</strong>
+                Рабочих дней: <strong x-text="data.workingDays"></strong>
             </div>
             <div class="meta-chip">
-                Таргет визитов: <strong>{{ $workingDays }} × {{ \App\Http\Controllers\LeaderboardController::DAILY_TARGET }} = {{ $callTarget }}</strong>
+                Таргет визитов: <strong x-text="data.workingDays + ' × {{ \App\Http\Controllers\LeaderboardController::DAILY_TARGET }} = ' + data.callTarget"></strong>
             </div>
             <div class="meta-chip">
                 Частота: <strong>{{ \App\Http\Controllers\LeaderboardController::FREQUENCY }}×</strong>
@@ -181,12 +154,13 @@
         </div>
     </div>
 
-    @if($rows->isEmpty())
-    <div style="padding:48px;text-align:center;color:var(--text3);font-size:14px;">
-        Нет данных для выбранного периода
-    </div>
-    @else
-    <div style="overflow-x:auto;">
+    <template x-if="data.rows.length === 0">
+        <div style="padding:48px;text-align:center;color:var(--text3);font-size:14px;">
+            Нет данных для выбранного периода
+        </div>
+    </template>
+
+    <div style="overflow-x:auto;" x-show="data.rows.length > 0">
     <table class="lb-table">
         <thead>
             {{-- Строка 1: группы --}}
@@ -194,198 +168,244 @@
                 <th class="rank-cell" rowspan="2" style="cursor:default;">#</th>
                 <th rowspan="2" style="cursor:default;min-width:160px;">Сотрудник</th>
 
-                {{-- Реализация --}}
                 <th colspan="2" class="th-group group-sep" style="color:#1d4ed8;">
                     Реализация визитов
                 </th>
 
-                {{-- Врачи --}}
                 <th colspan="3" class="th-group group-sep" style="color:var(--purple);">
                     Врачи
                 </th>
 
-                {{-- Аптеки --}}
                 <th colspan="3" class="th-group group-sep" style="color:var(--sky);">
                     Аптеки
                 </th>
 
-                {{-- Доп --}}
                 <th rowspan="2" class="group-sep" style="text-align:right;cursor:default;white-space:nowrap;color:var(--text2);">
                     Ср. длит.
                 </th>
             </tr>
 
-            {{-- Строка 2: подзаголовки --}}
+            {{-- Строка 2: подзаголовки, сортировка кликом --}}
             <tr>
-                {{-- Реализация --}}
-                <th class="{{ $sort==='total_visits' ? 'sort-active' : '' }} group-sep" style="text-align:right;">
-                    <a href="{{ $thUrl('total_visits') }}">
-                        Факт<span class="sort-ico">{!! $sortIco('total_visits') !!}</span>
-                    </a>
+                <th :class="{ 'sort-active': sort === 'total_visits' }" class="group-sep" style="text-align:right;" @click="sortBy('total_visits')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Факт<span class="sort-ico" x-text="sortIco('total_visits')"></span>
+                    </span>
                 </th>
-                <th class="{{ $sort==='call_pct' ? 'sort-active' : '' }}" style="text-align:right;">
-                    <a href="{{ $thUrl('call_pct') }}">
-                        % выполн.<span class="sort-ico">{!! $sortIco('call_pct') !!}</span>
-                    </a>
-                </th>
-
-                {{-- Врачи --}}
-                <th class="{{ $sort==='base_doctors' ? 'sort-active' : '' }} group-sep" style="text-align:right;">
-                    <a href="{{ $thUrl('base_doctors') }}">
-                        База<span class="sort-ico">{!! $sortIco('base_doctors') !!}</span>
-                    </a>
-                </th>
-                <th class="{{ $sort==='doctor_visits' ? 'sort-active' : '' }}" style="text-align:right;">
-                    <a href="{{ $thUrl('doctor_visits') }}">
-                        Визиты<span class="sort-ico">{!! $sortIco('doctor_visits') !!}</span>
-                    </a>
-                </th>
-                <th class="{{ $sort==='freq_pct_doc' ? 'sort-active' : '' }}" style="text-align:right;">
-                    <a href="{{ $thUrl('freq_pct_doc') }}">
-                        Частота<span class="sort-ico">{!! $sortIco('freq_pct_doc') !!}</span>
-                    </a>
+                <th :class="{ 'sort-active': sort === 'call_pct' }" style="text-align:right;" @click="sortBy('call_pct')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        % выполн.<span class="sort-ico" x-text="sortIco('call_pct')"></span>
+                    </span>
                 </th>
 
-                {{-- Аптеки --}}
-                <th class="{{ $sort==='base_pharmacies' ? 'sort-active' : '' }} group-sep" style="text-align:right;">
-                    <a href="{{ $thUrl('base_pharmacies') }}">
-                        База<span class="sort-ico">{!! $sortIco('base_pharmacies') !!}</span>
-                    </a>
+                <th :class="{ 'sort-active': sort === 'base_doctors' }" class="group-sep" style="text-align:right;" @click="sortBy('base_doctors')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        База<span class="sort-ico" x-text="sortIco('base_doctors')"></span>
+                    </span>
                 </th>
-                <th class="{{ $sort==='pharmacy_visits' ? 'sort-active' : '' }}" style="text-align:right;">
-                    <a href="{{ $thUrl('pharmacy_visits') }}">
-                        Визиты<span class="sort-ico">{!! $sortIco('pharmacy_visits') !!}</span>
-                    </a>
+                <th :class="{ 'sort-active': sort === 'doctor_visits' }" style="text-align:right;" @click="sortBy('doctor_visits')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Визиты<span class="sort-ico" x-text="sortIco('doctor_visits')"></span>
+                    </span>
                 </th>
-                <th class="{{ $sort==='freq_pct_phar' ? 'sort-active' : '' }}" style="text-align:right;">
-                    <a href="{{ $thUrl('freq_pct_phar') }}">
-                        Частота<span class="sort-ico">{!! $sortIco('freq_pct_phar') !!}</span>
-                    </a>
+                <th :class="{ 'sort-active': sort === 'freq_pct_doc' }" style="text-align:right;" @click="sortBy('freq_pct_doc')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Частота<span class="sort-ico" x-text="sortIco('freq_pct_doc')"></span>
+                    </span>
+                </th>
+
+                <th :class="{ 'sort-active': sort === 'base_pharmacies' }" class="group-sep" style="text-align:right;" @click="sortBy('base_pharmacies')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        База<span class="sort-ico" x-text="sortIco('base_pharmacies')"></span>
+                    </span>
+                </th>
+                <th :class="{ 'sort-active': sort === 'pharmacy_visits' }" style="text-align:right;" @click="sortBy('pharmacy_visits')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Визиты<span class="sort-ico" x-text="sortIco('pharmacy_visits')"></span>
+                    </span>
+                </th>
+                <th :class="{ 'sort-active': sort === 'freq_pct_phar' }" style="text-align:right;" @click="sortBy('freq_pct_phar')">
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+                        Частота<span class="sort-ico" x-text="sortIco('freq_pct_phar')"></span>
+                    </span>
                 </th>
             </tr>
         </thead>
         <tbody>
-        @foreach($rows as $i => $row)
-        @php
-            $rank      = $i + 1;
-            $rankClass = match($rank) { 1 => 'rank-1', 2 => 'rank-2', 3 => 'rank-3', default => 'rank-n' };
-            $visitPct  = $maxVisits > 0 ? round($row['total_visits'] / $maxVisits * 100) : 0;
-            $cCall     = $pctColor($row['call_pct']);
-            $cDoc      = $pctColor($row['freq_pct_doc']);
-            $cPhar     = $pctColor($row['freq_pct_phar']);
-        @endphp
+        <template x-for="(row, i) in sortedRows" :key="row.id">
         <tr>
-            <td class="rank-cell"><span class="{{ $rankClass }}">{{ $rank }}</span></td>
+            <td class="rank-cell"><span :class="rankClass(i + 1)" x-text="i + 1"></span></td>
 
             <td>
                 <div class="emp-name">
-                    <a href="{{ route('employees.show', $row['id']) }}"
+                    <a :href="'/employee/' + row.id"
                        style="color:inherit;text-decoration:none;"
-                       onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='inherit'">
-                        {{ $row['name'] }}
-                    </a>
+                       onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='inherit'"
+                       x-text="row.name"></a>
                 </div>
-                @if($row['position'])
-                <div class="emp-pos">{{ $row['position'] }}</div>
-                @endif
+                <div class="emp-pos" x-show="row.position" x-text="row.position"></div>
             </td>
 
             {{-- Реализация: факт --}}
             <td class="num-cell group-sep">
-                <div class="num-big">{{ number_format($row['total_visits'], 0, '.', ' ') }}</div>
-                <div class="pct-sub">/ {{ $callTarget }}</div>
-                <div class="bar-wrap"><div class="bar-fill" style="background:#3b82f6;width:{{ $visitPct }}%;"></div></div>
+                <div class="num-big" x-text="fmt(row.total_visits)"></div>
+                <div class="pct-sub" x-text="'/ ' + data.callTarget"></div>
+                <div class="bar-wrap"><div class="bar-fill" style="background:#3b82f6;" :style="'width:' + visitPct(row) + '%'"></div></div>
             </td>
 
             {{-- Реализация: % --}}
             <td class="pct-cell">
-                @if($callTarget > 0)
-                    <div class="pct-val" style="color:{{ $cCall }};">{{ $row['call_pct'] }}%</div>
-                    <div class="pct-bar">
-                        <div class="pct-bar-fill" style="background:{{ $cCall }};width:{{ min($row['call_pct'],100) }}%;"></div>
+                <template x-if="data.callTarget > 0">
+                    <div>
+                        <div class="pct-val" :style="'color:' + pctColor(row.call_pct)" x-text="row.call_pct + '%'"></div>
+                        <div class="pct-bar">
+                            <div class="pct-bar-fill" :style="'background:' + pctColor(row.call_pct) + ';width:' + Math.min(row.call_pct, 100) + '%'"></div>
+                        </div>
                     </div>
-                @else
+                </template>
+                <template x-if="data.callTarget <= 0">
                     <span style="color:var(--text3);">—</span>
-                @endif
+                </template>
             </td>
 
             {{-- Врачи: база --}}
             <td class="num-cell group-sep" style="color:var(--purple);">
-                @if($row['base_doctors'] > 0)
-                    <div class="num-big">{{ $row['base_doctors'] }}</div>
-                @else
-                    <span style="color:var(--text3);">—</span>
-                @endif
+                <span x-show="row.base_doctors > 0" class="num-big" x-text="row.base_doctors"></span>
+                <span x-show="row.base_doctors <= 0" style="color:var(--text3);">—</span>
             </td>
 
             {{-- Врачи: визиты --}}
             <td class="num-cell" style="color:var(--purple);">
-                @if($row['doctor_visits'] > 0)
-                    {{ number_format($row['doctor_visits'], 0, '.', ' ') }}
-                @else
-                    <span style="color:var(--text3);">—</span>
-                @endif
+                <span x-show="row.doctor_visits > 0" x-text="fmt(row.doctor_visits)"></span>
+                <span x-show="row.doctor_visits <= 0" style="color:var(--text3);">—</span>
             </td>
 
             {{-- Врачи: частота --}}
             <td class="pct-cell">
-                @if($row['freq_target_doc'] > 0)
-                    <div class="pct-val" style="color:{{ $cDoc }};">{{ $row['freq_pct_doc'] }}%</div>
-                    <div style="font-size:11px;color:var(--text3);">{{ $row['doctor_visits'] }} / {{ $row['freq_target_doc'] }}</div>
-                    <div class="pct-bar">
-                        <div class="pct-bar-fill" style="background:{{ $cDoc }};width:{{ min($row['freq_pct_doc'],100) }}%;"></div>
+                <template x-if="row.freq_target_doc > 0">
+                    <div>
+                        <div class="pct-val" :style="'color:' + pctColor(row.freq_pct_doc)" x-text="row.freq_pct_doc + '%'"></div>
+                        <div style="font-size:11px;color:var(--text3);" x-text="row.doctor_visits + ' / ' + row.freq_target_doc"></div>
+                        <div class="pct-bar">
+                            <div class="pct-bar-fill" :style="'background:' + pctColor(row.freq_pct_doc) + ';width:' + Math.min(row.freq_pct_doc, 100) + '%'"></div>
+                        </div>
                     </div>
-                @else
+                </template>
+                <template x-if="row.freq_target_doc <= 0">
                     <span style="color:var(--text3);">—</span>
-                @endif
+                </template>
             </td>
 
             {{-- Аптеки: база --}}
             <td class="num-cell group-sep" style="color:var(--sky);">
-                @if($row['base_pharmacies'] > 0)
-                    <div class="num-big">{{ $row['base_pharmacies'] }}</div>
-                @else
-                    <span style="color:var(--text3);">—</span>
-                @endif
+                <span x-show="row.base_pharmacies > 0" class="num-big" x-text="row.base_pharmacies"></span>
+                <span x-show="row.base_pharmacies <= 0" style="color:var(--text3);">—</span>
             </td>
 
             {{-- Аптеки: визиты --}}
             <td class="num-cell" style="color:var(--sky);">
-                @if($row['pharmacy_visits'] > 0)
-                    {{ number_format($row['pharmacy_visits'], 0, '.', ' ') }}
-                @else
-                    <span style="color:var(--text3);">—</span>
-                @endif
+                <span x-show="row.pharmacy_visits > 0" x-text="fmt(row.pharmacy_visits)"></span>
+                <span x-show="row.pharmacy_visits <= 0" style="color:var(--text3);">—</span>
             </td>
 
             {{-- Аптеки: частота --}}
             <td class="pct-cell">
-                @if($row['freq_target_phar'] > 0)
-                    <div class="pct-val" style="color:{{ $cPhar }};">{{ $row['freq_pct_phar'] }}%</div>
-                    <div style="font-size:11px;color:var(--text3);">{{ $row['pharmacy_visits'] }} / {{ $row['freq_target_phar'] }}</div>
-                    <div class="pct-bar">
-                        <div class="pct-bar-fill" style="background:{{ $cPhar }};width:{{ min($row['freq_pct_phar'],100) }}%;"></div>
+                <template x-if="row.freq_target_phar > 0">
+                    <div>
+                        <div class="pct-val" :style="'color:' + pctColor(row.freq_pct_phar)" x-text="row.freq_pct_phar + '%'"></div>
+                        <div style="font-size:11px;color:var(--text3);" x-text="row.pharmacy_visits + ' / ' + row.freq_target_phar"></div>
+                        <div class="pct-bar">
+                            <div class="pct-bar-fill" :style="'background:' + pctColor(row.freq_pct_phar) + ';width:' + Math.min(row.freq_pct_phar, 100) + '%'"></div>
+                        </div>
                     </div>
-                @else
+                </template>
+                <template x-if="row.freq_target_phar <= 0">
                     <span style="color:var(--text3);">—</span>
-                @endif
+                </template>
             </td>
 
             {{-- Ср. длительность --}}
             <td class="num-cell group-sep">
-                @if($row['avg_duration'] > 0)
-                    <span style="color:var(--text2);">{{ $row['avg_duration'] }}<span style="font-size:11px;"> мин</span></span>
-                @else
-                    <span style="color:var(--text3);">—</span>
-                @endif
+                <span x-show="row.avg_duration > 0" style="color:var(--text2);"><span x-text="row.avg_duration"></span><span style="font-size:11px;"> мин</span></span>
+                <span x-show="row.avg_duration <= 0" style="color:var(--text3);">—</span>
             </td>
         </tr>
-        @endforeach
+        </template>
         </tbody>
     </table>
     </div>
-    @endif
 </div>
 
 </div>
+
+<script>
+function leaderboard(initialData, initialMonth) {
+    return {
+        month: initialMonth,
+        loading: false,
+        data: initialData,
+        sort: 'total_visits',
+        dir: 'desc',
+
+        get sortedRows() {
+            const rows = [...this.data.rows];
+            const s = this.sort, d = this.dir === 'desc' ? -1 : 1;
+            rows.sort((a, b) => (a[s] - b[s]) * d);
+            return rows;
+        },
+        sortBy(col) {
+            if (this.sort === col) {
+                this.dir = this.dir === 'desc' ? 'asc' : 'desc';
+            } else {
+                this.sort = col;
+                this.dir = 'desc';
+            }
+        },
+        sortIco(col) {
+            if (this.sort !== col) return '↕';
+            return this.dir === 'desc' ? '↓' : '↑';
+        },
+        rankClass(rank) {
+            return rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-n';
+        },
+        pctColor(pct) {
+            return pct >= 80 ? '#16a34a' : (pct >= 50 ? '#f59e0b' : '#ef4444');
+        },
+        visitPct(row) {
+            const max = this.data.rows.reduce((m, r) => Math.max(m, r.total_visits), 0) || 1;
+            return Math.round(row.total_visits / max * 100);
+        },
+        fmt(n) {
+            return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        },
+
+        exportUrl() {
+            const params = new URLSearchParams({ month: this.month });
+            return '{{ route('leaderboard.export') }}?' + params.toString();
+        },
+
+        async loadMonth() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({ month: this.month });
+                const res = await fetch('{{ route('leaderboard.data') }}?' + params.toString(), {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) throw new Error('http_' + res.status);
+                this.data = await res.json();
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('month', this.month);
+                window.history.replaceState({}, '', url);
+            } catch (e) {
+                this.data = { ...this.data, error: 'Не удалось получить данные из Nobel CRM. Попробуйте позже.' };
+            } finally {
+                this.loading = false;
+            }
+        },
+    };
+}
+</script>
+
 @endsection

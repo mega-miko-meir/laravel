@@ -313,6 +313,37 @@
 })();
 </script>
 
+<script>
+(function () {
+    // Фоновая предзагрузка «Аналитики»: сразу после логина/захода на дашборд
+    // тихо прогреваем серверный кэш (Cache::remember по месяцу) для основных
+    // страниц раздела, чтобы при первом реальном переходе туда данные уже
+    // лежали в кэше и страница открывалась мгновенно, а не ждала живой запрос
+    // в Nobel CRM. Каждый эндпоинт сам решает дефолтный месяц (предыдущий) —
+    // параметры передавать не нужно.
+    const prefetchUrls = [
+        '{{ route('calls.data') }}',
+        '{{ route('admin.target-clients.data') }}',
+        '{{ route('admin.double-visit-plan.data') }}',
+        '{{ route('leaderboard.data') }}',
+        '{{ route('kmp.data') }}',
+    ];
+
+    function prefetchAnalytics() {
+        prefetchUrls.forEach(url => {
+            fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .catch(() => {});
+        });
+    }
+
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(prefetchAnalytics, { timeout: 5000 });
+    } else {
+        setTimeout(prefetchAnalytics, 1500);
+    }
+})();
+</script>
+
 @endcan
 
 @endsection

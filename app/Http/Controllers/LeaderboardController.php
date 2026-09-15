@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\Nobel\Call;
-use Carbon\Carbon;
+use App\Support\Etl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class LeaderboardController extends Controller
@@ -15,38 +17,58 @@ class LeaderboardController extends Controller
 
     public function index(Request $request)
     {
-        $dateFrom = $request->input('date_from');
-        $dateTo   = $request->input('date_to');
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
 
-        [$crmStats, $stgDoctors, $stgPharmacies] = $this->fetchStats($dateFrom, $dateTo);
-        $workingDays = $this->workingDays($dateFrom, $dateTo);
-        $callTarget  = $workingDays * self::DAILY_TARGET;
-        $rows        = $this->buildRows($crmStats, $stgDoctors, $stgPharmacies, $callTarget);
+        return view('leaderboard', [
+            'month'       => $month,
+            'initialData' => $this->loadMonth($month),
+        ]);
+    }
 
-        $allowedSorts = [
-            'total_visits', 'call_pct', 'doctor_visits', 'pharmacy_visits', 'avg_duration',
-            'base_doctors', 'base_pharmacies', 'freq_pct_doc', 'freq_pct_phar',
-        ];
-        $sort = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'total_visits';
-        $dir  = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+    /**
+     * JSON-эндпоинт смены месяца без перезагрузки страницы — тот же паттерн,
+     * что на «Визитах»/«Таргетных клиентах»/«Двойных визитах». Сортировка
+     * таблицы больше не серверный параметр — $rows уже плоский массив,
+     * сортируется целиком на клиенте после одной загрузки месяца.
+     */
+    public function data(Request $request)
+    {
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
 
-        $rows = ($dir === 'desc' ? $rows->sortByDesc($sort) : $rows->sortBy($sort))->values();
+        return response()->json($this->loadMonth($month), 200, [], JSON_UNESCAPED_UNICODE);
+    }
 
-        return view('leaderboard', compact('rows', 'dateFrom', 'dateTo', 'sort', 'dir', 'workingDays', 'callTarget'));
+    private function loadMonth(string $month): array
+    {
+        [$dateFrom, $dateTo] = $this->monthBounds($month);
+
+        // Раньше каждое открытие страницы било живым запросом в Nobel CRM (плюс
+        // ещё 2 запроса к stg_*-таблицам) — как и везде в этом разделе, кэшируем
+        // до следующего ночного ETL.
+        return Cache::remember("leaderboard_{$month}", Etl::secondsUntilNextRun(), function () use ($dateFrom, $dateTo) {
+            [$crmStats, $stgDoctors, $stgPharmacies] = $this->fetchStats($dateFrom, $dateTo);
+            $workingDays = $this->workingDays($dateFrom, $dateTo);
+            $callTarget  = $workingDays * self::DAILY_TARGET;
+            $rows        = $this->buildRows($crmStats, $stgDoctors, $stgPharmacies, $callTarget);
+
+            return [
+                'rows'        => $rows,
+                'workingDays' => $workingDays,
+                'callTarget'  => $callTarget,
+            ];
+        });
     }
 
     public function export(Request $request)
     {
-        $dateFrom    = $request->input('date_from');
-        $dateTo      = $request->input('date_to');
-        $workingDays = $this->workingDays($dateFrom, $dateTo);
-        $callTarget  = $workingDays * self::DAILY_TARGET;
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
+        $data  = $this->loadMonth($month);
 
-        [$crmStats, $stgDoctors, $stgPharmacies] = $this->fetchStats($dateFrom, $dateTo);
-        $rows = $this->buildRows($crmStats, $stgDoctors, $stgPharmacies, $callTarget)
-                     ->sortByDesc('total_visits')->values();
+        $rows        = collect($data['rows'])->sortByDesc('total_visits')->values();
+        $workingDays = $data['workingDays'];
+        $callTarget  = $data['callTarget'];
 
-        $fileName = 'leaderboard_' . now()->format('Y-m-d') . '.csv';
+        $fileName = 'leaderboard_' . $month . '.csv';
 
         return response()->streamDownload(function () use ($rows, $workingDays, $callTarget) {
             $out = fopen('php://output', 'w');
@@ -84,15 +106,17 @@ class LeaderboardController extends Controller
         ]);
     }
 
-    private function fetchStats(?string $dateFrom, ?string $dateTo): array
+    private function fetchStats(string $dateFrom, string $dateTo): array
     {
-        $crmStats     = collect();
-        $stgDoctors   = collect();
+        $crmStats      = collect();
+        $stgDoctors    = collect();
         $stgPharmacies = collect();
 
         try {
-            $q = Call::whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
+            $crmStats = Call::whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
                 ->where('appointment_status', 'Выполнено')
+                ->where('appointment_Date', '>=', $dateFrom)
+                ->where('appointment_Date', '<=', $dateTo)
                 ->selectRaw('
                     employee_id,
                     MAX(employee) as employee_name,
@@ -100,10 +124,8 @@ class LeaderboardController extends Controller
                     SUM(appointment_type = "Визит к врачу") as doctor_visits,
                     SUM(appointment_type = "Визит в аптеку") as pharmacy_visits,
                     ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avg_duration
-                ');
-            if ($dateFrom) $q->where('appointment_Date', '>=', $dateFrom);
-            if ($dateTo)   $q->where('appointment_Date', '<=', $dateTo);
-            $crmStats = $q->groupBy('employee_id')->get()->keyBy('employee_id');
+                ')
+                ->groupBy('employee_id')->get()->keyBy('employee_id');
 
             // Базы клиентов из stg-таблиц (без фильтра по датам — это назначенная база)
             $stgDoctors = DB::connection('nobel')
@@ -131,7 +153,7 @@ class LeaderboardController extends Controller
         \Illuminate\Support\Collection $stgDoctors,
         \Illuminate\Support\Collection $stgPharmacies,
         int $callTarget
-    ): \Illuminate\Support\Collection {
+    ): array {
         return Employee::whereHas('crmIds')
             ->with('crmIds')
             ->orderBy('full_name')
@@ -174,16 +196,14 @@ class LeaderboardController extends Controller
                 ];
             })
             ->filter(fn($r) => $r['total_visits'] > 0)
-            ->values();
+            ->values()
+            ->all();
     }
 
-    private function workingDays(?string $dateFrom, ?string $dateTo): int
+    private function workingDays(string $dateFrom, string $dateTo): int
     {
-        if (!$dateFrom && !$dateTo) {
-            return 19;
-        }
-        $start = $dateFrom ? Carbon::parse($dateFrom) : now()->startOfMonth();
-        $end   = $dateTo   ? Carbon::parse($dateTo)   : now()->endOfMonth();
+        $start = Carbon::parse($dateFrom);
+        $end   = Carbon::parse($dateTo);
         $days  = 0;
         for ($d = $start->copy()->startOfDay(); $d->lte($end); $d->addDay()) {
             if ($d->isWeekday()) {
@@ -191,5 +211,12 @@ class LeaderboardController extends Controller
             }
         }
         return $days;
+    }
+
+    /** @return array{0: string, 1: string} [monthStart, monthEnd] в формате Y-m-d */
+    private function monthBounds(string $month): array
+    {
+        $date = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        return [$date->toDateString(), $date->copy()->endOfMonth()->toDateString()];
     }
 }
