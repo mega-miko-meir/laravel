@@ -2,158 +2,225 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\Nobel\Call;
+use App\Services\TargetClientsService;
+use App\Support\Etl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class CallController extends Controller
 {
+    public function __construct(private TargetClientsService $target)
+    {
+    }
+
+    /**
+     * Порядок полей в каждой строке $rows (см. loadMonth()) — массив, а не объект,
+     * чтобы не повторять имена ключей 30-40 тысяч раз в JSON (на объёме одного
+     * месяца это разница в разы: qs_calls отдаёт до ~41k визитов/месяц).
+     */
+    private const ROW_FIELDS = [
+        'appointment_Date', 'employee', 'employee_id', 'organization',
+        'customer_spesiality', 'town', 'province', 'employee_department',
+        'appointment_type', 'appointment_duration',
+    ];
+
+    /**
+     * Версия формы payload'а loadMonth() — часть cache-ключа. Кэш живёт часами
+     * (до ночного ETL), и при любом изменении состава полей возвращаемого
+     * массива (например, onekeyVisited -> onekeyTarget) старые закэшированные
+     * записи сохраняют СТАРУЮ форму — клиент получает смесь новых и отсутствующих
+     * (undefined -> 0) полей молча, без ошибки. Бампать при каждом таком изменении.
+     */
+    private const CACHE_VERSION = 'v4';
+
     public function index(Request $request)
     {
-        $onekeyTotal = $onekeyVisited = $onekeyPercent = 0;
-        $pharmOnekeyTotal = $pharmOnekeyVisited = $pharmOnekeyPercent = 0;
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
 
         try {
-            // KPI, тренды и охват OneKey — тяжёлые агрегаты по ~200k строк без
-            // хороших индексов под TEXT-колонки в staging-таблицах Nobel CRM.
-            // Данные обновляются раз в сутки через ETL — кэшируем на 10 минут,
-            // ключ учитывает все фильтры, влияющие на эти запросы.
-            $filterKey = 'calls_summary_' . md5(json_encode($request->only([
-                'date_from', 'date_to', 'province', 'town', 'employee', 'employee_id',
-                'employee_department', 'organization_type', 'customer_spesiality',
-            ])));
-
-            $summary = Cache::remember($filterKey, 600, function () use ($request) {
-                // 1 запрос вместо 6: все KPI-метрики за один SELECT
-                $kpi = $this->filtered($request)
-                    ->selectRaw('COUNT(*) as total, COUNT(DISTINCT employee) as employees_count, ROUND(AVG(CASE WHEN appointment_duration > 0 THEN appointment_duration END)) as avg_duration, SUM(appointment_type = "Визит к врачу") as doctor_visits, SUM(appointment_type = "Визит в аптеку") as pharmacy_visits')
-                    ->first();
-
-                // Monthly trend (last 12 months)
-                $monthlyTrend = $this->filtered($request)
-                    ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total, COUNT(*) as completed")
-                    ->whereNotNull('appointment_Date')
-                    ->groupBy('month')
-                    ->orderBy('month')
-                    ->limit(12)
-                    ->get();
-
-                // Top 10 regions
-                $topRegions = $this->filtered($request)
-                    ->selectRaw('province, COUNT(*) as total')
-                    ->whereNotNull('province')->where('province', '<>', '')
-                    ->groupBy('province')
-                    ->orderByDesc('total')
-                    ->limit(10)
-                    ->get();
-
-                // Top specialties
-                $topSpecialties = $this->filtered($request)
-                    ->selectRaw('customer_spesiality, COUNT(*) as total')
-                    ->whereNotNull('customer_spesiality')->where('customer_spesiality', '<>', '')
-                    ->groupBy('customer_spesiality')
-                    ->orderByDesc('total')
-                    ->limit(12)
-                    ->get();
-
-                return compact('kpi', 'monthlyTrend', 'topRegions', 'topSpecialties');
-            });
-
-            $kpi            = $summary['kpi'];
-            $monthlyTrend   = $summary['monthlyTrend'];
-            $topRegions     = $summary['topRegions'];
-            $topSpecialties = $summary['topSpecialties'];
-
-            $totalVisits       = (int) ($kpi->total ?? 0);
-            $employeesCount    = (int) ($kpi->employees_count ?? 0);
-            $avgDuration       = (int) ($kpi->avg_duration ?? 0);
-            $doctorVisits      = (int) ($kpi->doctor_visits ?? 0);
-            $pharmacyVisits    = (int) ($kpi->pharmacy_visits ?? 0);
-            $visitsPerEmployee = $employeesCount > 0 ? round($totalVisits / $employeesCount, 1) : 0;
-
-            // Paginated table with sorting
-            $allowedSorts = ['appointment_Date', 'employee', 'organization', 'province', 'town', 'appointment_duration'];
-            $sortCol = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'appointment_Date';
-            $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
-
-            $calls = $this->filtered($request)->orderBy($sortCol, $sortDir)->paginate(25);
-
-            // Опции фильтров — кэшируются на 1 час
-            $base = fn($col) => Call::whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
-                ->where('appointment_status', 'Выполнено')
-                ->distinct()->whereNotNull($col)->where($col, '<>', '')->orderBy($col)->pluck($col);
-
-            $provinces   = Cache::remember('calls_filter_provinces',   3600, fn() => $base('province'));
-            $towns       = Cache::remember('calls_filter_towns',       3600, fn() => $base('town'));
-            $specialties = Cache::remember('calls_filter_specialties', 3600, fn() => $base('customer_spesiality'));
-            $departments = Cache::remember('calls_filter_departments', 3600, fn() => $base('employee_department'));
-
-            // value — внутренний id сотрудника (не внешний crm id): у одного
-            // сотрудника может быть несколько CRM-аккаунтов, фильтр агрегирует все.
-            $empList = \App\Models\Employee::whereHas('crmIds')
-                ->orderBy('full_name')
-                ->get(['id', 'full_name'])
-                ->map(fn($e) => ['label' => $e->full_name, 'value' => $e->id])
-                ->values();
-
-            // OneKey coverage — общие фильтры для обоих запросов
-            $covWhere    = " AND c.appointment_status = 'Выполнено'";
-            $covBindings = [];
-            if ($request->filled('date_from')) { $covWhere .= " AND c.appointment_Date >= ?"; $covBindings[] = $request->input('date_from'); }
-            if ($request->filled('date_to'))   { $covWhere .= " AND c.appointment_Date <= ?"; $covBindings[] = $request->input('date_to'); }
-            if ($request->filled('employee_id')) {
-                $crmIds = \App\Models\Employee::find($request->input('employee_id'))?->crm_employee_ids ?? [];
-                $covWhere .= $crmIds
-                    ? " AND c.employee_id IN (" . implode(',', array_fill(0, count($crmIds), '?')) . ")"
-                    : " AND 1=0";
-                array_push($covBindings, ...$crmIds);
-            }
-            if ($request->filled('province')) {
-                $provs = (array) $request->input('province');
-                $covWhere .= " AND c.province IN (" . implode(',', array_fill(0, count($provs), '?')) . ")";
-                array_push($covBindings, ...$provs);
-            }
-
-            $coverageKey = 'calls_coverage_' . md5($covWhere . json_encode($covBindings));
-
-            // Охват врачей — total по customer_id, visited через join на customer_id
-            $doctorRow = Cache::remember("{$coverageKey}_doctor", 600, fn() => DB::connection('nobel')->selectOne("
-                SELECT
-                    (SELECT COUNT(DISTINCT customer_id) FROM qs_onekey_doctors) AS onekey_total,
-                    COUNT(DISTINCT d.customer_id) AS visited_count
-                FROM qs_calls c
-                INNER JOIN qs_onekey_doctors d ON d.customer_id = c.customer_id
-                WHERE c.appointment_type = 'Визит к врачу'" . $covWhere, $covBindings));
-            $onekeyTotal   = (int)($doctorRow->onekey_total  ?? 0);
-            $onekeyVisited = (int)($doctorRow->visited_count ?? 0);
-            $onekeyPercent = $onekeyTotal > 0 ? round($onekeyVisited / $onekeyTotal * 100) : 0;
-
-            // Охват аптек — total по organization_id, visited через join на organization_id
-            $pharmRow = Cache::remember("{$coverageKey}_pharmacy", 600, fn() => DB::connection('nobel')->selectOne("
-                SELECT
-                    (SELECT COUNT(DISTINCT organization_id) FROM qs_onekey_pharmacy) AS onekey_total,
-                    COUNT(DISTINCT p.organization_id) AS visited_count
-                FROM qs_calls c
-                INNER JOIN qs_onekey_pharmacy p ON p.organization_id = c.organization_id
-                WHERE c.appointment_type = 'Визит в аптеку'" . $covWhere, $covBindings));
-            $pharmOnekeyTotal   = (int)($pharmRow->onekey_total  ?? 0);
-            $pharmOnekeyVisited = (int)($pharmRow->visited_count ?? 0);
-            $pharmOnekeyPercent = $pharmOnekeyTotal > 0 ? round($pharmOnekeyVisited / $pharmOnekeyTotal * 100) : 0;
-
+            $data = $this->loadMonth($month);
         } catch (\Exception $e) {
             return back()->withErrors(['nobel_db' => 'Nobel CRM недоступна: ' . $e->getMessage()]);
         }
 
-        return view('calls', compact(
-            'calls', 'provinces', 'towns', 'specialties', 'departments', 'empList',
-            'totalVisits', 'employeesCount', 'avgDuration', 'visitsPerEmployee',
-            'monthlyTrend', 'topRegions', 'topSpecialties',
-            'doctorVisits', 'pharmacyVisits',
-            'onekeyTotal', 'onekeyVisited', 'onekeyPercent',
-            'pharmOnekeyTotal', 'pharmOnekeyVisited', 'pharmOnekeyPercent',
-            'sortCol', 'sortDir'
-        ));
+        return view('calls', [
+            'month'             => $month,
+            'initialData'       => $data,
+            'departmentGroupMap' => TargetClientsService::DEPARTMENT_GROUP_MAP,
+        ]);
+    }
+
+    /**
+     * JSON-эндпоинт смены месяца без перезагрузки страницы (Alpine.js fetch).
+     * Внутри месяца все фильтры (регион/город/специальность/группа/сотрудник/
+     * сортировка/пагинация/поиск) работают ЦЕЛИКОМ на клиенте — вся выборка за
+     * месяц уже в браузере, повторного похода на сервер не требуется. Только
+     * смена месяца — реальный новый запрос к Nobel CRM.
+     */
+    public function data(Request $request)
+    {
+        $month = $request->input('month', now()->subMonth()->format('Y-m'));
+
+        try {
+            // JSON_UNESCAPED_UNICODE: без него кириллица (почти весь текст тут)
+            // кодируется как \uXXXX — 6 байт на символ вместо ~2 в UTF-8, что на
+            // объёме одного месяца утраивало размер ответа.
+            return response()->json($this->loadMonth($month), 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Nobel CRM недоступна: ' . $e->getMessage()]);
+        }
+    }
+
+    private function loadMonth(string $month): array
+    {
+        set_time_limit(120);
+        // Один месяц может дать 30-40 тыс. визитов — Eloquent-модели на каждую
+        // строку (атрибуты, casts, dirty-tracking) съедают память в разы
+        // быстрее, чем сырые stdClass из query builder; дефолтных 128M не
+        // хватало даже на выборку одного тяжёлого месяца.
+        ini_set('memory_limit', '512M');
+
+        [$monthStart, $monthEnd] = $this->monthBounds($month);
+        $ttl = Etl::secondsUntilNextRun();
+
+        return Cache::remember("calls_month_" . self::CACHE_VERSION . "_{$month}", $ttl, function () use ($monthStart, $monthEnd) {
+            // Вся выборка месяца — ОДИН запрос, без пагинации/сортировки/фильтров
+            // на сервере (это теперь всё на клиенте). KPI/топ-регионы/топ-
+            // специальности/список фильтров — тоже больше не отдельные запросы,
+            // они считаются в браузере из этого же набора строк. Через query
+            // builder (не Eloquent) — сырые stdClass, без накладных расходов модели.
+            //
+            // Категориальные поля (сотрудник/организация/специальность/город/
+            // регион/группа/тип/дата) словарно кодируются: вместо повторения
+            // строки в каждой из 30-40 тыс. строк — маленький целочисленный
+            // индекс в общий словарь (см. $dictionaries в возвращаемом массиве).
+            // На реальных данных это снизило JSON с ~22MB до размера, пригодного
+            // для загрузки разом в браузер.
+            $dict = ['date' => [], 'employee' => [], 'organization' => [], 'specialty' => [],
+                     'town' => [], 'province' => [], 'department' => [], 'type' => []];
+            $idx = function (string $col, string $val) use (&$dict) {
+                return $dict[$col][$val] ??= count($dict[$col]);
+            };
+
+            $rows = DB::connection('nobel')->table('qs_calls')
+                ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
+                ->where('appointment_status', 'Выполнено')
+                ->whereBetween('appointment_Date', [$monthStart, $monthEnd])
+                ->orderBy('appointment_Date', 'desc')
+                ->get(self::ROW_FIELDS)
+                ->map(function ($c) use ($idx) {
+                    $date = $c->appointment_Date ? Carbon::parse($c->appointment_Date)->format('d.m.Y') : '—';
+                    return [
+                        $idx('date', $date),
+                        $idx('employee', $c->employee ?? '—'),
+                        $c->employee_id,
+                        $idx('organization', $c->organization ?? '—'),
+                        $idx('specialty', $c->customer_spesiality ?? '—'),
+                        $idx('town', $c->town ?? '—'),
+                        $idx('province', $c->province ?? '—'),
+                        $idx('department', $c->employee_department ?? '—'),
+                        $idx('type', $c->appointment_type ?? '—'),
+                        $c->appointment_duration,
+                    ];
+                });
+
+            // Тренд за последние 12 месяцев, заканчивая выбранным — единственный
+            // виджет, который физически не может считаться из данных одного
+            // месяца, остаётся отдельным лёгким агрегатом (не зависит от
+            // категориальных фильтров страницы, только от выбранного месяца).
+            $trendStart = Carbon::parse($monthStart)->subMonths(11)->startOfMonth();
+            $trend = Call::query()
+                ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
+                ->where('appointment_status', 'Выполнено')
+                ->where('appointment_Date', '>=', $trendStart)
+                ->where('appointment_Date', '<=', $monthEnd)
+                ->selectRaw("DATE_FORMAT(appointment_Date, '%Y-%m') as month, COUNT(*) as total")
+                ->groupBy('month')->orderBy('month')
+                ->get();
+
+            // Охват = доля рынка OneKey, попавшая в таргет-лист за выбранный месяц.
+            // Числитель — таргетные клиенты (employee_position='Медицинский
+            // представитель', без фильтра по статусу визита — таргет это план,
+            // а не факт визита, см. TargetClientsService); знаменатель — весь
+            // справочник OneKey (ёмкость рынка, не зависит ни от месяца, ни от
+            // фильтров). Таргет-лист должен реагировать на те же фильтры
+            // (регион/город/специальность/группа/сотрудник), что и остальная
+            // страница — поэтому он не сводится на сервере к одному числу, а
+            // грузится отдельным маленьким набором (уникальные клиенты, а не
+            // визиты — на порядок меньше строк, чем в $rows) и фильтруется в
+            // браузере той же логикой, что и таблица. Индексы категориальных
+            // полей — из ОБЩИХ словарей выше ($idx), чтобы совпадали с $rows.
+            $onekeyTotal = (int) (DB::connection('nobel')
+                ->selectOne('SELECT COUNT(DISTINCT customer_id) AS n FROM qs_onekey_doctors')->n ?? 0);
+            $pharmOnekeyTotal = (int) (DB::connection('nobel')
+                ->selectOne('SELECT COUNT(DISTINCT organization_id) AS n FROM qs_onekey_pharmacy')->n ?? 0);
+
+            // Критерий "кто является целью" (employee_position/appointment_type/
+            // organization_type) — из TargetClientsService::baseQuery(), не
+            // продублирован здесь: та же таблица "таргет", что и на странице
+            // «Таргетные клиенты», только своя проекция колонок под клиентскую
+            // фильтрацию/словарное кодирование этой страницы.
+            $doctorTargets = $this->target
+                ->baseQuery(TargetClientsService::SEGMENT_DOCTORS, $monthStart, $monthEnd)
+                ->distinct()
+                ->get(['customer_id', 'employee_id', 'province', 'town', 'employee_department', 'customer_spesiality'])
+                ->map(fn($c) => [
+                    $c->customer_id,
+                    $c->employee_id,
+                    $idx('province', $c->province ?? '—'),
+                    $idx('town', $c->town ?? '—'),
+                    $idx('department', $c->employee_department ?? '—'),
+                    $idx('specialty', $c->customer_spesiality ?? '—'),
+                ]);
+
+            $pharmacyTargets = $this->target
+                ->baseQuery(TargetClientsService::SEGMENT_PHARMACIES, $monthStart, $monthEnd)
+                ->distinct()
+                ->get(['organization_id', 'employee_id', 'province', 'town', 'employee_department'])
+                ->map(fn($c) => [
+                    $c->organization_id,
+                    $c->employee_id,
+                    $idx('province', $c->province ?? '—'),
+                    $idx('town', $c->town ?? '—'),
+                    $idx('department', $c->employee_department ?? '—'),
+                ]);
+
+            // Словари, использованные и в $rows, и в таргет-листах — пересобираем
+            // ПОСЛЕ обоих проходов, чтобы включить значения, встретившиеся только
+            // в таргет-листах (например, департамент сотрудника, у которого в
+            // этом месяце не было ни одного ВЫПОЛНЕННОГО визита).
+            $dictionaries = array_map(fn($d) => array_keys($d), $dict);
+
+            // Список сотрудников для фильтра + их CRM-аккаунты — у одного
+            // сотрудника может быть несколько crm_employee_id (повторный найм),
+            // клиентский фильтр должен матчить строки по ЛЮБОМУ из них.
+            $empList = Employee::whereHas('crmIds')
+                ->orderBy('full_name')
+                ->get(['id', 'full_name'])
+                ->map(fn($e) => [
+                    'label'  => $e->full_name,
+                    'value'  => $e->id,
+                    'crmIds' => $e->crm_employee_ids,
+                ])
+                ->values();
+
+            return [
+                'error'            => null,
+                'rowFields'        => self::ROW_FIELDS,
+                'rows'             => $rows,
+                'dictionaries'     => $dictionaries,
+                'trend'            => $trend,
+                'onekeyTotal'      => $onekeyTotal,
+                'pharmOnekeyTotal' => $pharmOnekeyTotal,
+                'doctorTargets'    => $doctorTargets,
+                'pharmacyTargets'  => $pharmacyTargets,
+                'empList'          => $empList,
+            ];
+        });
     }
 
     public function export(Request $request)
@@ -198,24 +265,41 @@ class CallController extends Controller
         ]);
     }
 
+    /** Экспорт по-прежнему серверный (нужна настоящая отправка файла) — принимает month + те же категориальные фильтры, что выбраны на клиенте. */
     private function filtered(Request $request)
     {
         $q = Call::query()
             ->whereIn('appointment_type', ['Визит к врачу', 'Визит в аптеку'])
             ->where('appointment_status', 'Выполнено');
-        if ($request->filled('date_from'))            $q->where('appointment_Date', '>=', $request->input('date_from'));
-        if ($request->filled('date_to'))              $q->where('appointment_Date', '<=', $request->input('date_to'));
-        if ($request->filled('province'))             $q->whereIn('province', (array) $request->input('province'));
-        if ($request->filled('town'))                 $q->whereIn('town', (array) $request->input('town'));
-        if ($request->filled('employee'))             $q->where('employee', 'like', '%' . $request->input('employee') . '%');
+
+        if ($request->filled('month')) {
+            [$monthStart, $monthEnd] = $this->monthBounds($request->input('month'));
+            $q->whereBetween('appointment_Date', [$monthStart, $monthEnd]);
+        }
+        if ($request->filled('province'))            $q->whereIn('province', (array) $request->input('province'));
+        if ($request->filled('town'))                $q->whereIn('town', (array) $request->input('town'));
+        if ($request->filled('employee_department')) {
+            // Клиент присылает НОРМАЛИЗОВАННЫЕ названия групп (см.
+            // TargetClientsService::DEPARTMENT_GROUP_MAP, единственный источник
+            // этой карты в проекте) — разворачиваем обратно в сырые значения БД.
+            $raw = collect((array) $request->input('employee_department'))
+                ->flatMap(fn($name) => $this->target->rawDepartmentValues($name))
+                ->all();
+            $q->whereIn('employee_department', $raw);
+        }
+        if ($request->filled('customer_spesiality'))  $q->whereIn('customer_spesiality', (array) $request->input('customer_spesiality'));
         if ($request->filled('employee_id')) {
-            $crmIds = \App\Models\Employee::find($request->input('employee_id'))?->crm_employee_ids ?? [];
+            $crmIds = Employee::find($request->input('employee_id'))?->crm_employee_ids ?? [];
             $q->whereIn('employee_id', $crmIds ?: [-1]);
         }
-        if ($request->filled('employee_department'))    $q->whereIn('employee_department', (array) $request->input('employee_department'));
-        if ($request->filled('organization_type'))    $q->whereIn('organization_type', (array) $request->input('organization_type'));
-        if ($request->filled('appointment_status'))   $q->whereIn('appointment_status', (array) $request->input('appointment_status'));
-        if ($request->filled('customer_spesiality'))  $q->whereIn('customer_spesiality', (array) $request->input('customer_spesiality'));
+
         return $q;
+    }
+
+    /** @return array{0: string, 1: string} [monthStart, monthEnd] в формате Y-m-d */
+    private function monthBounds(string $month): array
+    {
+        $date = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        return [$date->toDateString(), $date->copy()->endOfMonth()->toDateString()];
     }
 }
