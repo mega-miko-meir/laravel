@@ -62,24 +62,35 @@ class DataQualityService
         return $rows->filter(fn($r) => $r->territory_role !== null && $r->territory_role !== $r->position)->values();
     }
 
+    /**
+     * Nobel CRM (qs_calls) заводит учётки только на Rep и RM — KAM/Product/
+     * Marketing/FFM там в принципе не существуют, так что для них "нет
+     * привязки" всегда true и не является реальной проблемой данных.
+     */
     public function activeWithoutCrm(): Collection
     {
-        return $this->activeEmployeesMissing('employee_crm_ids');
-    }
-
-    public function activeWithoutKmp(): Collection
-    {
-        return $this->activeEmployeesMissing('employee_kmp_names');
+        return $this->activeEmployeesMissing('employee_crm_ids', ['Rep', 'RM']);
     }
 
     /**
-     * Активные сотрудники, у которых нет ни одной привязанной внешней учётки
-     * (many-to-one: проверяем отсутствие любых строк в pivot-таблице, а не одно поле).
+     * KMP-продажи привязываются только по полю "Медпредставитель" (Rep) —
+     * РМ там не фигурирует как отдельная привязываемая роль.
      */
-    private function activeEmployeesMissing(string $pivotTable): Collection
+    public function activeWithoutKmp(): Collection
+    {
+        return $this->activeEmployeesMissing('employee_kmp_names', ['Rep']);
+    }
+
+    /**
+     * Активные сотрудники нужной должности, у которых нет ни одной привязанной
+     * внешней учётки (many-to-one: проверяем отсутствие любых строк в
+     * pivot-таблице, а не одно поле).
+     */
+    private function activeEmployeesMissing(string $pivotTable, array $positions): Collection
     {
         return $this->joinLatestEvent(DB::table('employees as e'))
             ->whereIn('ev.event_type', ['hired', 'return_from_leave'])
+            ->whereIn('e.position', $positions)
             ->whereNotExists(function ($q) use ($pivotTable) {
                 $q->select(DB::raw(1))
                     ->from($pivotTable . ' as pv')
@@ -88,6 +99,78 @@ class DataQualityService
             ->select('e.id', 'e.full_name', 'e.position')
             ->orderBy('e.full_name')
             ->get();
+    }
+
+    /**
+     * Обратное направление к activeWithoutCrm(): у CRM-аккаунта (визиты в Nobel
+     * CRM, Rep/RM по должности CRM) нет ни привязки в employee_crm_ids, ни вообще
+     * похожего по имени сотрудника в employees — то есть это не "забыли
+     * привязать", а человек в принципе не заведён в системе. activeWithoutCrm()
+     * такие случаи не видит, поскольку смотрит только на таблицу employees.
+     */
+    public function crmAccountsWithoutEmployee(): Collection
+    {
+        $crmEmployees = DB::connection('nobel')->select("
+            SELECT employee_id, TRIM(employee) as employee, employee_position
+            FROM qs_calls
+            WHERE employee_id IS NOT NULL AND employee IS NOT NULL AND employee <> ''
+              AND employee_position IN ('Медицинский представитель', 'Региональный менеджер')
+            GROUP BY employee_id, employee, employee_position
+            ORDER BY employee
+        ");
+
+        $linkedCrmIds = DB::table('employee_crm_ids')->pluck('crm_employee_id')->flip();
+
+        // Тот же алгоритм короткого имени (первые два слова), что и в
+        // CrmMappingController::autoMatch() — если бы автопривязка нашла
+        // совпадение, это не "отсутствующий" сотрудник, а просто непривязанный.
+        $employeeShNames = DB::table('employees')->pluck('full_name')
+            ->map(fn($name) => $this->shName($name))
+            ->flip();
+
+        return collect($crmEmployees)
+            ->reject(fn($r) => $linkedCrmIds->has((int) $r->employee_id))
+            ->reject(fn($r) => $employeeShNames->has($this->shName($r->employee)))
+            ->map(fn($r) => (object) [
+                'crm_employee_id' => (int) $r->employee_id,
+                'employee'        => $r->employee,
+                'position'        => $r->employee_position,
+            ])
+            ->values();
+    }
+
+    private function shName(string $name): string
+    {
+        return implode(' ', array_slice(explode(' ', trim($name)), 0, 2));
+    }
+
+    /**
+     * Обратное направление к activeWithoutKmp(): у КМП-продавца (Медпредставитель
+     * в kmp) нет ни привязки в employee_kmp_names, ни вообще похожего по имени
+     * сотрудника в employees.
+     */
+    public function kmpAccountsWithoutEmployee(): Collection
+    {
+        $kmpEmployees = DB::connection('nobel')->select('
+            SELECT TRIM(`Медпредставитель`) as name
+            FROM kmp
+            WHERE `Статус заказа` = "Доставлено"
+              AND `Медпредставитель` IS NOT NULL AND `Медпредставитель` <> ""
+            GROUP BY TRIM(`Медпредставитель`)
+            ORDER BY `Медпредставитель`
+        ');
+
+        $linkedNames = DB::table('employee_kmp_names')->pluck('kmp_employee_name')->flip();
+
+        $employeeShNames = DB::table('employees')->pluck('full_name')
+            ->map(fn($name) => $this->shName($name))
+            ->flip();
+
+        return collect($kmpEmployees)
+            ->reject(fn($r) => $linkedNames->has($r->name))
+            ->reject(fn($r) => $employeeShNames->has($this->shName($r->name)))
+            ->map(fn($r) => (object) ['employee' => $r->name])
+            ->values();
     }
 
     /**

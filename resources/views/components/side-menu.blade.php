@@ -2,9 +2,7 @@
     // Точный список путей внутри выпадающего "Настройки" — не голый 'admin/*',
     // иначе теперь ложно захватывает admin.double-visit-plan/admin.target-clients,
     // которые переехали в раздел "Аналитика" и больше не лежат в этом списке.
-    $isAdminPage = request()->is('admin/crm-mapping*')
-        || request()->is('admin/kmp-mapping*')
-        || request()->is('admin/data-quality*')
+    $isAdminPage = request()->is('admin/data-integrity*')
         || request()->is('admin/territory-changes*')
         || request()->is('users')
         || request()->is('activity');
@@ -139,11 +137,9 @@
                 x-transition:enter-start="opacity-0 -translate-y-1"
                 x-transition:enter-end="opacity-100 translate-y-0"
                 style="list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;">
-                <li>{!! $navLink(route('admin.crm-mapping'), 'Привязка CRM', $icons['link'], request()->is('admin/crm-mapping*')) !!}</li>
-                <li>{!! $navLink(route('admin.kmp-mapping'), 'Привязка KMP', $icons['link'], request()->is('admin/kmp-mapping*')) !!}</li>
+                <li>{!! $navLink(route('admin.data-integrity'), 'Привязки и проверка данных', $icons['link'], request()->is('admin/data-integrity*')) !!}</li>
                 <li>{!! $navLink('/users', 'Пользователи', $icons['users'], request()->is('users')) !!}</li>
                 <li>{!! $navLink(route('activity.logs'), 'Активность', $icons['activity'], request()->is('activity')) !!}</li>
-                <li>{!! $navLink(route('admin.data-quality'), 'Проверка данных', $icons['dq'], request()->is('admin/data-quality')) !!}</li>
                 <li>{!! $navLink(route('admin.territory-changes'), 'Смена территорий', $icons['territory'], request()->is('admin/territory-changes*')) !!}</li>
             </ul>
         </li>

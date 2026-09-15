@@ -8,7 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\CrmMappingController;
 use App\Http\Controllers\KmpMappingController;
-use App\Http\Controllers\DataQualityController;
+use App\Http\Controllers\DataIntegrityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TerritoryChangeController;
 use App\Http\Controllers\DoubleVisitPlanController;
@@ -35,15 +35,20 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/notifications/{notification}', [NotificationController::class, 'show'])
         ->name('admin.notifications.show');
 
-    Route::get('/admin/crm-mapping', [CrmMappingController::class, 'index'])->name('admin.crm-mapping');
+    // Привязка CRM/KMP и проверка данных объединены на одной странице с вкладками
+    // (/admin/data-integrity) — старые URL остаются рабочими как редиректы на
+    // нужную вкладку, чтобы не ломать существующие ссылки/закладки.
+    Route::get('/admin/data-integrity', [DataIntegrityController::class, 'index'])->name('admin.data-integrity');
+
+    Route::get('/admin/crm-mapping', fn() => redirect()->route('admin.data-integrity', ['tab' => 'crm']))->name('admin.crm-mapping');
     Route::post('/admin/crm-mapping/auto-match', [CrmMappingController::class, 'autoMatch'])->name('admin.crm-mapping.auto');
     Route::post('/admin/crm-mapping/link', [CrmMappingController::class, 'link'])->name('admin.crm-mapping.link');
 
-    Route::get('/admin/kmp-mapping', [KmpMappingController::class, 'index'])->name('admin.kmp-mapping');
+    Route::get('/admin/kmp-mapping', fn() => redirect()->route('admin.data-integrity', ['tab' => 'kmp']))->name('admin.kmp-mapping');
     Route::post('/admin/kmp-mapping/auto-match', [KmpMappingController::class, 'autoMatch'])->name('admin.kmp-mapping.auto');
     Route::post('/admin/kmp-mapping/link', [KmpMappingController::class, 'link'])->name('admin.kmp-mapping.link');
 
-    Route::get('/admin/data-quality', [DataQualityController::class, 'index'])->name('admin.data-quality');
+    Route::get('/admin/data-quality', fn() => redirect()->route('admin.data-integrity', ['tab' => 'quality']))->name('admin.data-quality');
 
     Route::post('/admin/reports/weekly-dismissed', [ReportController::class, 'sendWeeklyDismissed'])->name('admin.reports.weekly-dismissed');
 

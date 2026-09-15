@@ -27,7 +27,12 @@ class CrmMappingController extends Controller
         });
     }
 
-    public function index()
+    /**
+     * Данные для карточки «CRM» на объединённой странице
+     * /admin/data-integrity — переиспользуются DataIntegrityController'ом
+     * напрямую, без похода через рендер отдельного вью.
+     */
+    public function buildIndexData(): array
     {
         $crmEmployees = $this->getCrmEmployees();
 
@@ -41,11 +46,13 @@ class CrmMappingController extends Controller
         $crmLinks = EmployeeCrmId::with('employee:id,full_name,position')->get()->keyBy('crm_employee_id');
 
         $crmTotal = count($crmEmployees);
-        $mapped   = $crmLinks->count();
+        // Не $crmLinks->count() — employee_crm_ids может содержать "осиротевшие"
+        // привязки на crm_employee_id, который больше не встречается в текущей
+        // выгрузке qs_calls (аккаунт пропал/переименован в Nobel), и это раздувало
+        // счётчик "привязано" вместе с заниженным "не привязано".
+        $mapped = collect($crmEmployees)->filter(fn($c) => $crmLinks->has($c->employee_id))->count();
 
-        return view('admin.crm-mapping', compact(
-            'crmEmployees', 'sysEmployees', 'crmLinks', 'crmTotal', 'mapped'
-        ));
+        return compact('crmEmployees', 'sysEmployees', 'crmLinks', 'crmTotal', 'mapped');
     }
 
     // Привязать CRM-аккаунт (employee_id из qs_calls) к сотруднику системы.

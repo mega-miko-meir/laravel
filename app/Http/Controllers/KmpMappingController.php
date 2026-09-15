@@ -28,7 +28,12 @@ class KmpMappingController extends Controller
         });
     }
 
-    public function index()
+    /**
+     * Данные для карточки «KMP» на объединённой странице
+     * /admin/data-integrity — переиспользуются DataIntegrityController'ом
+     * напрямую, без похода через рендер отдельного вью.
+     */
+    public function buildIndexData(): array
     {
         $kmpEmployees = $this->getKmpEmployees();
 
@@ -41,11 +46,12 @@ class KmpMappingController extends Controller
         $kmpLinks = EmployeeKmpName::with('employee:id,full_name,position')->get()->keyBy('kmp_employee_name');
 
         $kmpTotal = count($kmpEmployees);
-        $mapped   = $kmpLinks->count();
+        // Считаем только среди текущих $kmpEmployees, а не все employee_kmp_names —
+        // иначе "осиротевшие" привязки на имя, пропавшее из текущей выгрузки kmp,
+        // раздували бы "привязано" и занижали "не привязано" (как было на CRM).
+        $mapped = collect($kmpEmployees)->filter(fn($c) => $kmpLinks->has($c->name))->count();
 
-        return view('admin.kmp-mapping', compact(
-            'kmpEmployees', 'sysEmployees', 'kmpLinks', 'kmpTotal', 'mapped'
-        ));
+        return compact('kmpEmployees', 'sysEmployees', 'kmpLinks', 'kmpTotal', 'mapped');
     }
 
     public function link(Request $request)
