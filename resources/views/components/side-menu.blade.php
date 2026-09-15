@@ -1,5 +1,13 @@
 @php
-    $isAdminPage = request()->is('admin/*') || request()->is('users') || request()->is('activity');
+    // Точный список путей внутри выпадающего "Настройки" — не голый 'admin/*',
+    // иначе теперь ложно захватывает admin.double-visit-plan/admin.target-clients,
+    // которые переехали в раздел "Аналитика" и больше не лежат в этом списке.
+    $isAdminPage = request()->is('admin/crm-mapping*')
+        || request()->is('admin/kmp-mapping*')
+        || request()->is('admin/data-quality*')
+        || request()->is('admin/territory-changes*')
+        || request()->is('users')
+        || request()->is('activity');
 @endphp
 
 <nav style="height:100%;display:flex;flex-direction:column;padding:56px 0 16px;background:#1e3a8a;color:#fff;overflow-y:auto;">
@@ -63,11 +71,11 @@
         </li>
         @endcan
 
-        {{-- ── CRM ── --}}
+        {{-- ── Аналитика ── --}}
         @can('admin')
         <li>
             <div style="padding:4px 12px;margin-top:16px;margin-bottom:2px;display:flex;align-items:center;gap:8px;">
-                <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#60a5fa;">CRM</span>
+                <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#60a5fa;">Аналитика</span>
                 <div style="flex:1;height:1px;background:#2563eb;opacity:.5;"></div>
             </div>
         </li>
@@ -75,20 +83,16 @@
             {!! $navLink(route('calls.index'), 'Визиты', $icons['calls'], request()->is('calls*')) !!}
         </li>
         <li>
+            {!! $navLink(route('admin.double-visit-plan'), 'Двойные визиты', $icons['calls'], request()->is('admin/double-visit-plan*')) !!}
+        </li>
+        <li>
+            {!! $navLink(route('admin.target-clients'), 'Таргетные клиенты', $icons['clients'], request()->is('admin/target-clients*')) !!}
+        </li>
+        <li>
             {!! $navLink(route('clients.index'), 'База OneKey', $icons['clients'], request()->is('clients')) !!}
         </li>
         <li>
             {!! $navLink(route('leaderboard.index'), 'Рейтинг МП', $icons['leaderboard'], request()->is('leaderboard*')) !!}
-        </li>
-        @endcan
-
-        {{-- ── KMP ── --}}
-        @can('admin')
-        <li>
-            <div style="padding:4px 12px;margin-top:16px;margin-bottom:2px;display:flex;align-items:center;gap:8px;">
-                <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#60a5fa;">KMP</span>
-                <div style="flex:1;height:1px;background:#2563eb;opacity:.5;"></div>
-            </div>
         </li>
         <li>
             {!! $navLink(route('kmp.index'), 'Продажи', $icons['kmp'], request()->is('kmp*')) !!}
@@ -141,7 +145,6 @@
                 <li>{!! $navLink(route('activity.logs'), 'Активность', $icons['activity'], request()->is('activity')) !!}</li>
                 <li>{!! $navLink(route('admin.data-quality'), 'Проверка данных', $icons['dq'], request()->is('admin/data-quality')) !!}</li>
                 <li>{!! $navLink(route('admin.territory-changes'), 'Смена территорий', $icons['territory'], request()->is('admin/territory-changes*')) !!}</li>
-                <li>{!! $navLink(route('admin.double-visit-plan'), 'План двойных визитов', $icons['calls'], request()->is('admin/double-visit-plan*')) !!}</li>
             </ul>
         </li>
         @endcan
