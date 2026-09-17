@@ -107,17 +107,15 @@ class DataQualityService
      * похожего по имени сотрудника в employees — то есть это не "забыли
      * привязать", а человек в принципе не заведён в системе. activeWithoutCrm()
      * такие случаи не видит, поскольку смотрит только на таблицу employees.
+     *
+     * Список принимается снаружи (кэшированный CrmMappingController::getCrmEmployees()),
+     * а не запрашивается заново — тот же поход в qs_calls занимает ~5-6с, и раньше
+     * дублировался: один и тот же запрос выполнялся дважды на одной странице.
      */
-    public function crmAccountsWithoutEmployee(): Collection
+    public function crmAccountsWithoutEmployee(array $crmEmployees): Collection
     {
-        $crmEmployees = DB::connection('nobel')->select("
-            SELECT employee_id, TRIM(employee) as employee, employee_position
-            FROM qs_calls
-            WHERE employee_id IS NOT NULL AND employee IS NOT NULL AND employee <> ''
-              AND employee_position IN ('Медицинский представитель', 'Региональный менеджер')
-            GROUP BY employee_id, employee, employee_position
-            ORDER BY employee
-        ");
+        $crmEmployees = collect($crmEmployees)
+            ->whereIn('employee_position', ['Медицинский представитель', 'Региональный менеджер']);
 
         $linkedCrmIds = DB::table('employee_crm_ids')->pluck('crm_employee_id')->flip();
 
@@ -128,7 +126,7 @@ class DataQualityService
             ->map(fn($name) => $this->shName($name))
             ->flip();
 
-        return collect($crmEmployees)
+        return $crmEmployees
             ->reject(fn($r) => $linkedCrmIds->has((int) $r->employee_id))
             ->reject(fn($r) => $employeeShNames->has($this->shName($r->employee)))
             ->map(fn($r) => (object) [
@@ -148,18 +146,12 @@ class DataQualityService
      * Обратное направление к activeWithoutKmp(): у КМП-продавца (Медпредставитель
      * в kmp) нет ни привязки в employee_kmp_names, ни вообще похожего по имени
      * сотрудника в employees.
+     *
+     * Список принимается снаружи (кэшированный KmpMappingController::getKmpEmployees()) —
+     * та же причина, что и у crmAccountsWithoutEmployee().
      */
-    public function kmpAccountsWithoutEmployee(): Collection
+    public function kmpAccountsWithoutEmployee(array $kmpEmployees): Collection
     {
-        $kmpEmployees = DB::connection('nobel')->select('
-            SELECT TRIM(`Медпредставитель`) as name
-            FROM kmp
-            WHERE `Статус заказа` = "Доставлено"
-              AND `Медпредставитель` IS NOT NULL AND `Медпредставитель` <> ""
-            GROUP BY TRIM(`Медпредставитель`)
-            ORDER BY `Медпредставитель`
-        ');
-
         $linkedNames = DB::table('employee_kmp_names')->pluck('kmp_employee_name')->flip();
 
         $employeeShNames = DB::table('employees')->pluck('full_name')
