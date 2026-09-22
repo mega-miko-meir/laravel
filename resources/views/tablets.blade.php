@@ -172,24 +172,55 @@
                          border-radius:50%;font-size:11px;font-weight:700;">{{ $count }}</span>
             Без планшета
         </button>
+        @php
+            $fieldEmployees = $availableEmployees->whereIn('position', \App\Services\AvailableResourcesService::FIELD_ROLES)->values();
+            $otherEmployees = $availableEmployees->whereNotIn('position', \App\Services\AvailableResourcesService::FIELD_ROLES)->values();
+        @endphp
         <div x-show="open" @click.away="open=false" x-cloak
-             style="position:absolute;left:0;top:calc(100% + 6px);width:260px;
+             style="position:absolute;left:0;top:calc(100% + 6px);width:280px;
                     background:#fff;border:1px solid #e5e7eb;border-radius:10px;
-                    box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:50;max-height:260px;overflow-y:auto;">
-            <ul style="margin:0;padding:4px 0;list-style:none;">
-                @forelse($availableEmployees as $emp)
-                    <li>
-                        <a href="{{ route('employees.show', $emp->id) }}"
-                           style="display:block;padding:9px 14px;font-size:13px;color:#374151;text-decoration:none;"
-                           onmouseover="this.style.background='#f9fafb';"
-                           onmouseout="this.style.background='none';">
-                            {{ $emp->full_name }}
-                        </a>
-                    </li>
-                @empty
-                    <li style="padding:12px 14px;font-size:13px;color:#9ca3af;">Все сотрудники с планшетами</li>
-                @endforelse
-            </ul>
+                    box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:50;max-height:340px;overflow-y:auto;">
+            @if($availableEmployees->isEmpty())
+                <div style="padding:12px 14px;font-size:13px;color:#9ca3af;">Все сотрудники с планшетами</div>
+            @else
+                @if($fieldEmployees->isNotEmpty())
+                    <p style="margin:0;padding:8px 14px 4px;font-size:10px;font-weight:700;text-transform:uppercase;
+                              letter-spacing:.05em;color:#b45309;">Полевые ({{ $fieldEmployees->count() }})</p>
+                    <ul style="margin:0;padding:0 0 4px;list-style:none;">
+                        @foreach($fieldEmployees as $emp)
+                            <li>
+                                <a href="{{ route('employees.show', $emp->id) }}"
+                                   style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+                                          padding:9px 14px;font-size:13px;color:#374151;text-decoration:none;"
+                                   onmouseover="this.style.background='#f9fafb';"
+                                   onmouseout="this.style.background='none';">
+                                    <span>{{ $emp->full_name }}</span>
+                                    <span style="font-size:11px;color:#9ca3af;flex-shrink:0;">{{ $emp->position }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @if($otherEmployees->isNotEmpty())
+                    <p style="margin:0;padding:8px 14px 4px;font-size:10px;font-weight:700;text-transform:uppercase;
+                              letter-spacing:.05em;color:#9ca3af;border-top:1px solid #f0f0f0;">Остальные ({{ $otherEmployees->count() }})</p>
+                    <ul style="margin:0;padding:0 0 4px;list-style:none;">
+                        @foreach($otherEmployees as $emp)
+                            <li>
+                                <a href="{{ route('employees.show', $emp->id) }}"
+                                   style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+                                          padding:9px 14px;font-size:13px;color:#374151;text-decoration:none;"
+                                   onmouseover="this.style.background='#f9fafb';"
+                                   onmouseout="this.style.background='none';">
+                                    <span>{{ $emp->full_name }}</span>
+                                    <span style="font-size:11px;color:#9ca3af;flex-shrink:0;">{{ $emp->position }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            @endif
         </div>
     </div>
 </div>
