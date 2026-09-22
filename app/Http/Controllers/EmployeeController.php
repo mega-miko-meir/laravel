@@ -350,38 +350,11 @@ class EmployeeController extends Controller
         $order = $request->input('order', 'desc');
         $activeOnly = $request->input('active_only', 1);
 
-        $queryNormalized = strtolower(trim($query ?? ''));
-        $isRoleSearch = in_array($queryNormalized, ['rm', 'rep', 'ffm']);
-
         $employees = Employee::with([
                 'latestEvent',
                 'employee_territory' => fn ($q) => $q->orderByDesc('assigned_at'),
             ])
-            ->where(function ($q) use ($query, $queryNormalized, $isRoleSearch) {
-                if (!$query) {
-                    return;
-                }
-
-                if ($isRoleSearch) {
-                    $q->whereHas('territories', function ($q2) use ($queryNormalized) {
-                        $q2->whereRaw('LOWER(role) = ?', [$queryNormalized]);
-                    });
-                    return;
-                }
-
-                $q->where('first_name', 'like', "%{$query}%")
-                    ->orWhere('full_name', 'like', "%{$query}%")
-                    ->orWhere('last_name', 'like', "%{$query}%")
-                    ->orWhere('position', 'like', "%{$query}%")
-                    ->orWhere('email', 'like', "%{$query}%")
-                    ->orWhereHas('territories', function ($q2) use ($query) {
-                        $q2->where('team', 'like', "{$query}%")
-                            ->orWhere('city', 'like', "%{$query}%");
-                    })
-                    ->orWhereHas('latestEvent', function ($q3) use ($query) {
-                        $q3->where('event_type', 'like', "%{$query}%");
-                    });
-            })
+            ->search($query)
             ->when($activeOnly == 1, function ($q) {
                 $q->active();
             })

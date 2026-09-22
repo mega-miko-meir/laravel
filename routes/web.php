@@ -50,6 +50,7 @@ Route::middleware('auth')->group(function () {
 
     // Clients
     Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+    Route::get('/clients/data', [ClientController::class, 'data'])->name('clients.data');
 
     // Feedback
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');

@@ -21,7 +21,7 @@
 
         {{-- Экспорт --}}
         <div x-data="{ exportOpen: false }" style="position:relative;">
-            <button @click="exportOpen = !exportOpen"
+            <button @click="exportOpen = !exportOpen; if (exportOpen) syncExportFilters();"
                     style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
                            background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;
                            font-size:13px;font-weight:500;cursor:pointer;"
@@ -45,6 +45,10 @@
 
                 <form action="{{ route('export.excel') }}" method="POST">
                     @csrf
+                    <input type="hidden" name="search" id="export-search">
+
+                    <p id="export-filter-hint" style="display:none;font-size:11px;color:#2563eb;background:#eff6ff;
+                              border-radius:6px;padding:6px 8px;margin-bottom:10px;"></p>
 
                     <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">Статус сотрудников:</p>
                     <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;margin-bottom:14px;">
@@ -55,6 +59,7 @@
                         ] as [$val,$lbl,$chk])
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                                 <input type="checkbox" name="statuses[]" value="{{ $val }}" {{ $chk ? 'checked' : '' }}
+                                       class="export-status-checkbox"
                                        style="width:14px;height:14px;accent-color:#2563eb;">
                                 {{ $lbl }}
                             </label>
@@ -225,6 +230,29 @@
 
     // Показать кнопку очистки если поиск уже введён при загрузке
     if (input.value) clearBtn.style.display = 'block';
+
+    // Панель экспорта подхватывает то, что сейчас отфильтровано на странице:
+    // строку поиска (включая "rep"/"rm"/"ffm" по роли) и статус "Активные".
+    // Вызывается при каждом открытии панели — так экспорт всегда отражает
+    // текущий вид страницы, а не то, что было выбрано при прошлом открытии.
+    window.syncExportFilters = function () {
+        const searchValue = input.value.trim();
+        document.getElementById('export-search').value = searchValue;
+
+        const activeOnly = getActiveOnly() === 1;
+        document.querySelectorAll('.export-status-checkbox').forEach(cb => {
+            cb.checked = activeOnly ? (cb.value === 'active') : true;
+        });
+
+        const hint = document.getElementById('export-filter-hint');
+        const parts = [];
+        if (searchValue) parts.push('поиск «' + searchValue + '»');
+        if (activeOnly) parts.push('только активные');
+        hint.textContent = parts.length
+            ? 'Выгрузятся сотрудники, отфильтрованные на странице: ' + parts.join(', ') + '.'
+            : '';
+        hint.style.display = parts.length ? 'block' : 'none';
+    };
 })();
 </script>
 

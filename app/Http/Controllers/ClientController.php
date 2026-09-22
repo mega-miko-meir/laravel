@@ -6,8 +6,8 @@ use App\Http\Requests\ClientExportRequest;
 use App\Http\Requests\ClientIndexRequest;
 use App\Models\Nobel\OnekeyDoctor;
 use App\Models\Nobel\OnekeyPharmacy;
+use App\Support\Etl;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -31,67 +31,115 @@ class ClientController extends Controller
         'province'            => 'Регион',
     ];
 
+    private const CACHE_VERSION = 'v1';
+
     public function index(ClientIndexRequest $request)
     {
-        $isPharmacy = $request->input('organization_type') === 'Аптека';
+        $type = $request->input('organization_type') === 'Аптека' ? 'Аптека' : 'Специалист';
 
         try {
-            $query = $isPharmacy ? OnekeyPharmacy::query() : OnekeyDoctor::query();
-            $this->applyFilters($query, $request, $isPharmacy);
-            $idCol = $isPharmacy ? 'organization_id' : 'customer_id';
-
-            // COUNT(DISTINCT id) на некэшируемом filtered-запросе — дёшево (индекс по id).
-            // Обычный paginate() тут в разы дороже: Laravel оборачивает GROUP BY + все
-            // MAX(...)-колонки в подзапрос ради подсчёта total, пересчитывая все агрегаты.
-            $total = (clone $query)->selectRaw("COUNT(DISTINCT `$idCol`) as cnt")->value('cnt');
-
-            $this->groupByUnique($query, array_keys($isPharmacy ? self::PHARMACY_COLUMNS : self::DOCTOR_COLUMNS), $idCol);
-            $perPage = 50;
-            $page    = LengthAwarePaginator::resolveCurrentPage();
-            $items   = $query->forPage($page, $perPage)->get();
-
-            $clients = new LengthAwarePaginator($items, $total, $perPage, $page, [
-                'path'  => $request->url(),
-                'query' => $request->query(),
-            ]);
-
-            // DISTINCT+ORDER BY по TEXT-колонкам без индекса — дорого (temp table на диске),
-            // а список специальностей/городов/регионов меняется редко. Кэшируем на 1 час,
-            // как и фильтры /calls (см. CallController).
-            $specialties = $isPharmacy
-                ? collect()
-                : Cache::remember('clients_filter_specialties', 3600, fn() => OnekeyDoctor::distinct()
-                    ->whereNotNull('customer_spesiality')
-                    ->where('customer_spesiality', '<>', '')
-                    ->orderBy('customer_spesiality')
-                    ->pluck('customer_spesiality'));
-
-            $model     = $isPharmacy ? OnekeyPharmacy::class : OnekeyDoctor::class;
-            $cacheType = $isPharmacy ? 'pharmacy' : 'doctors';
-
-            $cities = Cache::remember("clients_filter_towns_$cacheType", 3600, fn() => $model::distinct()
-                ->whereNotNull('town')->where('town', '<>', '')
-                ->orderBy('town')->pluck('town'));
-
-            $regions = Cache::remember("clients_filter_provinces_$cacheType", 3600, fn() => $model::distinct()
-                ->whereNotNull('province')->where('province', '<>', '')
-                ->orderBy('province')->pluck('province'));
+            $initialData = $this->loadType($type);
         } catch (\Exception $e) {
             // Nobel DB недоступна — показываем страницу без данных вместо падения
-            $clients = new LengthAwarePaginator(collect(), 0, 50, 1, [
-                'path'  => $request->url(),
-                'query' => $request->query(),
-            ]);
-            $specialties = collect();
-            $cities      = collect();
-            $regions     = collect();
+            $initialData = $this->emptyPayload($type, 'Не удалось получить данные из Nobel CRM. Попробуйте позже.');
         }
 
-        return view('clients', compact(
-            'clients', 'specialties', 'cities', 'regions', 'isPharmacy'
-        ));
+        return view('clients', [
+            'type'        => $type,
+            'initialData' => $initialData,
+        ]);
     }
 
+    /**
+     * JSON-эндпоинт для переключения «Специалист/Аптека» без перезагрузки страницы —
+     * тот же паттерн, что на Визитах/КМП. Фильтры (регион/город/специальность/ФИО) и
+     * пагинация работают на клиенте по одному загруженному набору.
+     */
+    public function data(Request $request)
+    {
+        $type = $request->input('organization_type') === 'Аптека' ? 'Аптека' : 'Специалист';
+
+        try {
+            return response()->json($this->loadType($type), 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json($this->emptyPayload($type, 'Не удалось получить данные из Nobel CRM. Попробуйте позже.'));
+        }
+    }
+
+    /**
+     * В OneKey всего ~60 тыс. врачей и ~10 тыс. аптек (после дедупликации) — это
+     * помещается в один дикт-кодированный payload, поэтому вместо серверной фильтрации
+     * с перезагрузкой страницы отдаём всё разом. Справочники регионов/городов/
+     * специальностей берутся из самих словарей (отдельные DISTINCT-запросы не нужны).
+     * Справочная база обновляется ночным ETL — кэшируем до его следующего запуска.
+     */
+    private function loadType(string $type): array
+    {
+        $isPharmacy = $type === 'Аптека';
+        $key = 'onekey_' . ($isPharmacy ? 'pharmacy' : 'doctors') . '_' . self::CACHE_VERSION;
+
+        return Cache::remember($key, Etl::secondsUntilNextRun(), function () use ($isPharmacy, $type) {
+            ini_set('memory_limit', '512M');
+
+            $dict = [];
+            $idx = function (string $col, ?string $val) use (&$dict) {
+                $val = $val ?? '';
+                $dict[$col] ??= [];
+                return $dict[$col][$val] ??= count($dict[$col]);
+            };
+
+            $rows = [];
+            if ($isPharmacy) {
+                $cols  = ['id', 'name', 'address', 'province', 'town'];
+                $query = DB::connection('nobel')->table((new OnekeyPharmacy)->getTable())
+                    ->select([
+                        'organization_id',
+                        DB::raw('MAX(`organization`) as organization'),
+                        DB::raw('MAX(`organization_address`) as organization_address'),
+                        DB::raw('MAX(`province`) as province'),
+                        DB::raw('MAX(`town`) as town'),
+                    ])->groupBy('organization_id');
+
+                foreach ($query->cursor() as $r) {
+                    $rows[] = [$r->organization_id, $r->organization, $r->organization_address,
+                        $idx('province', $r->province), $idx('town', $r->town)];
+                }
+            } else {
+                $cols  = ['id', 'name', 'specialty', 'organization', 'province', 'town'];
+                $query = DB::connection('nobel')->table((new OnekeyDoctor)->getTable())
+                    ->select([
+                        'customer_id',
+                        DB::raw('MAX(`customer`) as customer'),
+                        DB::raw('MAX(`customer_spesiality`) as customer_spesiality'),
+                        DB::raw('MAX(`organization`) as organization'),
+                        DB::raw('MAX(`province`) as province'),
+                        DB::raw('MAX(`town`) as town'),
+                    ])->groupBy('customer_id');
+
+                foreach ($query->cursor() as $r) {
+                    $rows[] = [$r->customer_id, $r->customer,
+                        $idx('specialty', $r->customer_spesiality), $idx('organization', $r->organization),
+                        $idx('province', $r->province), $idx('town', $r->town)];
+                }
+            }
+
+            $dictionaries = [];
+            foreach ($dict as $col => $map) {
+                $dictionaries[$col] = array_keys($map);
+            }
+
+            return ['error' => null, 'type' => $type, 'cols' => $cols, 'dictionaries' => $dictionaries, 'data' => $rows];
+        });
+    }
+
+    private function emptyPayload(string $type, string $error): array
+    {
+        $cols = $type === 'Аптека'
+            ? ['id', 'name', 'address', 'province', 'town']
+            : ['id', 'name', 'specialty', 'organization', 'province', 'town'];
+
+        return ['error' => $error, 'type' => $type, 'cols' => $cols, 'dictionaries' => new \stdClass, 'data' => []];
+    }
     public function export(ClientExportRequest $request)
     {
         $isPharmacy = $request->input('organization_type') === 'Аптека';

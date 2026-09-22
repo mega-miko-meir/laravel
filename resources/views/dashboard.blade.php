@@ -329,6 +329,7 @@
         '{{ route('leaderboard.data') }}',
         '{{ route('kmp.data') }}',
         '{{ route('admin.data-integrity') }}',
+        '{{ route('clients.data') }}',
     ];
 
     function prefetchAnalytics() {

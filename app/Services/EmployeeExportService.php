@@ -145,8 +145,12 @@ class EmployeeExportService
             ...array_map(fn($status) => self::STATUS_EVENT_TYPES[$status], $statuses)
         ));
 
+        // Тот же поиск (включая "rep"/"rm"/"ffm" по роли), что сейчас показан на
+        // странице «Сотрудники» — панель экспорта подставляет туда текущее
+        // значение строки поиска, так что выгрузка отражает то, что видно на экране.
         $employees = Employee::withLatestEvent()
             ->with(['crmIds', 'kmpNames'])
+            ->search($request->input('search'))
             ->whereHas('latestEvent', fn($q) => $q->whereIn('event_type', $eventTypes))
             ->get();
 

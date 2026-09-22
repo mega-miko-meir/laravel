@@ -265,6 +265,46 @@ class Employee extends Model
     }
 
     /**
+     * Тот же поиск, что на странице «Сотрудники» (EmployeeController::searchEmployee):
+     * текстовое совпадение по имени/должности/почте/территории, либо, если весь
+     * запрос — это "rep"/"rm"/"ffm", поиск по роли на последней территории.
+     * Вынесено в scope, чтобы выгрузка в Excel могла применить точно тот же
+     * фильтр, что сейчас показан на экране, а не дублировать эту логику.
+     */
+    public function scopeSearch($query, ?string $term)
+    {
+        $term = trim((string) $term);
+        if ($term === '') {
+            return $query;
+        }
+
+        $normalized = strtolower($term);
+        $isRoleSearch = in_array($normalized, ['rm', 'rep', 'ffm']);
+
+        return $query->where(function ($q) use ($term, $normalized, $isRoleSearch) {
+            if ($isRoleSearch) {
+                $q->whereHas('territories', function ($q2) use ($normalized) {
+                    $q2->whereRaw('LOWER(role) = ?', [$normalized]);
+                });
+                return;
+            }
+
+            $q->where('first_name', 'like', "%{$term}%")
+                ->orWhere('full_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
+                ->orWhere('position', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%")
+                ->orWhereHas('territories', function ($q2) use ($term) {
+                    $q2->where('team', 'like', "{$term}%")
+                        ->orWhere('city', 'like', "%{$term}%");
+                })
+                ->orWhereHas('latestEvent', function ($q3) use ($term) {
+                    $q3->where('event_type', 'like', "%{$term}%");
+                });
+        });
+    }
+
+    /**
      * Scope for employees with latest event.
      */
     public function scopeWithLatestEvent($query)
