@@ -112,7 +112,7 @@ class EmployeeExportService
             'email' => 'Почта',
             'team' => 'Группа',
             'department' => 'Департамент',
-            'manager' => 'РМ',
+            'manager' => 'Менеджер',
             'hiring_date' => 'Дата приема',
             'role' => 'Позиция',
             'status' => 'Статус',

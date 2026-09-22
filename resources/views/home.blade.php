@@ -73,11 +73,11 @@
                     <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#374151;">
                         @foreach([
                             ['full_name','ФИО',true],['first_name_eng','ФИО англ',false],
-                            ['role','Позиция',true],['city','Город',false],
-                            ['email','Почта',false],['team','Группа',true],
-                            ['department','Департамент',true],['manager','Менеджер',false],
+                            ['role','Позиция',true],['city','Город',true],
+                            ['email','Почта',true],['team','Группа',true],
+                            ['department','Департамент',true],['manager','Менеджер',true],
                             ['hiring_date','Дата приема',false],
-                            ['status','Статус',false],
+                            ['status','Статус',true],
                             ['status_event_date','Дата увольнения/декрета',false],
                             ['crm_full_name','ФИО по CRM',false],
                             ['kmp_full_name','ФИО по КМП',false],
