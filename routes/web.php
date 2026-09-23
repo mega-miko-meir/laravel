@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'showDashboard']);
+    Route::get('/dashboard/cards-data', [DashboardController::class, 'cardsData'])->name('dashboard.cardsData');
     Route::get('employees/list/{type}', [DashboardController::class, 'filteredList'])->name('employees.filtered');
     Route::get('employees/list/{type}/export', [DashboardController::class, 'filteredListExport'])->name('employees.filtered.export');
     Route::post('employees/list/{type}/email', [DashboardController::class, 'filteredListEmail'])->name('employees.filtered.email');

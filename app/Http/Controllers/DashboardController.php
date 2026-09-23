@@ -11,10 +11,102 @@ use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
-    public function showDashboard(Request $request, EmployeeEventStatsService $stats)
+    /**
+     * Числа для карточек дашборда (верхние 6 + Стаж/Текучесть + «За период»).
+     * Общий метод для первого (SSR) рендера и для AJAX-обновления при смене
+     * фильтра по должности или периода — чтобы не дублировать расчёты.
+     *
+     * $roles — пустой массив = без фильтра (как сейчас). $periodFrom/$periodTo —
+     * если оба заданы, верхние «в этом месяце»/«в этом году» карточки
+     * заменяются значениями за выбранный период (см. решение по UX ниже).
+     */
+    private function computeCardMetrics(EmployeeEventStatsService $stats, array $roles, ?string $periodFrom, ?string $periodTo): array
     {
         $now       = now();
-        $lastMonth = now()->subMonth();
+        $latestEventSub = 'ev.id = (SELECT ee.id FROM employee_events ee WHERE ee.employee_id = e.id ORDER BY ee.event_date DESC, ee.id DESC LIMIT 1)';
+
+        // Считаем hired/dismissed парой в одном запросе (GROUP BY event_type)
+        // вместо запроса на каждый тип — основная БД у нас на удалённом
+        // сервере, и AJAX-обновление карточек дёргает эти запросы на каждый
+        // клик по фильтру, так что каждый лишний round-trip заметно тормозит.
+        $monthCounts = $stats->countsByMonth(['hired', 'dismissed'], $now->month, $now->year, $roles);
+        $yearCounts  = $stats->countsByYear(['hired', 'dismissed'], $now->year, $roles);
+
+        $hiredThisMonth = $monthCounts['hired'];
+        $firedThisMonth = $monthCounts['dismissed'];
+        $hiredThisYear  = $yearCounts['hired'];
+        $firedThisYear  = $yearCounts['dismissed'];
+        // Текучесть всегда считаем по календарному году (не подменяется
+        // периодом ниже) — сохраняем значение до возможной подмены.
+        $firedThisYearForTurnover = $yearCounts['dismissed'];
+
+        $hasPeriod = (bool) ($periodFrom && $periodTo);
+        $periodStats = null;
+        if ($hasPeriod) {
+            $periodStats = $stats->countsByDateRange(['hired', 'dismissed', 'maternity_leave'], $periodFrom, $periodTo, $roles);
+
+            // Решение пользователя: пока выбран период, верхние «в этом
+            // месяце»/«в этом году» карточки показывают этот период, а не
+            // свои обычные фиксированные окна.
+            $hiredThisMonth = $periodStats['hired'];
+            $firedThisMonth = $periodStats['dismissed'];
+            $hiredThisYear  = $periodStats['hired'];
+            $firedThisYear  = $periodStats['dismissed'];
+        }
+
+        $latestCounts = $stats->countsWithLatestEvent(['hired', 'return_from_leave', 'maternity_leave'], $roles);
+        $totalActive  = $latestCounts['hired'] + $latestCounts['return_from_leave'];
+        $onLeave      = $latestCounts['maternity_leave'];
+        $turnoverPct  = $totalActive > 0 ? round($firedThisYearForTurnover / $totalActive * 100, 1) : 0;
+
+        $avgDaysQuery = DB::table('employees as e')
+            ->join('employee_events as ev', function ($j) use ($latestEventSub) {
+                $j->on('ev.employee_id', '=', 'e.id')->whereRaw($latestEventSub);
+            })
+            ->whereIn('ev.event_type', ['hired', 'return_from_leave'])
+            ->whereNotNull('e.hiring_date');
+        if (!empty($roles)) {
+            $avgDaysQuery->whereRaw('(
+                SELECT t.role
+                FROM employee_territory et
+                JOIN territories t ON t.id = et.territory_id
+                WHERE et.employee_id = e.id
+                ORDER BY et.assigned_at DESC, et.id DESC
+                LIMIT 1
+            ) IN (' . implode(',', array_fill(0, count($roles), '?')) . ')', $roles);
+        }
+        $avgDays = $avgDaysQuery->selectRaw('AVG(DATEDIFF(NOW(), e.hiring_date)) as avg_days')->value('avg_days');
+
+        return [
+            'hired_total'        => $totalActive,
+            'on_maternity_leave' => $onLeave,
+            'hired_this_month'   => $hiredThisMonth,
+            'fired_this_month'   => $firedThisMonth,
+            'hired_this_year'    => $hiredThisYear,
+            'fired_this_year'    => $firedThisYear,
+            'avg_tenure_years'   => $avgDays ? intval($avgDays / 365) : 0,
+            'avg_tenure_months'  => $avgDays ? intval(($avgDays % 365) / 30) : 0,
+            'turnover_pct'       => $turnoverPct,
+            'has_period'         => $hasPeriod,
+            'period_stats'       => $periodStats,
+        ];
+    }
+
+    /**
+     * AJAX-эндпоинт: пересчитывает все карточки дашборда без перезагрузки
+     * страницы — при смене фильтра по должности и/или периода «За период».
+     */
+    public function cardsData(Request $request, EmployeeEventStatsService $stats)
+    {
+        $roles      = array_filter((array) $request->input('roles', []));
+        $periodFrom = $request->input('date_from');
+        $periodTo   = $request->input('date_to');
+
+        return response()->json($this->computeCardMetrics($stats, $roles, $periodFrom, $periodTo));
+    }
+
+    public function showDashboard(Request $request, EmployeeEventStatsService $stats)
+    {
         $since     = now()->subMonths(11)->startOfMonth();
 
         // Переиспользуемые подзапросы
@@ -114,51 +206,25 @@ class DashboardController extends Controller
         }
         $hasCityData = !empty($cityRoleData);
 
-        // ── Средний стаж ─────────────────────────────────────────────────
-        $avgDays = DB::table('employees as e')
-            ->join('employee_events as ev', function ($j) use ($latestEventSub) {
-                $j->on('ev.employee_id', '=', 'e.id')->whereRaw($latestEventSub);
-            })
-            ->whereIn('ev.event_type', ['hired', 'return_from_leave'])
-            ->whereNotNull('e.hiring_date')
-            ->selectRaw('AVG(DATEDIFF(NOW(), e.hiring_date)) as avg_days')
-            ->value('avg_days');
-
-        $avgTenureYears  = $avgDays ? intval($avgDays / 365) : 0;
-        $avgTenureMonths = $avgDays ? intval(($avgDays % 365) / 30) : 0;
-
-        // ── Текучесть ─────────────────────────────────────────────────────
-        $totalActive   = $stats->countWithLatestEvent(['hired', 'return_from_leave']);
-        $firedThisYear = $stats->countByYear('dismissed', $now->year);
-        $turnoverPct   = $totalActive > 0 ? round($firedThisYear / $totalActive * 100, 1) : 0;
-
-        // ── Принято/уволено/в декрете за произвольный период ────────────
+        // ── Карточки (верхние 6 + Стаж/Текучесть + «За период») ─────────
+        // Общий расчёт с cardsData() — чтобы AJAX-обновление при смене
+        // фильтра по должности/периода не расходилось с первым рендером.
         $periodFrom = $request->input('date_from');
         $periodTo   = $request->input('date_to');
-        $hasPeriod  = (bool) ($periodFrom && $periodTo);
-
-        $periodStats = null;
-        if ($hasPeriod) {
-            $periodStats = [
-                'hired'           => $stats->countByDateRange('hired', $periodFrom, $periodTo),
-                'dismissed'       => $stats->countByDateRange('dismissed', $periodFrom, $periodTo),
-                'maternity_leave' => $stats->countByDateRange('maternity_leave', $periodFrom, $periodTo),
-            ];
-        }
+        $cards      = $this->computeCardMetrics($stats, [], $periodFrom, $periodTo);
 
         return view('dashboard', [
             'periodFrom'  => $periodFrom,
             'periodTo'    => $periodTo,
-            'hasPeriod'   => $hasPeriod,
-            'periodStats' => $periodStats,
-            'hired_total'        => $totalActive,
-            'fired_this_month'   => $stats->countByMonth('dismissed', $now->month, $now->year),
-            'hired_this_month'   => $stats->countByMonth('hired', $now->month, $now->year),
-            'on_maternity_leave' => $stats->countWithLatestEvent('maternity_leave'),
-            'fired_last_month'   => $stats->countByMonth('dismissed', $lastMonth->month, $lastMonth->year),
-            'hired_last_month'   => $stats->countByMonth('hired', $lastMonth->month, $lastMonth->year),
-            'fired_this_year'    => $firedThisYear,
-            'hired_this_year'    => $stats->countByYear('hired', $now->year),
+            'hasPeriod'   => $cards['has_period'],
+            'periodStats' => $cards['period_stats'],
+
+            'hired_total'        => $cards['hired_total'],
+            'on_maternity_leave' => $cards['on_maternity_leave'],
+            'hired_this_month'   => $cards['hired_this_month'],
+            'fired_this_month'   => $cards['fired_this_month'],
+            'hired_this_year'    => $cards['hired_this_year'],
+            'fired_this_year'    => $cards['fired_this_year'],
 
             'chartLabels'      => $chartLabels,
             'chartKeys'        => $chartKeys,
@@ -170,9 +236,9 @@ class DashboardController extends Controller
             'cityRoleData'     => $cityRoleData,
             'hasCityData'      => $hasCityData,
 
-            'avgTenureYears'   => $avgTenureYears,
-            'avgTenureMonths'  => $avgTenureMonths,
-            'turnoverPct'      => $turnoverPct,
+            'avgTenureYears'   => $cards['avg_tenure_years'],
+            'avgTenureMonths'  => $cards['avg_tenure_months'],
+            'turnoverPct'      => $cards['turnover_pct'],
         ]);
     }
 

@@ -28,12 +28,12 @@
 
 @php
     $cards = [
-        ['route' => 'hired_total',        'label' => 'Всего сотрудников',       'value' => $hired_total,        'color' => '#2563eb', 'bg' => '#eff6ff'],
-        ['route' => 'on_maternity_leave', 'label' => 'В декрете',               'value' => $on_maternity_leave, 'color' => '#9333ea', 'bg' => '#faf5ff'],
-        ['route' => 'hired_this_month',   'label' => 'Нанятые в этом месяце',   'value' => $hired_this_month,   'color' => '#16a34a', 'bg' => '#f0fdf4'],
-        ['route' => 'fired_this_month',   'label' => 'Уволенные в этом месяце', 'value' => $fired_this_month,   'color' => '#dc2626', 'bg' => '#fef2f2'],
-        ['route' => 'hired_this_year',    'label' => 'Нанятые в этом году',     'value' => $hired_this_year,    'color' => '#16a34a', 'bg' => '#f0fdf4'],
-        ['route' => 'fired_this_year',    'label' => 'Уволенные в этом году',   'value' => $fired_this_year,    'color' => '#dc2626', 'bg' => '#fef2f2'],
+        ['route' => 'hired_total',        'label' => 'Всего сотрудников',       'value' => $hired_total,        'color' => '#2563eb', 'bg' => '#eff6ff', 'period_type' => null],
+        ['route' => 'on_maternity_leave', 'label' => 'В декрете',               'value' => $on_maternity_leave, 'color' => '#9333ea', 'bg' => '#faf5ff', 'period_type' => null],
+        ['route' => 'hired_this_month',   'label' => 'Нанятые в этом месяце',   'value' => $hired_this_month,   'color' => '#16a34a', 'bg' => '#f0fdf4', 'period_type' => 'hired'],
+        ['route' => 'fired_this_month',   'label' => 'Уволенные в этом месяце', 'value' => $fired_this_month,   'color' => '#dc2626', 'bg' => '#fef2f2', 'period_type' => 'dismissed'],
+        ['route' => 'hired_this_year',    'label' => 'Нанятые в этом году',     'value' => $hired_this_year,    'color' => '#16a34a', 'bg' => '#f0fdf4', 'period_type' => 'hired'],
+        ['route' => 'fired_this_year',    'label' => 'Уволенные в этом году',   'value' => $fired_this_year,    'color' => '#dc2626', 'bg' => '#fef2f2', 'period_type' => 'dismissed'],
     ];
 @endphp
 
@@ -41,7 +41,7 @@
     <div style="background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
         <p style="font-size:11px;color:#6b7280;font-weight:500;margin-bottom:6px;">Средний стаж</p>
         <div style="display:flex;align-items:center;justify-content:space-between;">
-            <p style="font-size:22px;font-weight:700;color:#0891b2;line-height:1;">
+            <p id="avg-tenure-value" style="font-size:22px;font-weight:700;color:#0891b2;line-height:1;">
                 {{ $avgTenureYears }}<span style="font-size:12px;font-weight:500;margin-left:1px;">л</span>
                 {{ $avgTenureMonths }}<span style="font-size:12px;font-weight:500;margin-left:1px;">мес</span>
             </p>
@@ -56,14 +56,14 @@
     <div style="background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
         <p style="font-size:11px;color:#6b7280;font-weight:500;margin-bottom:6px;">Текучесть {{ now()->year }}</p>
         <div style="display:flex;align-items:center;justify-content:space-between;">
-            <p style="font-size:26px;font-weight:700;line-height:1;
+            <p id="turnover-value" style="font-size:26px;font-weight:700;line-height:1;
                       color:{{ $turnoverPct > 20 ? '#dc2626' : ($turnoverPct > 10 ? '#d97706' : '#16a34a') }};">
                 {{ $turnoverPct }}<span style="font-size:14px;font-weight:500;">%</span>
             </p>
-            <div style="width:30px;height:30px;border-radius:8px;flex-shrink:0;
+            <div id="turnover-icon-wrap" style="width:30px;height:30px;border-radius:8px;flex-shrink:0;
                         background:{{ $turnoverPct > 20 ? '#fef2f2' : ($turnoverPct > 10 ? '#fffbeb' : '#f0fdf4') }};
                         display:flex;align-items:center;justify-content:center;">
-                <svg style="width:15px;height:15px;color:{{ $turnoverPct > 20 ? '#dc2626' : ($turnoverPct > 10 ? '#d97706' : '#16a34a') }};"
+                <svg id="turnover-icon" style="width:15px;height:15px;color:{{ $turnoverPct > 20 ? '#dc2626' : ($turnoverPct > 10 ? '#d97706' : '#16a34a') }};"
                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -72,14 +72,17 @@
         </div>
     </div>
     @foreach($cards as $card)
-        <a href="{{ route('employees.filtered', $card['route']) }}"
+        <a id="card-{{ $card['route'] }}"
+           href="{{ route('employees.filtered', $card['route']) }}"
+           data-normal-href="{{ route('employees.filtered', $card['route']) }}"
+           @if($card['period_type']) data-period-type="{{ $card['period_type'] }}" @endif
            style="display:block;background:#fff;border:1px solid #f0f0f0;border-radius:10px;
                   padding:12px 14px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.05);"
            onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)';"
            onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,.05)';this.style.transform='translateY(0)';">
-            <p style="font-size:11px;color:#6b7280;font-weight:500;margin-bottom:6px;line-height:1.3;">{{ $card['label'] }}</p>
+            <p id="card-{{ $card['route'] }}-label" style="font-size:11px;color:#6b7280;font-weight:500;margin-bottom:6px;line-height:1.3;">{{ $card['label'] }}</p>
             <div style="display:flex;align-items:center;justify-content:space-between;">
-                <p style="font-size:26px;font-weight:700;color:{{ $card['color'] }};line-height:1;">{{ $card['value'] }}</p>
+                <p id="card-{{ $card['route'] }}-value" style="font-size:26px;font-weight:700;color:{{ $card['color'] }};line-height:1;">{{ $card['value'] }}</p>
                 <div style="width:30px;height:30px;border-radius:8px;background:{{ $card['bg'] }};
                             display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <svg style="width:15px;height:15px;color:{{ $card['color'] }};" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,20 +103,22 @@
     @endforeach
 </div>
 
-{{-- Период: принято / уволено / в декрете за произвольный диапазон дат --}}
+{{-- Период: принято / уволено / в декрете за произвольный диапазон дат.
+     Пока период выбран, карточки «в этом месяце/году» выше тоже показывают
+     этот период (см. refreshDashboardCards ниже) — без перезагрузки страницы. --}}
 <div style="background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:14px;
             margin-top:14px;max-width:1000px;">
     <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">За период</p>
 
-    <form method="GET" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+    <form id="period-form" method="GET" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
         <div>
             <label style="display:block;font-size:11px;color:#9ca3af;margin-bottom:4px;">С</label>
-            <input type="date" name="date_from" value="{{ $periodFrom }}"
+            <input type="date" id="period-date-from" name="date_from" value="{{ $periodFrom }}"
                    style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none;">
         </div>
         <div>
             <label style="display:block;font-size:11px;color:#9ca3af;margin-bottom:4px;">По</label>
-            <input type="date" name="date_to" value="{{ $periodTo }}"
+            <input type="date" id="period-date-to" name="date_to" value="{{ $periodTo }}"
                    style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none;">
         </div>
         <button type="submit"
@@ -125,36 +130,157 @@
         </button>
     </form>
 
-    @if($hasPeriod)
+    <div id="period-results" style="display:{{ $hasPeriod ? 'block' : 'none' }};">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
             @foreach([
-                ['type' => 'hired',           'label' => 'Принято',   'value' => $periodStats['hired'],           'color' => '#16a34a', 'bg' => '#f0fdf4'],
-                ['type' => 'dismissed',       'label' => 'Уволено',   'value' => $periodStats['dismissed'],       'color' => '#dc2626', 'bg' => '#fef2f2'],
-                ['type' => 'maternity_leave', 'label' => 'В декрете', 'value' => $periodStats['maternity_leave'], 'color' => '#9333ea', 'bg' => '#faf5ff'],
+                ['type' => 'hired',           'label' => 'Принято',   'color' => '#16a34a', 'bg' => '#f0fdf4'],
+                ['type' => 'dismissed',       'label' => 'Уволено',   'color' => '#dc2626', 'bg' => '#fef2f2'],
+                ['type' => 'maternity_leave', 'label' => 'В декрете', 'color' => '#9333ea', 'bg' => '#faf5ff'],
             ] as $pc)
-                <a href="{{ route('employees.periodList', ['type' => $pc['type'], 'date_from' => $periodFrom, 'date_to' => $periodTo]) }}"
+                <a id="period-link-{{ $pc['type'] }}"
+                   href="{{ route('employees.periodList', ['type' => $pc['type'], 'date_from' => $periodFrom, 'date_to' => $periodTo]) }}"
                    style="display:block;background:{{ $pc['bg'] }};border-radius:8px;padding:12px 14px;text-decoration:none;"
                    onmouseover="this.style.opacity='0.85';" onmouseout="this.style.opacity='1';">
                     <p style="font-size:11px;color:#6b7280;font-weight:500;margin-bottom:4px;">{{ $pc['label'] }}</p>
-                    <p style="font-size:24px;font-weight:700;color:{{ $pc['color'] }};line-height:1;">{{ $pc['value'] }}</p>
+                    <p id="period-{{ $pc['type'] }}-value" style="font-size:24px;font-weight:700;color:{{ $pc['color'] }};line-height:1;">{{ $periodStats[$pc['type']] ?? 0 }}</p>
                 </a>
             @endforeach
         </div>
 
-        <a href="{{ route('employees.periodList', ['type' => 'all', 'date_from' => $periodFrom, 'date_to' => $periodTo]) }}"
+        <a id="period-link-all"
+           href="{{ route('employees.periodList', ['type' => 'all', 'date_from' => $periodFrom, 'date_to' => $periodTo]) }}"
            style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:600;
                   color:#2563eb;text-decoration:none;"
            onmouseover="this.style.textDecoration='underline';"
            onmouseout="this.style.textDecoration='none';">
-            Показать всех одним списком ({{ $periodStats['hired'] + $periodStats['dismissed'] + $periodStats['maternity_leave'] }})
+            Показать всех одним списком (<span id="period-all-count">{{ ($periodStats['hired'] ?? 0) + ($periodStats['dismissed'] ?? 0) + ($periodStats['maternity_leave'] ?? 0) }}</span>)
             <svg style="width:12px;height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
             </svg>
         </a>
-    @else
-        <p style="font-size:12px;color:#9ca3af;">Укажите даты «С» и «По», чтобы увидеть принятых/уволенных/ушедших в декрет за этот период.</p>
-    @endif
+    </div>
+    <p id="period-empty" style="font-size:12px;color:#9ca3af;display:{{ $hasPeriod ? 'none' : 'block' }};">Укажите даты «С» и «По», чтобы увидеть принятых/уволенных/ушедших в декрет за этот период.</p>
 </div>
+
+<script>
+(function () {
+    const allRolesForCards = @json($allRoles);
+    // Общее состояние выбранных ролей — расшарено с графиками ниже (которые
+    // рендерятся только для админов): один Set, обе части страницы читают и
+    // мутируют его, чтобы клик по роли обновлял и графики, и карточки разом.
+    window.dashboardState = window.dashboardState || { selectedRoles: new Set(allRolesForCards) };
+
+    function periodListUrl(type, from, to) {
+        return '{{ route('employees.periodList', ['type' => '__TYPE__']) }}'.replace('__TYPE__', type)
+            + '?date_from=' + encodeURIComponent(from) + '&date_to=' + encodeURIComponent(to);
+    }
+
+    function applyCardsData(d, from, to) {
+        const labels = {
+            hired_this_month:  d.has_period ? 'Нанятые за период'   : 'Нанятые в этом месяце',
+            fired_this_month:  d.has_period ? 'Уволенные за период' : 'Уволенные в этом месяце',
+            hired_this_year:   d.has_period ? 'Нанятые за период'   : 'Нанятые в этом году',
+            fired_this_year:   d.has_period ? 'Уволенные за период' : 'Уволенные в этом году',
+        };
+        ['hired_total', 'on_maternity_leave', 'hired_this_month', 'fired_this_month', 'hired_this_year', 'fired_this_year'].forEach(key => {
+            const valueEl = document.getElementById('card-' + key + '-value');
+            if (valueEl) valueEl.textContent = d[key];
+            if (labels[key]) {
+                const labelEl = document.getElementById('card-' + key + '-label');
+                if (labelEl) labelEl.textContent = labels[key];
+            }
+            const linkEl = document.getElementById('card-' + key);
+            if (linkEl && linkEl.dataset.periodType) {
+                linkEl.href = d.has_period
+                    ? periodListUrl(linkEl.dataset.periodType, from, to)
+                    : linkEl.dataset.normalHref;
+            }
+        });
+
+        const avgTenureEl = document.getElementById('avg-tenure-value');
+        if (avgTenureEl) {
+            avgTenureEl.innerHTML =
+                d.avg_tenure_years + '<span style="font-size:12px;font-weight:500;margin-left:1px;">л</span> '
+                + d.avg_tenure_months + '<span style="font-size:12px;font-weight:500;margin-left:1px;">мес</span>';
+        }
+
+        const turnoverColor = d.turnover_pct > 20 ? '#dc2626' : (d.turnover_pct > 10 ? '#d97706' : '#16a34a');
+        const turnoverBg    = d.turnover_pct > 20 ? '#fef2f2' : (d.turnover_pct > 10 ? '#fffbeb' : '#f0fdf4');
+        const turnoverValueEl = document.getElementById('turnover-value');
+        if (turnoverValueEl) {
+            turnoverValueEl.style.color = turnoverColor;
+            turnoverValueEl.innerHTML = d.turnover_pct + '<span style="font-size:14px;font-weight:500;">%</span>';
+        }
+        const turnoverIconWrap = document.getElementById('turnover-icon-wrap');
+        if (turnoverIconWrap) turnoverIconWrap.style.background = turnoverBg;
+        const turnoverIcon = document.getElementById('turnover-icon');
+        if (turnoverIcon) turnoverIcon.style.color = turnoverColor;
+
+        const periodResults = document.getElementById('period-results');
+        const periodEmpty   = document.getElementById('period-empty');
+        if (d.has_period) {
+            if (periodResults) periodResults.style.display = 'block';
+            if (periodEmpty) periodEmpty.style.display = 'none';
+            ['hired', 'dismissed', 'maternity_leave'].forEach(type => {
+                const valEl = document.getElementById('period-' + type + '-value');
+                if (valEl) valEl.textContent = d.period_stats[type];
+                const linkEl = document.getElementById('period-link-' + type);
+                if (linkEl) linkEl.href = periodListUrl(type, from, to);
+            });
+            const countEl = document.getElementById('period-all-count');
+            if (countEl) countEl.textContent = d.period_stats.hired + d.period_stats.dismissed + d.period_stats.maternity_leave;
+            const allLinkEl = document.getElementById('period-link-all');
+            if (allLinkEl) allLinkEl.href = periodListUrl('all', from, to);
+        } else {
+            if (periodResults) periodResults.style.display = 'none';
+            if (periodEmpty) periodEmpty.style.display = 'block';
+        }
+    }
+
+    window.refreshDashboardCards = function () {
+        const from = document.getElementById('period-date-from').value;
+        const to   = document.getElementById('period-date-to').value;
+        const roles = Array.from(window.dashboardState.selectedRoles);
+
+        const params = new URLSearchParams();
+        if (roles.length === 0) {
+            // Все роли сброшены («Сбросить») — это осознанный выбор «ничего»,
+            // а не «фильтр не задан». Пустой roles[] сервер интерпретирует
+            // как «без фильтра» (см. applyRoles() в EmployeeEventStatsService),
+            // поэтому шлём заведомо несуществующую роль — 0 совпадений.
+            params.append('roles[]', '__none__');
+        } else if (roles.length < allRolesForCards.length) {
+            roles.forEach(r => params.append('roles[]', r));
+        }
+        if (from && to) {
+            params.set('date_from', from);
+            params.set('date_to', to);
+        }
+
+        fetch('{{ route('dashboard.cardsData') }}?' + params.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then(r => r.json())
+            .then(d => applyCardsData(d, from, to))
+            .catch(err => console.error('Не удалось обновить карточки дашборда:', err));
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete('date_from');
+        url.searchParams.delete('date_to');
+        if (from && to) {
+            url.searchParams.set('date_from', from);
+            url.searchParams.set('date_to', to);
+        }
+        window.history.replaceState({}, '', url);
+    };
+
+    document.getElementById('period-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.refreshDashboardCards();
+    });
+})();
+</script>
 
 @can('admin')
 
@@ -199,7 +325,9 @@
         <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 2px;">По городам</p>
         <p style="font-size:12px;color:#9ca3af;margin:0 0 20px;">Активные сотрудники</p>
         @if($hasCityData)
-            <canvas id="cityChart" style="max-height:220px;"></canvas>
+            <div id="cityChartWrap" style="position:relative;">
+                <canvas id="cityChart"></canvas>
+            </div>
         @else
             <p style="font-size:13px;color:#9ca3af;text-align:center;padding:40px 0;">Нет данных по городам</p>
         @endif
@@ -216,7 +344,10 @@
     const cityRoleData     = @json($cityRoleData);
     const allRoles         = @json($allRoles);
 
-    let selectedRoles = new Set(allRoles);
+    // Общий Set с карточками (см. скрипт в блоке «За период» выше) — клик
+    // по роли должен пересчитывать графики и карточки одним и тем же состоянием.
+    window.dashboardState = window.dashboardState || { selectedRoles: new Set(allRoles) };
+    let selectedRoles = window.dashboardState.selectedRoles;
 
     const palette = ['#2563eb','#16a34a','#d97706','#9333ea','#0891b2','#ea580c','#65a30d','#e11d48','#0f766e'];
     const roleColor = {};
@@ -242,10 +373,21 @@
             let t = 0; selectedRoles.forEach(r => t += roleMap[r] ?? 0);
             if (t > 0) totals[city] = t;
         }
-        return Object.entries(totals).sort(([,a],[,b]) => b - a).slice(0, 12);
+        // Раньше .slice(0, 12) тихо обрезал список — при 15+ городах несколько
+        // самых маленьких вообще не попадали на график. 40 — не реальный лимит
+        // отображения, а просто защита от аномально длинного списка (грязные
+        // данные и т.п.), которого сейчас в базе нет.
+        return Object.entries(totals).sort(([,a],[,b]) => b - a).slice(0, 40);
     }
     function cityColors(n) {
         return Array.from({ length: n }, (_, i) => `rgba(37,99,235,${Math.max(0.18, 1 - i * 0.07).toFixed(2)})`);
+    }
+    // Фиксированная высота canvas + много городов = Chart.js прячет подписи
+    // через одну, чтобы они не накладывались друг на друга. Вместо этого
+    // подгоняем высоту под реальное число строк — по ~26px на бар.
+    function setCityChartHeight(n) {
+        const wrap = document.getElementById('cityChartWrap');
+        if (wrap) wrap.style.height = Math.max(180, n * 26 + 24) + 'px';
     }
 
     const { hired: initHired, dismissed: initDismissed } = getBarSeries();
@@ -275,10 +417,11 @@
     @if($hasCityData)
     const cityValuePlugin = { id: 'cityValue', afterDatasetsDraw(chart) { const { ctx } = chart; chart.getDatasetMeta(0).data.forEach((bar, i) => { const value = chart.data.datasets[0].data[i]; ctx.save(); ctx.font = '600 11px sans-serif'; ctx.fillStyle = '#374151'; ctx.textBaseline = 'middle'; ctx.fillText(value, bar.x + 6, bar.y); ctx.restore(); }); } };
     const initCity = getCitySorted();
+    setCityChartHeight(initCity.length);
     const cityChartInst = new Chart(document.getElementById('cityChart'), {
         plugins: [cityValuePlugin], type: 'bar',
         data: { labels: initCity.map(([c]) => c), datasets: [{ label: 'Сотрудников', data: initCity.map(([,n]) => n), backgroundColor: cityColors(initCity.length), borderRadius: 4 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, layout: { padding: { right: 30 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.x + ' чел.' } } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 }, color: '#9ca3af' }, grid: { color: '#f3f4f6' } }, y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#374151' } } } },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 30 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.x + ' чел.' } } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 }, color: '#9ca3af' }, grid: { color: '#f3f4f6' } }, y: { grid: { display: false }, ticks: { autoSkip: false, font: { size: 11 }, color: '#374151' } } } },
     });
     @endif
 
@@ -292,7 +435,7 @@
         renderDonutLegend(roles, data, colors);
         cumulativeChartInst.data.datasets[0].data = getCumulativeSeries(); cumulativeChartInst.update();
         @if($hasCityData)
-        const sorted = getCitySorted(); cityChartInst.data.labels = sorted.map(([c]) => c); cityChartInst.data.datasets[0].data = sorted.map(([,n]) => n); cityChartInst.data.datasets[0].backgroundColor = cityColors(sorted.length); cityChartInst.update();
+        const sorted = getCitySorted(); setCityChartHeight(sorted.length); cityChartInst.data.labels = sorted.map(([c]) => c); cityChartInst.data.datasets[0].data = sorted.map(([,n]) => n); cityChartInst.data.datasets[0].backgroundColor = cityColors(sorted.length); cityChartInst.update();
         @endif
     }
 
@@ -307,9 +450,9 @@
         document.querySelectorAll('.role-btn[data-role]').forEach(btn => { const on = selectedRoles.has(btn.dataset.role); btn.style.background = on ? '#2563eb' : '#fff'; btn.style.color = on ? '#fff' : '#374151'; btn.style.borderColor = on ? '#2563eb' : '#e5e7eb'; });
     }
 
-    document.getElementById('btn-select-all')?.addEventListener('click', () => { selectedRoles = new Set(allRoles); syncButtons(); refreshAll(); });
-    document.getElementById('btn-clear-all')?.addEventListener('click', () => { selectedRoles = new Set(); syncButtons(); refreshAll(); });
-    document.querySelectorAll('.role-btn[data-role]').forEach(btn => { btn.addEventListener('click', () => { const r = btn.dataset.role; selectedRoles.has(r) ? selectedRoles.delete(r) : selectedRoles.add(r); syncButtons(); refreshAll(); }); });
+    document.getElementById('btn-select-all')?.addEventListener('click', () => { selectedRoles = new Set(allRoles); window.dashboardState.selectedRoles = selectedRoles; syncButtons(); refreshAll(); window.refreshDashboardCards?.(); });
+    document.getElementById('btn-clear-all')?.addEventListener('click', () => { selectedRoles = new Set(); window.dashboardState.selectedRoles = selectedRoles; syncButtons(); refreshAll(); window.refreshDashboardCards?.(); });
+    document.querySelectorAll('.role-btn[data-role]').forEach(btn => { btn.addEventListener('click', () => { const r = btn.dataset.role; selectedRoles.has(r) ? selectedRoles.delete(r) : selectedRoles.add(r); syncButtons(); refreshAll(); window.refreshDashboardCards?.(); }); });
 })();
 </script>
 

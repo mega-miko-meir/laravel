@@ -18,13 +18,6 @@ class EmployeeEventStatsService
             )');
     }
 
-    private function applyTypes(\Illuminate\Database\Query\Builder $query, string|array $types): \Illuminate\Database\Query\Builder
-    {
-        return is_array($types)
-            ? $query->whereIn('ee1.event_type', $types)
-            : $query->where('ee1.event_type', $types);
-    }
-
     private function applyTypesToList(\Illuminate\Database\Query\Builder $query, string|array $types): \Illuminate\Database\Query\Builder
     {
         return is_array($types)
@@ -32,40 +25,86 @@ class EmployeeEventStatsService
             : $query->where('ev.event_type', $types);
     }
 
-    public function countWithLatestEvent(string|array $types): int
+    /**
+     * Фильтр по роли (Rep/RM/FFM/...) — та же логика, что и в baseListQuery()
+     * и в графиках дашборда: роль берётся с ПОСЛЕДНЕЙ территории сотрудника
+     * (скалярный подзапрос с тай-брейком по id, чтобы не задваивать при
+     * одинаковом assigned_at), а не из статичного employees.position.
+     * $employeeIdColumn — квалифицированное имя колонки employee_id в основном
+     * запросе (разные алиасы у count- и list-запросов).
+     */
+    private function applyRoles(\Illuminate\Database\Query\Builder $query, array $roles, string $employeeIdColumn): \Illuminate\Database\Query\Builder
     {
-        return $this->applyTypes($this->baseCountQuery(), $types)->count();
+        if (empty($roles)) {
+            return $query;
+        }
+
+        return $query->whereRaw('(
+            SELECT t.role
+            FROM employee_territory et
+            JOIN territories t ON t.id = et.territory_id
+            WHERE et.employee_id = ' . $employeeIdColumn . '
+            ORDER BY et.assigned_at DESC, et.id DESC
+            LIMIT 1
+        ) IN (' . implode(',', array_fill(0, count($roles), '?')) . ')', $roles);
     }
 
-    public function countByMonth(string|array $types, int $month, int $year): int
+    /**
+     * Общий хвост для counts*() ниже: группирует по event_type и отдаёт
+     * ['hired' => N, 'dismissed' => N, ...] ОДНИМ запросом вместо одного
+     * count() на каждый тип — важно, т.к. основная БД у нас на удалённом
+     * сервере (192.168.33.39) и каждый лишний round-trip заметно ощутим
+     * (карточки дашборда дёргают эти методы через AJAX на каждый клик).
+     */
+    private function countsGrouped(\Illuminate\Database\Query\Builder $query, array $types): array
+    {
+        $counts = $query->whereIn('ee1.event_type', $types)
+            ->selectRaw('ee1.event_type, COUNT(*) as cnt')
+            ->groupBy('ee1.event_type')
+            ->pluck('cnt', 'event_type');
+
+        return collect($types)->mapWithKeys(fn ($type) => [$type => (int) ($counts[$type] ?? 0)])->all();
+    }
+
+    public function countsWithLatestEvent(array $types, array $roles = []): array
+    {
+        $query = $this->applyRoles($this->baseCountQuery(), $roles, 'ee1.employee_id');
+
+        return $this->countsGrouped($query, $types);
+    }
+
+    public function countsByMonth(array $types, int $month, int $year, array $roles = []): array
     {
         $query = $this->baseCountQuery()
             ->whereMonth('ee1.event_date', $month)
             ->whereYear('ee1.event_date', $year);
+        $query = $this->applyRoles($query, $roles, 'ee1.employee_id');
 
-        return $this->applyTypes($query, $types)->count();
+        return $this->countsGrouped($query, $types);
     }
 
-    public function countByYear(string|array $types, int $year): int
+    public function countsByYear(array $types, int $year, array $roles = []): array
     {
         $query = $this->baseCountQuery()
             ->whereYear('ee1.event_date', $year);
+        $query = $this->applyRoles($query, $roles, 'ee1.employee_id');
 
-        return $this->applyTypes($query, $types)->count();
+        return $this->countsGrouped($query, $types);
     }
 
     /**
-     * Считает события заданного типа, у которых event_date попадает в период —
+     * Считает события заданных типов, у которых event_date попадает в период —
      * без ограничения "только последнее событие сотрудника" (в отличие от
-     * countByMonth/countByYear), т.к. за произвольный период нас интересуют
+     * countsByMonth/countsByYear), т.к. за произвольный период нас интересуют
      * все случившиеся события этого типа, даже если статус сотрудника с тех пор менялся.
      */
-    public function countByDateRange(string|array $types, string $from, string $to): int
+    public function countsByDateRange(array $types, string $from, string $to, array $roles = []): array
     {
         $query = DB::table('employee_events as ee1')
             ->whereBetween('ee1.event_date', [$from, $to]);
+        $query = $this->applyRoles($query, $roles, 'ee1.employee_id');
 
-        return $this->applyTypes($query, $types)->count();
+        return $this->countsGrouped($query, $types);
     }
 
     private function baseListQuery(): \Illuminate\Database\Query\Builder
