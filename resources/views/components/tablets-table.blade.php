@@ -27,7 +27,7 @@
                     <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:600;
                                text-transform:uppercase;letter-spacing:.05em;
                                color:{{ $sort === $col ? '#2563eb' : '#6b7280' }};">
-                        <a href="{{ $thUrl($col, $firstDir) }}" onclick="return tabletsAjaxSort(event, this.href)"
+                        <a href="{{ $thUrl($col, $firstDir) }}" onclick="return tabletsAjaxSort(event, this.href, 'tablets-table')"
                            style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:3px;">
                             {{ $label }}<span style="opacity:{{ $sort === $col ? 1 : .5 }};">{{ $sortIco($col) }}</span>
                         </a>

@@ -247,78 +247,9 @@
     <div x-show="open" x-cloak
          style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;
                 box-shadow:0 1px 3px rgba(0,0,0,.05);">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead>
-                <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
-                    @foreach(['Номер','Серийный','Последний сотрудник','Выдача','Возврат','Ответственный','Город'] as $col)
-                        <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:600;
-                                   text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">{{ $col }}</th>
-                    @endforeach
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($freeTablets as $tablet)
-                    <tr style="border-top:1px solid #f5f5f5;"
-                        onmouseover="this.style.background='#fafafa';"
-                        onmouseout="this.style.background='none';">
-                        <td style="padding:9px 14px;">
-                            <a href="{{ route('tablets.show', $tablet->id) }}"
-                               style="color:#2563eb;font-weight:500;text-decoration:none;"
-                               onmouseover="this.style.textDecoration='underline';"
-                               onmouseout="this.style.textDecoration='none';">
-                                {{ $tablet->invent_number }}
-                            </a>
-                        </td>
-                        <td style="padding:9px 14px;">
-                        <a href="{{ route('tablets.show', $tablet->id) }}"
-                           style="color:#6b7280;text-decoration:none;"
-                           onmouseover="this.style.textDecoration='underline';this.style.color='#2563eb';"
-                           onmouseout="this.style.textDecoration='none';this.style.color='#6b7280';">
-                            {{ $tablet->serial_number }}
-                        </a>
-                    </td>
-                        <td style="padding:9px 14px;color:#374151;">
-                            {{ $tablet->latestAssignment?->employee?->sh_name ?? '—' }}
-                        </td>
-                        <td style="padding:9px 14px;">
-                            @if($tablet->currentAssignment?->pdf_path)
-                                <a href="{{ asset('storage/'.$tablet->currentAssignment->pdf_path) }}" target="_blank"
-                                   style="color:#2563eb;font-size:11px;text-decoration:none;"
-                                   onmouseover="this.style.textDecoration='underline';"
-                                   onmouseout="this.style.textDecoration='none';">PDF</a>
-                            @else
-                                <span style="color:#d1d5db;">—</span>
-                            @endif
-                        </td>
-                        <td style="padding:9px 14px;">
-                            @if($tablet->currentAssignment?->unassign_pdf)
-                                <a href="{{ asset('storage/'.$tablet->currentAssignment->unassign_pdf) }}" target="_blank"
-                                   style="color:#2563eb;font-size:11px;text-decoration:none;"
-                                   onmouseover="this.style.textDecoration='underline';"
-                                   onmouseout="this.style.textDecoration='none';">PDF</a>
-                            @else
-                                <span style="color:#d1d5db;">—</span>
-                            @endif
-                        </td>
-                        <td style="padding:9px 14px;">
-                            @if($tablet->responsible)
-                                <a href="{{ route('employees.show', $tablet->responsible->id) }}"
-                                   style="color:#2563eb;font-size:12px;text-decoration:none;"
-                                   onmouseover="this.style.textDecoration='underline';"
-                                   onmouseout="this.style.textDecoration='none';">
-                                    {{ $tablet->responsible->sh_name }}
-                                </a>
-                            @else
-                                <span style="color:#d1d5db;">—</span>
-                            @endif
-                        </td>
-                        <td style="padding:9px 14px;color:#6b7280;">
-                            {{ $tablet->responsible?->employee_territory->first()?->city ?? '—' }}
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+        <div id="free-tablets-table">
+            @include('components.free-tablets-table', ['freeTablets' => $freeTablets, 'freeSort' => $freeSort, 'freeDir' => $freeDir])
+        </div>
     </div>
 </div>
 
@@ -336,12 +267,19 @@
 </div>
 
 <script>
-function tabletsAjaxSort(event, url) {
+// containerId — какой блок перерисовать; partialType — какую версию partial'а
+// просить у контроллера (сейчас есть 'free' для свободных планшетов, по
+// умолчанию — основная таблица "Все планшеты"). url — "чистая", без
+// partial-маркера — именно её кладём в адресную строку, чтобы ссылку можно
+// было скопировать/переоткрыть без последствий.
+function tabletsAjaxSort(event, url, containerId, partialType) {
     event.preventDefault();
-    const container = document.getElementById('tablets-table');
+    const container = document.getElementById(containerId);
     container.style.opacity = '.6';
 
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+    const fetchUrl = partialType ? url + (url.includes('?') ? '&' : '?') + 'partial=' + partialType : url;
+
+    fetch(fetchUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
         .then(r => r.text())
         .then(html => {
             container.innerHTML = html;
@@ -349,7 +287,7 @@ function tabletsAjaxSort(event, url) {
             window.history.replaceState({}, '', url);
 
             // Поиск не должен молча сбрасывать выбранную сортировку при следующей отправке.
-            const params = new URL(url).searchParams;
+            const params = new URL(url, window.location.origin).searchParams;
             const sortField = document.getElementById('search-sort');
             const dirField = document.getElementById('search-dir');
             if (sortField) sortField.value = params.get('sort') || '';

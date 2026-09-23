@@ -91,6 +91,7 @@ class TabletController extends Controller
     // -------------------------------------------------------------------------
 
     private const SORTABLE_COLUMNS = ['invent_number', 'serial_number', 'employee', 'assigned_at'];
+    private const SORTABLE_FREE_COLUMNS = ['invent_number', 'serial_number', 'employee', 'responsible', 'city', 'returned_at'];
 
     public function searchTablet(Request $request)
     {
@@ -156,12 +157,9 @@ class TabletController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // Клик по заголовку колонки перерисовывает только таблицу через AJAX —
-        // остальной блок (свободные планшеты, "без планшета", статистика) не
-        // меняется от сортировки, поэтому его незачем ни пересчитывать, ни отдавать.
-        if ($request->ajax()) {
-            return view('components.tablets-table', compact('tablets', 'sort', 'dir'));
-        }
+        $freeSort = in_array($request->input('free_sort'), self::SORTABLE_FREE_COLUMNS)
+            ? $request->input('free_sort') : 'invent_number';
+        $freeDir = $request->input('free_dir') === 'desc' ? 'desc' : 'asc';
 
         $freeTablets = Tablet::free()
             ->with([
@@ -170,6 +168,27 @@ class TabletController extends Controller
                 'responsible.employee_territory' => fn ($q) => $q->orderByDesc('assigned_at'),
             ])
             ->get();
+
+        $freeSortKey = match ($freeSort) {
+            'invent_number' => fn ($t) => $t->invent_number,
+            'serial_number' => fn ($t) => $t->serial_number,
+            'employee'      => fn ($t) => $t->latestAssignment?->employee?->sh_name ?? '',
+            'responsible'   => fn ($t) => $t->responsible?->sh_name ?? '',
+            'city'          => fn ($t) => $t->responsible?->employee_territory->first()?->city ?? '',
+            'returned_at'   => fn ($t) => optional($t->latestAssignment)->returned_at,
+        };
+        $freeTablets = ($freeDir === 'asc' ? $freeTablets->sortBy($freeSortKey) : $freeTablets->sortByDesc($freeSortKey))->values();
+
+        // Клик по заголовку колонки перерисовывает только соответствующую таблицу
+        // через AJAX — остальной блок страницы не меняется от сортировки, поэтому
+        // незачем ни пересчитывать, ни отдавать его целиком.
+        if ($request->ajax() && $request->input('partial') === 'free') {
+            return view('components.free-tablets-table', compact('freeTablets', 'freeSort', 'freeDir'));
+        }
+
+        if ($request->ajax()) {
+            return view('components.tablets-table', compact('tablets', 'sort', 'dir'));
+        }
 
         $availableEmployees = $this->available->getAvailableForTablet();
         $count = $availableEmployees->count();
@@ -184,7 +203,7 @@ class TabletController extends Controller
             ];
         });
 
-        return view('tablets', compact('tablets', 'query', 'freeTablets', 'availableEmployees', 'count', 'tabletStats', 'sort', 'dir'));
+        return view('tablets', compact('tablets', 'query', 'freeTablets', 'availableEmployees', 'count', 'tabletStats', 'sort', 'dir', 'freeSort', 'freeDir'));
     }
 
     public function exportToExcel(Request $request)
