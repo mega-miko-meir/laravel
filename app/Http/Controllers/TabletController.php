@@ -157,9 +157,12 @@ class TabletController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
+        // По умолчанию — город, по убыванию; остальные колонки при первом клике
+        // логичнее сортировать по возрастанию (см. ту же логику у основной таблицы).
         $freeSort = in_array($request->input('free_sort'), self::SORTABLE_FREE_COLUMNS)
-            ? $request->input('free_sort') : 'invent_number';
-        $freeDir = $request->input('free_dir') === 'desc' ? 'desc' : 'asc';
+            ? $request->input('free_sort') : 'city';
+        $freeDefaultDir = $freeSort === 'city' ? 'desc' : 'asc';
+        $freeDir = in_array($request->input('free_dir'), ['asc', 'desc']) ? $request->input('free_dir') : $freeDefaultDir;
 
         $freeTablets = Tablet::free()
             ->with([

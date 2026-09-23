@@ -30,7 +30,7 @@
             @endforeach
             @foreach([
                 ['responsible', 'Ответственный', 'asc'],
-                ['city', 'Город', 'asc'],
+                ['city', 'Город', 'desc'],
                 ['returned_at', 'Дата возврата', 'desc'],
             ] as [$col, $label, $firstDir])
                 <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:600;
