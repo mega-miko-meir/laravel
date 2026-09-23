@@ -7,7 +7,8 @@
             <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
                 <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;
                            text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">
-                    <a href="{{ route('employees.search', ['search'=>request('search'),'sort'=>'full_name','order'=>request('order')==='asc'?'desc':'asc','active_only'=>request('active_only',1)]) }}"
+                    <a href="{{ route('employees.search', ['search'=>request('search'),'sort'=>'full_name','order'=>($sort==='full_name' && $order==='asc')?'desc':'asc','active_only'=>request('active_only',1)]) }}"
+                       onclick="return typeof sortByColumn === 'function' ? sortByColumn(event, 'full_name') : true;"
                        style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"
                        onmouseover="this.style.color='#374151';" onmouseout="this.style.color='#6b7280';">
                         ФИО @if($sort==='full_name')<span>{{ $order==='asc'?'↑':'↓' }}</span>@endif
@@ -19,7 +20,8 @@
                 @endforeach
                 <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;
                            text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">
-                    <a href="{{ route('employees.search', ['search'=>request('search'),'sort'=>'latest_event_date','order'=>request('order')==='asc'?'desc':'asc','active_only'=>request('active_only',1)]) }}"
+                    <a href="{{ route('employees.search', ['search'=>request('search'),'sort'=>'latest_event_date','order'=>($sort==='latest_event_date' && $order==='asc')?'desc':'asc','active_only'=>request('active_only',1)]) }}"
+                       onclick="return typeof sortByColumn === 'function' ? sortByColumn(event, 'latest_event_date') : true;"
                        style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"
                        onmouseover="this.style.color='#374151';" onmouseout="this.style.color='#6b7280';">
                         Дата события @if($sort==='latest_event_date')<span>{{ $order==='asc'?'↑':'↓' }}</span>@endif

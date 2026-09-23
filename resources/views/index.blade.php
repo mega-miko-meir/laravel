@@ -1,17 +1,22 @@
 @extends('layout')
 @section('content')
 
+<style>
+    .al-tab { border:1px solid #d1d5db; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:#374151; }
+    .al-tab-active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+</style>
+
 {{-- Тулбар --}}
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;margin-top:24px;">
 
     <h1 style="font-size:20px;font-weight:700;color:#111827;margin:0;">
         Активность
-        <span style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $logs->total() }}</span>
+        <span id="al-count" style="font-size:13px;font-weight:500;color:#9ca3af;margin-left:6px;">{{ $logs->total() }}</span>
     </h1>
 
     {{-- Выгрузить --}}
     <div x-data="{ open: false }" style="position:relative;">
-        <button @click="open = !open"
+        <button @click="open = !open; if (open) syncExportFilters();"
                 style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
                        background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;
                        font-size:13px;font-weight:500;cursor:pointer;"
@@ -33,12 +38,28 @@
                     background:#fff;border:1px solid #e5e7eb;border-radius:10px;
                     box-shadow:0 4px 20px rgba(0,0,0,.1);z-index:50;padding:16px;">
             <form method="GET" action="{{ route('activity.export') }}">
-                <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;">Период выгрузки</p>
+                <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;">Период выгрузки</p>
+                <p style="font-size:11px;color:#9ca3af;margin-bottom:12px;">
+                    Текущие фильтры (поиск/метод/пользователь) применятся автоматически.
+                </p>
+
+                {{-- Текущие фильтры экрана — переносим в выгрузку. Значения
+                     синхронизируются JS'ом при открытии панели (см. syncExportFilters),
+                     поэтому отражают live-состояние, а не только то, что было
+                     при первой загрузке страницы. --}}
+                <input type="hidden" name="q" id="export-q" value="{{ $filters['search'] }}">
+                <input type="hidden" name="user_id" id="export-user_id" value="{{ $filters['userId'] }}">
+                <input type="hidden" name="hide_own" id="export-hide_own" value="{{ $filters['hideOwn'] ? '1' : '0' }}">
+                <span id="export-methods">
+                    @foreach($filters['methods'] as $m)
+                        <input type="hidden" name="method[]" value="{{ $m }}">
+                    @endforeach
+                </span>
 
                 <div style="margin-bottom:10px;">
                     <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
                                   letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Дата начала</label>
-                    <input type="date" name="from" required
+                    <input type="date" name="from" required value="{{ $filters['from'] }}"
                            style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
                                   font-size:13px;outline:none;box-sizing:border-box;">
                 </div>
@@ -46,7 +67,7 @@
                 <div style="margin-bottom:14px;">
                     <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;
                                   letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Дата окончания</label>
-                    <input type="date" name="to" required
+                    <input type="date" name="to" required value="{{ $filters['to'] }}"
                            style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
                                   font-size:13px;outline:none;box-sizing:border-box;">
                 </div>
@@ -63,77 +84,156 @@
     </div>
 </div>
 
-{{-- Таблица --}}
-<div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;
-            box-shadow:0 1px 3px rgba(0,0,0,.05);">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-            <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
-                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
-                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Пользователь</th>
-                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
-                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">URL</th>
-                <th style="padding:10px 16px;text-align:center;font-size:10px;font-weight:600;
-                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Метод</th>
-                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
-                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">IP</th>
-                <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:600;
-                           text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Дата</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($logs as $log)
-                <tr style="border-top:1px solid #f5f5f5;"
-                    onmouseover="this.style.background='#fafafa';"
-                    onmouseout="this.style.background='none';">
+{{-- Фильтры --}}
+<form id="al-filters" method="GET" action="{{ route('activity.logs') }}"
+      onsubmit="applyFilters(); return false;"
+      style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:14px 16px;margin-bottom:16px;
+             display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
 
-                    <td style="padding:9px 16px;color:#111827;font-weight:500;">
-                        {{ $log->user?->full_name ?? '—' }}
-                    </td>
+    <div style="flex:1;min-width:200px;">
+        <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">Поиск</label>
+        <input type="text" name="q" value="{{ $filters['search'] }}" placeholder="URL, IP, пользователь..."
+               oninput="debouncedApplyFilters()"
+               style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                      font-size:13px;outline:none;box-sizing:border-box;">
+    </div>
 
-                    <td style="padding:9px 16px;color:#6b7280;max-width:320px;
-                               overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                        {{ $log->url }}
-                    </td>
+    <div>
+        <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">С</label>
+        <input type="date" name="from" value="{{ $filters['from'] }}" onchange="applyFilters()"
+               style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+    </div>
 
-                    <td style="padding:9px 16px;text-align:center;">
-                        @php
-                            $methodColors = [
-                                'GET'    => 'background:#eff6ff;color:#2563eb;',
-                                'POST'   => 'background:#f0fdf4;color:#16a34a;',
-                                'PUT'    => 'background:#fffbeb;color:#d97706;',
-                                'PATCH'  => 'background:#fffbeb;color:#d97706;',
-                                'DELETE' => 'background:#fef2f2;color:#dc2626;',
-                            ];
-                            $style = $methodColors[$log->method] ?? 'background:#f3f4f6;color:#374151;';
-                        @endphp
-                        <span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;
-                                     letter-spacing:.04em;{{ $style }}">
-                            {{ $log->method }}
-                        </span>
-                    </td>
+    <div>
+        <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">По</label>
+        <input type="date" name="to" value="{{ $filters['to'] }}" onchange="applyFilters()"
+               style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+    </div>
 
-                    <td style="padding:9px 16px;color:#6b7280;font-family:monospace;font-size:11px;">
-                        {{ $log->ip }}
-                    </td>
+    <div style="min-width:180px;">
+        <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">Пользователь</label>
+        <select name="user_id" onchange="onUserChange(this)"
+                style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;
+                       font-size:13px;outline:none;box-sizing:border-box;background:#fff;">
+            <option value="">Все пользователи</option>
+            @foreach($users as $u)
+                <option value="{{ $u->id }}" {{ (string) $filters['userId'] === (string) $u->id ? 'selected' : '' }}>
+                    {{ $u->full_name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
 
-                    <td style="padding:9px 16px;color:#9ca3af;white-space:nowrap;">
-                        {{ $log->created_at->format('d.m.Y H:i') }}
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" style="text-align:center;padding:40px 16px;color:#9ca3af;font-size:13px;">
-                        Нет данных
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+    <div>
+        <label style="display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">Метод</label>
+        <div style="display:flex;gap:6px;">
+            @foreach($methods as $m)
+                @php $checked = in_array($m, $filters['methods']); @endphp
+                <label class="al-tab {{ $checked ? 'al-tab-active' : '' }}" style="user-select:none;">
+                    <input type="checkbox" name="method[]" value="{{ $m }}" {{ $checked ? 'checked' : '' }}
+                           onchange="this.closest('label').classList.toggle('al-tab-active', this.checked); applyFilters();"
+                           style="display:none;">
+                    {{ $m }}
+                </label>
+            @endforeach
+        </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:6px;padding-bottom:8px;">
+        {{-- Чекбокс без name — браузер не отправляет незаполненные чекбоксы,
+             поэтому реальное значение всегда идёт через скрытое поле, которое
+             JS обновляет перед фильтрацией. --}}
+        <input type="hidden" name="hide_own" id="hide_own_value" value="{{ $filters['hideOwn'] ? '1' : '0' }}">
+        <input type="checkbox" id="hide_own" {{ $filters['hideOwn'] ? 'checked' : '' }}
+               {{ $filters['userId'] ? 'disabled' : '' }}
+               onchange="document.getElementById('hide_own_value').value = this.checked ? '1' : '0'; applyFilters();"
+               style="width:15px;height:15px;accent-color:#2563eb;">
+        <label for="hide_own" style="font-size:13px;color:#374151;cursor:pointer;white-space:nowrap;">
+            Скрыть мои действия
+        </label>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+        <button type="submit"
+                style="padding:8px 18px;background:#2563eb;color:#fff;border:none;border-radius:8px;
+                       font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+            Применить
+        </button>
+        <a href="{{ route('activity.logs') }}" id="al-reset"
+           style="padding:8px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;
+                  color:#374151;text-decoration:none;white-space:nowrap;
+                  {{ ($filters['search'] || $filters['userId'] || $filters['methods'] || $filters['from'] || $filters['to'] || !$filters['hideOwn']) ? '' : 'display:none;' }}">
+            Сбросить
+        </a>
+    </div>
+</form>
+
+{{-- Таблица (перерисовывается целиком при каждой смене фильтра, без полной
+     перезагрузки страницы; клик по пагинации внутри — обычная навигация,
+     GET-параметры фильтров она сохраняет за счёт withQueryString() на бэке) --}}
+<div id="al-table">
+    @include('components.activity-log-table', ['logs' => $logs])
 </div>
 
-<div style="margin-top:16px;">
-    {{ $logs->links() }}
-</div>
+<script>
+let alFilterTimer = null;
+
+function debouncedApplyFilters() {
+    clearTimeout(alFilterTimer);
+    alFilterTimer = setTimeout(applyFilters, 300);
+}
+
+function onUserChange(select) {
+    // Выбор конкретного пользователя делает "скрыть мои действия" бессмысленным —
+    // сервер всё равно игнорирует hide_own, когда задан user_id (см. контроллер),
+    // но чекбокс лучше явно отключить, чтобы не выглядело как рабочая комбинация.
+    document.getElementById('hide_own').disabled = !!select.value;
+    applyFilters();
+}
+
+function applyFilters() {
+    const form = document.getElementById('al-filters');
+    const params = new URLSearchParams(new FormData(form));
+
+    const url = '{{ route('activity.logs') }}?' + params.toString();
+    const table = document.getElementById('al-table');
+    table.style.opacity = '.6';
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+        .then(r => {
+            const total = r.headers.get('X-Total-Count');
+            if (total !== null) document.getElementById('al-count').textContent = total;
+            return r.text();
+        })
+        .then(html => {
+            table.innerHTML = html;
+            table.style.opacity = '1';
+
+            // URL адресной строки и панель экспорта — держим в актуальном состоянии.
+            window.history.replaceState({}, '', url);
+            const hasFilters = params.get('q') || params.get('user_id') || params.getAll('method[]').length
+                || params.get('from') || params.get('to') || params.get('hide_own') !== '1';
+            document.getElementById('al-reset').style.display = hasFilters ? '' : 'none';
+        })
+        .catch(() => { table.style.opacity = '1'; });
+}
+
+function syncExportFilters() {
+    const form = document.getElementById('al-filters');
+    document.getElementById('export-q').value = form.q.value;
+    document.getElementById('export-user_id').value = form.user_id.value;
+    document.getElementById('export-hide_own').value = document.getElementById('hide_own_value').value;
+
+    const methodsBox = document.getElementById('export-methods');
+    methodsBox.innerHTML = '';
+    form.querySelectorAll('input[name="method[]"]:checked').forEach(cb => {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'method[]';
+        hidden.value = cb.value;
+        methodsBox.appendChild(hidden);
+    });
+}
+</script>
 
 @endsection

@@ -203,9 +203,31 @@
         })
         .then(html => {
             container.innerHTML = html;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('sort', currentSort);
+            url.searchParams.set('order', currentOrder);
+            if (input.value) url.searchParams.set('search', input.value); else url.searchParams.delete('search');
+            window.history.replaceState({}, '', url);
         })
         .catch(console.error);
     }
+
+    // Клик по заголовку колонки (ФИО / Дата события) — та же живая
+    // AJAX-перерисовка, что и у поиска, вместо перезагрузки страницы.
+    // Функция глобальная и вызывается через inline onclick — так она
+    // остаётся рабочей и после того, как innerHTML таблицы перерисуется.
+    window.sortByColumn = function (event, field) {
+        event.preventDefault();
+        if (currentSort === field) {
+            currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort = field;
+            currentOrder = field === 'full_name' ? 'asc' : 'desc';
+        }
+        doSearch();
+        return false;
+    };
 
     // Живой поиск с дебаунсом 300 мс
     input.addEventListener('input', function () {
