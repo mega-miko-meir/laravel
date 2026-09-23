@@ -59,12 +59,17 @@ class DashboardController extends Controller
         $onLeave      = $latestCounts['maternity_leave'];
         $turnoverPct  = $totalActive > 0 ? round($firedThisYearForTurnover / $totalActive * 100, 1) : 0;
 
+        // Стаж считаем от даты события hired/return_from_leave (ev.event_date),
+        // а НЕ от employees.hiring_date: это поле не синхронизируется с реальной
+        // историей событий (в EmployeeEventController соответствующий код
+        // закомментирован) и у многих сотрудников стоит на дату последнего
+        // импорта/правки карточки, а не на реальную дату приёма — из-за этого
+        // средний стаж занижался в разы (событие уже участвует в JOIN ниже).
         $avgDaysQuery = DB::table('employees as e')
             ->join('employee_events as ev', function ($j) use ($latestEventSub) {
                 $j->on('ev.employee_id', '=', 'e.id')->whereRaw($latestEventSub);
             })
-            ->whereIn('ev.event_type', ['hired', 'return_from_leave'])
-            ->whereNotNull('e.hiring_date');
+            ->whereIn('ev.event_type', ['hired', 'return_from_leave']);
         if (!empty($roles)) {
             $avgDaysQuery->whereRaw('(
                 SELECT t.role
@@ -75,7 +80,7 @@ class DashboardController extends Controller
                 LIMIT 1
             ) IN (' . implode(',', array_fill(0, count($roles), '?')) . ')', $roles);
         }
-        $avgDays = $avgDaysQuery->selectRaw('AVG(DATEDIFF(NOW(), e.hiring_date)) as avg_days')->value('avg_days');
+        $avgDays = $avgDaysQuery->selectRaw('AVG(DATEDIFF(NOW(), ev.event_date)) as avg_days')->value('avg_days');
 
         return [
             'hired_total'        => $totalActive,
