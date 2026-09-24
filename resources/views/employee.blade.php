@@ -49,7 +49,12 @@
                 .catch(() => { this.kmpHtml = '<div style=\'padding:16px;color:#9ca3af;font-size:13px;\'>Не удалось загрузить данные</div>'; this.kmpLoaded = true; })
                 .finally(() => this.kmpLoading = false);
         },
-     }" style="width:100%;padding:4px 0;">
+     }"
+     x-init="
+        @if($hasVisits) loadVisits(); @endif
+        @if($hasKmp) loadKmp(); @endif
+     "
+     style="width:100%;padding:4px 0;">
 
     {{-- Назад + вкладки в одной строке --}}
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">

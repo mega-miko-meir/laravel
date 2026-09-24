@@ -12,6 +12,7 @@ use App\Models\Nobel\Call;
 use App\Models\Nobel\Kmp;
 use App\Notifications\EmployeeDeletedNotification;
 use App\Services\TeamService;
+use App\Support\Etl;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -142,9 +143,12 @@ class EmployeeController extends Controller
             sort($crmIds);
             $employeeId = $employee->id;
 
+            // TTL — до следующего ETL (данные Nobel CRM обновляются раз в сутки,
+            // см. Etl::secondsUntilNextRun()), а не час: иначе кэш "прогревается"
+            // заново каждый час вместо одного раза в день на сотрудника.
             return \Illuminate\Support\Facades\Cache::remember(
                 'employee_visit_stats_' . implode('-', $crmIds),
-                3600,
+                Etl::secondsUntilNextRun(),
                 function () use ($crmIds, $employeeId) {
                     // whereIn по всем привязанным CRM-аккаунтам сотрудника —
                     // метрики агрегируются по истории найма/увольнения/повторного найма.
@@ -205,9 +209,10 @@ class EmployeeController extends Controller
             sort($kmpNames);
             $employeeId = $employee->id;
 
+            // TTL — до следующего ETL, та же логика, что и в getVisitStats().
             return \Illuminate\Support\Facades\Cache::remember(
                 'employee_kmp_stats_' . md5(implode('|', $kmpNames)),
-                3600,
+                Etl::secondsUntilNextRun(),
                 function () use ($kmpNames, $employeeId) {
                     $currentYear = (int) now()->year;
                     // whereIn по всем привязанным именам КМП сотрудника — агрегация
