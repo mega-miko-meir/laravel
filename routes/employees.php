@@ -11,9 +11,15 @@ Route::get('/', [EmployeeController::class, 'searchEmployee'])->name('employees.
 Route::middleware('auth')->group(function () {
     Route::get('/employees', [EmployeeController::class, 'index']);
     Route::get('/employee/{id}', [EmployeeController::class, 'showEmployee'])->name('employees.show');
+    Route::get('/my-team', [EmployeeController::class, 'myTeam'])->name('employees.my-team');
+});
+
+// Блоки «Визиты CRM» / «KMP Продажи» в карточке сотрудника — временно только
+// для админов (функционал на доработке). Убрать 'can:admin' и условие в
+// EmployeeController::showEmployee(), когда будет готов для всех.
+Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/employee/{employee}/visit-stats', [EmployeeController::class, 'visitStatsPartial'])->name('employees.visitStats');
     Route::get('/employee/{employee}/kmp-stats', [EmployeeController::class, 'kmpStatsPartial'])->name('employees.kmpStats');
-    Route::get('/my-team', [EmployeeController::class, 'myTeam'])->name('employees.my-team');
 });
 
 Route::middleware(['auth', 'can:editor'])->group(function () {

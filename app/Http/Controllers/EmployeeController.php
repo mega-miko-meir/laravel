@@ -14,6 +14,7 @@ use App\Notifications\EmployeeDeletedNotification;
 use App\Services\TeamService;
 use App\Support\Etl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class EmployeeController extends Controller
 {
@@ -97,8 +98,10 @@ class EmployeeController extends Controller
             // Наличие CRM/KMP-блоков определяется по локальным полям сотрудника —
             // без обращения к внешним БД, чтобы карточка открывалась мгновенно.
             // Сами данные подгружаются отдельными запросами (см. visitStatsPartial/kmpStatsPartial).
-            'hasVisits'             => $employee->crmIds->isNotEmpty(),
-            'hasKmp'                => $employee->kmpNames->isNotEmpty(),
+            // Временно только для админов (функционал на доработке) — вместе с
+            // вкладками не рендерится и фоновый прогрев в employee.blade.php.
+            'hasVisits'             => Gate::allows('admin') && $employee->crmIds->isNotEmpty(),
+            'hasKmp'                => Gate::allows('admin') && $employee->kmpNames->isNotEmpty(),
         ]);
     }
 
