@@ -1,6 +1,6 @@
 @php $unreadCount = auth()->user()?->unreadNotifications()->count() ?? 0; @endphp
 
-<div style="position:fixed;top:0;left:0;right:0;height:56px;z-index:50;
+<div style="position:relative;flex-shrink:0;height:56px;z-index:50;
             display:flex;align-items:center;justify-content:space-between;
             padding:0 20px;
             background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#2563eb 100%);

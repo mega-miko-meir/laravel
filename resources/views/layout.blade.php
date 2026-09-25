@@ -19,30 +19,31 @@
 </head>
 
 <body
-    class="bg-gray-100 h-screen flex flex-col"
+    class="bg-gray-100"
+    @auth style="height:100vh;display:flex;flex-direction:column;overflow:hidden;" @endauth
     x-data="{ feedbackOpen: false }"
 >
 
 @auth
-    <div class="flex flex-1 h-full">
+    {{-- Шапка — обычный flex-элемент на всю ширину (не fixed): область под ней
+         (меню + контент) занимает остаток высоты экрана, и прокрутка контента
+         начинается ровно под шапкой, а не уходит под неё. --}}
+    @if (!isset($showHeader))
+        <x-header />
+    @endif
 
-        <!-- Боковое меню -->
+    <div style="flex:1 1 0%;min-height:0;display:flex;">
+
+        <!-- Боковое меню (прокручивается само, если пункты не влезают) -->
         @if (!isset($showHeader))
-            <aside class="w-64 text-white h-full flex-shrink-0" style="background:#1e3a8a;">
-                <x-side-menu class="col-span-2" />
+            <aside class="text-white" style="width:16rem;flex:0 0 16rem;display:flex;flex-direction:column;background:#1e3a8a;">
+                <x-side-menu />
             </aside>
         @endif
 
-        <!-- Основной контент -->
-        <main class="flex-1 p-8 overflow-auto">
-            <br>
-
-            @if (!isset($showHeader))
-                <x-header class="mb-6" />
-            @endif
-
+        <!-- Основной контент — единственная зона прокрутки страницы -->
+        <main class="p-8" style="flex:1 1 0%;min-width:0;overflow:auto;">
             @yield('content')
-
         </main>
     </div>
     <x-feedback-form />

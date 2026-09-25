@@ -8,7 +8,14 @@
         || request()->is('activity');
 @endphp
 
-<nav style="height:100%;display:flex;flex-direction:column;padding:56px 0 16px;background:#1e3a8a;color:#fff;overflow-y:auto;">
+<style>
+    .side-nav { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.25) transparent; }
+    .side-nav::-webkit-scrollbar { width:6px; }
+    .side-nav::-webkit-scrollbar-thumb { background:rgba(255,255,255,.25); border-radius:3px; }
+    .side-nav::-webkit-scrollbar-track { background:transparent; }
+</style>
+
+<nav class="side-nav" style="flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 0;background:#1e3a8a;color:#fff;overflow-y:auto;">
 
     @php
         $navLink = function(string $href, string $label, string $icon, bool $active): string {
@@ -126,8 +133,9 @@
                     {!! $icons['settings'] !!}
                     Настройки
                 </div>
-                <svg style="width:12px;height:12px;transition:transform .2s;" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                     :style="open ? 'transform:rotate(180deg)' : ''">
+                {{-- width/height атрибутами, не style: Alpine :style затирает весь style="" --}}
+                <svg width="12" height="12" style="flex-shrink:0;transition:transform .2s;" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                     :style="open ? 'transform:rotate(180deg)' : 'transform:none'">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                 </svg>
             </button>

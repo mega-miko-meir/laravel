@@ -1,3 +1,1 @@
-<div {{ $attributes->merge(['class' => 'bg-white']) }}>
-    @include('partials.__header')
-</div>
+@include('partials.__header')

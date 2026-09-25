@@ -1,7 +1,7 @@
 @extends('layout')
 @section('content')
 
-<div style="display:flex; flex-direction:column; height:calc(100vh - 112px); max-width:800px; margin:0 auto;">
+<div style="display:flex; flex-direction:column; height:calc(100vh - 120px); max-width:800px; margin:0 auto;">
 
     {{-- Шапка --}}
     <div style="display:flex; align-items:center; justify-content:space-between;
