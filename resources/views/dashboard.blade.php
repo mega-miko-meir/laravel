@@ -282,8 +282,6 @@
 })();
 </script>
 
-@can('admin')
-
 {{-- Фильтр по должности (глобальный) --}}
 @if(count($allRoles) > 0)
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;
@@ -465,13 +463,18 @@
     // лежали в кэше и страница открывалась мгновенно, а не ждала живой запрос
     // в Nobel CRM. Каждый эндпоинт сам решает дефолтный период — параметры
     // передавать не нужно.
+    // Большинство этих страниц доступны только админам (can:admin в роутах) —
+    // для остальных пользователей прогревать их нет смысла, будет просто 403.
+    // «База OneKey» (clients.data) доступна всем — прогреваем её всегда.
     const prefetchUrls = [
+        @can('admin')
         '{{ route('calls.data') }}',
         '{{ route('admin.target-clients.data') }}',
         '{{ route('admin.double-visit-plan.data') }}',
         '{{ route('leaderboard.data') }}',
         '{{ route('kmp.data') }}',
         '{{ route('admin.data-integrity') }}',
+        @endcan
         '{{ route('clients.data') }}',
     ];
 
@@ -489,7 +492,5 @@
     }
 })();
 </script>
-
-@endcan
 
 @endsection
