@@ -10,11 +10,11 @@
                   {{ $notification->read_at ? 'bg-gray-50' : 'bg-white' }}">
 
             <div class="font-semibold">
-                {{ $notification->data['title'] }}
+                {{ $notification->display['title'] }}
             </div>
 
             <div class="text-sm text-gray-500">
-                От: {{ $notification->data['user_name'] }}
+                {{ $notification->display['subtitle'] }}
             </div>
             <div>
                 <p class="text-xs text-gray-400 mt-2">Дата: {{ $notification->created_at->format('d.m.Y H:i') }}</p>
