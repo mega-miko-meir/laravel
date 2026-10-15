@@ -166,6 +166,64 @@ class DataQualityService
     }
 
     /**
+     * У одного сотрудника две (и более) строки employee_territory с ОДИНАКОВЫМ
+     * assigned_at. Сами по себе не ломают ничего в этой таблице, но дашборд и
+     * другие отчёты вычисляют "текущую роль"/"текущую территорию" через
+     * "последняя по assigned_at" — при таком тай-брейке обе строки считаются
+     * "последними" одновременно, и сотрудник задваивается в агрегатах (так
+     * нашли реальный баг: Rep на дашборде показывал 161 вместо 159 — см.
+     * employee_territory для сотрудников #84 и #110).
+     */
+    public function duplicateTerritoryAssignments(): Collection
+    {
+        return DB::table('employee_territory as et')
+            ->join('employees as e', 'e.id', '=', 'et.employee_id')
+            ->join('territories as t', 't.id', '=', 'et.territory_id')
+            ->select(
+                'e.id as employee_id',
+                'e.full_name',
+                'et.assigned_at',
+                DB::raw('COUNT(*) as cnt'),
+                DB::raw("GROUP_CONCAT(DISTINCT t.territory_name ORDER BY t.territory_name SEPARATOR ', ') as territories")
+            )
+            ->groupBy('e.id', 'e.full_name', 'et.assigned_at')
+            ->having('cnt', '>', 1)
+            ->orderByDesc('et.assigned_at')
+            ->get();
+    }
+
+    /**
+     * employees.hiring_date расходится с реальной датой события "Принят" в
+     * истории (employee_events) — поле не синхронизируется автоматически
+     * (см. закомментированный код в EmployeeEventController) и может
+     * незаметно "протухнуть" при правке карточки или импорте. Отсюда же была
+     * ошибка в "Среднем стаже" на дашборде (RM показывал 11 месяцев вместо 7
+     * лет) — там расчёт перевели на событие, но сама employees.hiring_date
+     * нигде не подчищена и всё ещё отображается на карточке/в экспортах.
+     *
+     * hiring_date — колонка timestamp, и у подавляющего большинства строк
+     * время в ней — 19:00:00 (ровно минус 5 часов от полуночи, т.е. UTC+5
+     * Asia/Qyzylorda) — похоже на артефакт сохранения через часовой пояс,
+     * а не реальную ошибку: допустимое отклонение на 1 календарный день,
+     * иначе проверка тонет в ложных срабатываниях почти на всех сотрудниках.
+     */
+    public function hiringDateMismatches(): Collection
+    {
+        $firstHired = DB::table('employee_events')
+            ->where('event_type', 'hired')
+            ->selectRaw('employee_id, MIN(event_date) as first_hired')
+            ->groupBy('employee_id');
+
+        return DB::table('employees as e')
+            ->joinSub($firstHired, 'fh', 'fh.employee_id', '=', 'e.id')
+            ->whereNotNull('e.hiring_date')
+            ->whereRaw('ABS(DATEDIFF(DATE(e.hiring_date), fh.first_hired)) > 1')
+            ->select('e.id', 'e.full_name', 'e.hiring_date', 'fh.first_hired')
+            ->orderByDesc('fh.first_hired')
+            ->get();
+    }
+
+    /**
      * Территория помечена как активно назначенная (unassigned_at IS NULL)
      * сотруднику, чей последний статус — "уволен". Забыли снять при увольнении.
      */

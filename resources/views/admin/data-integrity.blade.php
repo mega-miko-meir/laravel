@@ -17,6 +17,7 @@
 
 @php
     $qualityIssues = $duplicateEvents->count() + $positionMismatches->count()
+        + $duplicateTerritoryAssignments->count() + $hiringDateMismatches->count()
         + $activeWithoutCrm->count() + $activeWithoutKmp->count()
         + $crmAccountsWithoutEmployee->count() + $kmpAccountsWithoutEmployee->count()
         + $territoriesHeldByDismissed->count() + $tabletsHeldByDismissed->count()
@@ -392,6 +393,56 @@
                                 <td style="padding:9px 18px;"><x-status-badge :status="$row->event_type" /></td>
                                 <td style="padding:9px 18px;color:#374151;">{{ \Carbon\Carbon::parse($row->event_date)->format('d.m.Y') }}</td>
                                 <td style="padding:9px 18px;color:#b91c1c;font-weight:600;">{{ $row->cnt }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </x-dq-section>
+
+            <x-dq-section title="Задвоенные назначения территорий" count="{{ $duplicateTerritoryAssignments->count() }}"
+                          description="У сотрудника две и более строки employee_territory с одинаковой датой назначения — дашборд и отчёты считают 'последнюю' территорию по этой дате и задваивают такого сотрудника в агрегатах по роли.">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">ФИО</th>
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">Дата назначения</th>
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">Территории</th>
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">Записей</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($duplicateTerritoryAssignments as $row)
+                            <tr style="border-bottom:1px solid #f9fafb;">
+                                <td style="padding:9px 18px;">
+                                    <a href="/employee/{{ $row->employee_id }}" style="color:#2563eb;text-decoration:none;">{{ $row->full_name }}</a>
+                                </td>
+                                <td style="padding:9px 18px;color:#374151;">{{ \Carbon\Carbon::parse($row->assigned_at)->format('d.m.Y H:i') }}</td>
+                                <td style="padding:9px 18px;color:#374151;">{{ $row->territories }}</td>
+                                <td style="padding:9px 18px;color:#b91c1c;font-weight:600;">{{ $row->cnt }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </x-dq-section>
+
+            <x-dq-section title="hiring_date расходится с реальным событием приёма" count="{{ $hiringDateMismatches->count() }}"
+                          description="employees.hiring_date не совпадает с датой самого первого события 'Принят' в истории — поле не синхронизируется автоматически и могло протухнуть при правке карточки или импорте.">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f9fafb;border-bottom:1px solid #f0f0f0;">
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">ФИО</th>
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">employees.hiring_date</th>
+                            <th style="padding:9px 18px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:#6b7280;">Реальная дата «Принят»</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($hiringDateMismatches as $row)
+                            <tr style="border-bottom:1px solid #f9fafb;">
+                                <td style="padding:9px 18px;">
+                                    <a href="/employee/{{ $row->id }}" style="color:#2563eb;text-decoration:none;">{{ $row->full_name }}</a>
+                                </td>
+                                <td style="padding:9px 18px;color:#374151;">{{ \Carbon\Carbon::parse($row->hiring_date)->format('d.m.Y') }}</td>
+                                <td style="padding:9px 18px;color:#b91c1c;font-weight:600;">{{ \Carbon\Carbon::parse($row->first_hired)->format('d.m.Y') }}</td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -33,6 +33,8 @@ class DataIntegrityController extends Controller
             'kmpMapped'    => $kmpData['mapped'],
 
             'duplicateEvents'             => $dqService->duplicateEvents(),
+            'duplicateTerritoryAssignments' => $dqService->duplicateTerritoryAssignments(),
+            'hiringDateMismatches'        => $dqService->hiringDateMismatches(),
             'positionMismatches'          => $dqService->positionMismatches(),
             'activeWithoutCrm'            => $dqService->activeWithoutCrm(),
             'activeWithoutKmp'            => $dqService->activeWithoutKmp(),
