@@ -235,6 +235,15 @@ class Employee extends Model
         });
 
         static::updated(function ($employee) {
+            // setStatus() ниже сам вызывает update() — без этой проверки ЛЮБОЕ
+            // обновление сотрудника без планшета, но с историей возврата (кроме
+            // уже dismissed), уходило в бесконечную рекурсию: updated -> setStatus
+            // -> update -> updated -> setStatus -> ... (обнаружено на импорте
+            // дат рождения — зависший процесс, 100% CPU, пришлось убивать вручную).
+            if ($employee->status === 'dismissed') {
+                return;
+            }
+
             if ($employee->tablets()->count() === 0) {
                 // Проверяем, есть ли загруженный unassign_pdf
                 $hasReturnedTablet = DB::table('employee_tablet')
