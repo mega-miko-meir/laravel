@@ -77,6 +77,7 @@
                             ['email','Почта',true],['team','Группа',true],
                             ['department','Департамент',true],['manager','Менеджер',true],
                             ['hiring_date','Дата приема',false],
+                            ['birth_date','День рождения',false],
                             ['status','Статус',true],
                             ['status_event_date','Дата увольнения/декрета',false],
                             ['crm_full_name','ФИО по CRM',false],

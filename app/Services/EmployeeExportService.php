@@ -46,6 +46,8 @@ class EmployeeExportService
                 optional($e->events()->where('event_type', 'hired')->latest('event_date')->first())->event_date
                     ? \Carbon\Carbon::parse($e->events()->where('event_type', 'hired')->latest('event_date')->first()->event_date)->format('d.m.Y')
                     : '',
+            'birth_date' => fn($e) =>
+                $e->birth_date ? \Carbon\Carbon::parse($e->birth_date)->format('d.m.Y') : '',
             'role' => fn($e) => $e->employee_territory()->latest('assigned_at')->first()->role ?? '',
             'status' => fn($e) => match ($e->latestEvent?->event_type) {
                 'dismissed'        => 'Уволен',
@@ -114,6 +116,7 @@ class EmployeeExportService
             'department' => 'Департамент',
             'manager' => 'Менеджер',
             'hiring_date' => 'Дата приема',
+            'birth_date' => 'День рождения',
             'role' => 'Позиция',
             'status' => 'Статус',
             'status_event_date' => 'Дата увольнения/декрета',
