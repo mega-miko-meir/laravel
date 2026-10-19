@@ -24,6 +24,7 @@ class EmployeeUpdateRequest extends FormRequest
             'city' => 'nullable',
             'position' => 'nullable',
             'hiring_date' => 'nullable',
+            'birth_date' => 'nullable|date',
             'email' => ['required', 'email', Rule::unique('employees', 'email')->ignore($employeeId)],
         ];
     }
