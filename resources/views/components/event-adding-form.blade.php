@@ -28,6 +28,7 @@
     } elseif (in_array($currentStatus, ['maternity_leave', 'long_vacation'])) {
         $actions = [
             ['type' => 'return_from_leave', 'label' => 'Вернуть на работу', 'color' => '#16a34a', 'bg' => '#dcfce7'],
+            ['type' => 'dismissed',         'label' => 'Уволить',            'color' => '#dc2626', 'bg' => '#fee2e2'],
         ];
     } elseif ($currentStatus === 'dismissed') {
         $actions = [
