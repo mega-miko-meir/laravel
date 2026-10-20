@@ -230,26 +230,15 @@
 </div>
 
 {{-- ══════════════════════════════════ --}}
-{{-- ИСТОРИЯ СОБЫТИЙ                    --}}
+{{-- ИСТОРИЯ СОБЫТИЙ — статичный блок, всегда развёрнут, без аккордеона --}}
 {{-- ══════════════════════════════════ --}}
-<div x-data="{ open: false }"
-     style="background:#fff;border-radius:12px;border:1px solid #f0f0f0;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+<div style="background:#fff;border-radius:12px;border:1px solid #f0f0f0;box-shadow:0 1px 3px rgba(0,0,0,.06);">
 
-    <button x-on:click="open = !open"
-            style="width:100%;display:flex;align-items:center;justify-content:space-between;
-                   padding:16px 20px;background:none;border:none;cursor:pointer;text-align:left;
-                   border-radius:12px;"
-            onmouseover="this.style.background='#f9fafb';"
-            onmouseout="this.style.background='none';">
+    <div style="padding:16px 20px 0;">
         <span style="font-size:14px;font-weight:600;color:#1f2937;">История событий</span>
-        <svg :class="{ 'rotate-180': open }"
-             style="width:16px;height:16px;color:#9ca3af;flex-shrink:0;transition:transform .2s;"
-             fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-        </svg>
-    </button>
+    </div>
 
-    <div x-show="open" x-cloak>
+    <div>
         @php
             $eventLabels = [
                 'hired'             => 'Принят',
@@ -262,7 +251,7 @@
             ];
         @endphp
         <ul style="padding:0 20px 16px;margin:0;list-style:none;">
-            @forelse($employee->events()->orderBy('event_date', 'desc')->get() as $event)
+            @forelse($employee->events()->orderBy('event_date', 'asc')->get() as $event)
                 <li x-data="{ editing: false }"
                     style="padding:8px 0;border-bottom:1px solid #f9fafb;">
 
