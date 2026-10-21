@@ -88,7 +88,12 @@ class IntegrationController extends Controller
         ]);
 
         $artisan = escapeshellarg(base_path('artisan'));
-        $php     = escapeshellarg(PHP_BINARY);
+        // PHP_BINARY ненадёжен под PHP-FPM — на части конфигураций (как на
+        // проде) возвращает пустую строку вместо пути к бинарнику, из-за
+        // чего setsid/exec пытался запустить "" и падал мгновенно, а статус
+        // так и оставался "running" до стухания. Фолбэк на бинарник "php" —
+        // резолвится через $PATH, как и в серверном crontab.
+        $php     = escapeshellarg(PHP_BINARY ?: 'php');
         $logFile = escapeshellarg(storage_path("logs/integration_{$slug}.log"));
         $argsStr = $args ? ' ' . implode(' ', array_map('escapeshellarg', $args)) : '';
         $command = $config['command'];
