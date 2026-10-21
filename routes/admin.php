@@ -13,6 +13,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TerritoryChangeController;
 use App\Http\Controllers\DoubleVisitPlanController;
 use App\Http\Controllers\TargetClientsController;
+use App\Http\Controllers\IntegrationController;
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -51,6 +52,14 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/data-quality', fn() => redirect()->route('admin.data-integrity', ['tab' => 'quality']))->name('admin.data-quality');
 
     Route::post('/admin/reports/weekly-dismissed', [ReportController::class, 'sendWeeklyDismissed'])->name('admin.reports.weekly-dismissed');
+
+    // Интеграции — ручной запуск синхронизации данных из внешних систем
+    // (Nobel CRM и далее по мере подключения новых источников), на случай
+    // если автозапуск по расписанию (02:00) не срабатывает из-за сетевых
+    // ограничений сервера. См. config/integrations.php.
+    Route::get('/admin/integrations', [IntegrationController::class, 'index'])->name('admin.integrations');
+    Route::post('/admin/integrations/{slug}/run', [IntegrationController::class, 'trigger'])->name('admin.integrations.run');
+    Route::get('/admin/integrations/{slug}/status', [IntegrationController::class, 'status'])->name('admin.integrations.status');
 
     Route::get('/admin/territory-changes', [TerritoryChangeController::class, 'index'])->name('admin.territory-changes');
     Route::get('/admin/territory-changes/export', [TerritoryChangeController::class, 'export'])->name('admin.territory-changes.export');
