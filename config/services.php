@@ -54,4 +54,17 @@ return [
         'model' => env('GROK_MODEL', 'grok-4-fast'),
     ],
 
+    // Учётка для автоматического входа на nobel.provisor.kz (интеграция «КМП»,
+    // см. scripts/kmp_etl.py) + креды nobeldb с правом записи (КМП грузится
+    // в таблицу KMP_data — обычный DB_* коннекшен 'nobel' там read-only).
+    'kmp_portal' => [
+        'username'               => env('KMP_PORTAL_USERNAME'),
+        'password'               => env('KMP_PORTAL_PASSWORD'),
+        'nobeldb_write_user'     => env('KMP_NOBELDB_USER'),
+        'nobeldb_write_password' => env('KMP_NOBELDB_PASS'),
+        // Необязательно: личный файл "Недели поставщика.xlsx", в репозиторий
+        // не кладём — см. scripts/kmp_etl.py.
+        'sw_reference_file'      => env('KMP_SW_REFERENCE_FILE'),
+    ],
+
 ];

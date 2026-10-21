@@ -40,6 +40,13 @@
                    class="etl-month-input" title="Месяц для обновления">
         @endif
 
+        @if(!empty($integration['supports_date_range']))
+            <input type="date" x-model="dateFrom" :disabled="running"
+                   max="{{ now()->format('Y-m-d') }}" class="etl-month-input" title="Дата с">
+            <input type="date" x-model="dateTo" :disabled="running"
+                   max="{{ now()->format('Y-m-d') }}" class="etl-month-input" title="Дата по">
+        @endif
+
         <button type="button" @click="trigger()" :disabled="running" class="etl-btn">
             <svg x-show="!running" style="width:14px;height:14px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

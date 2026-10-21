@@ -56,6 +56,24 @@ class IntegrationController extends Controller
             }
         }
 
+        if ($config['supports_date_range'] ?? false) {
+            $dateFrom = $request->input('date_from');
+            $dateTo   = $request->input('date_to');
+            if (($dateFrom && !$dateTo) || ($dateTo && !$dateFrom)) {
+                return response()->json(['status' => 'idle', 'message' => 'Укажите обе даты диапазона'], 422);
+            }
+            if ($dateFrom && $dateTo) {
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+                    return response()->json(['status' => 'idle', 'message' => 'Неверный формат даты'], 422);
+                }
+                if ($dateFrom > $dateTo) {
+                    return response()->json(['status' => 'idle', 'message' => '"С" не может быть позже "По"'], 422);
+                }
+                $args[] = '--from=' . $dateFrom;
+                $args[] = '--to=' . $dateTo;
+            }
+        }
+
         if ($config['supports_reports'] ?? false) {
             $reports = array_values(array_unique(array_intersect(
                 array_map('intval', (array) $request->input('reports', [])),

@@ -98,6 +98,8 @@
             running: false,
             pollTimer: null,
             selectedMonth: '{{ now()->format('Y-m') }}',
+            dateFrom: '',
+            dateTo: '',
             selectedReports: integration.reports ? Object.keys(integration.reports).map(Number) : [],
             badgeLabel: 'Ещё не запускалось',
             badgeBg: '#f3f4f6',
@@ -115,9 +117,18 @@
                     return;
                 }
 
+                if (integration.supports_date_range && (this.dateFrom || this.dateTo) && (!this.dateFrom || !this.dateTo)) {
+                    etlShowToast(false, 'Укажите обе даты диапазона (или не указывайте ни одной — тогда диапазон по умолчанию)');
+                    return;
+                }
+
                 this.running = true;
                 const body = {};
                 if (integration.supports_month) body.month = this.selectedMonth;
+                if (integration.supports_date_range && this.dateFrom && this.dateTo) {
+                    body.date_from = this.dateFrom;
+                    body.date_to = this.dateTo;
+                }
                 if (integration.supports_reports) body.reports = this.selectedReports;
 
                 fetch(`{{ url('/admin/integrations') }}/${this.slug}/run`, {
