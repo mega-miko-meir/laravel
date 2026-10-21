@@ -114,8 +114,16 @@ class DashboardController extends Controller
     {
         $since     = now()->subMonths(11)->startOfMonth();
 
-        // Переиспользуемые подзапросы
-        $latestTerrSub  = 'et.assigned_at = (SELECT MAX(et2.assigned_at) FROM employee_territory et2 WHERE et2.employee_id = e.id)';
+        // Переиспользуемые подзапросы.
+        // latestTerrSub — тай-брейк по et.id обязателен: у части сотрудников
+        // есть две строки employee_territory с ОДИНАКОВЫМ assigned_at (см.
+        // проверку "Задвоенные назначения территорий" на /admin/data-integrity).
+        // Без тай-брейка `et.assigned_at = (SELECT MAX(...))` совпадает с ОБЕИМИ
+        // строками разом, LEFT/INNER JOIN их обеих подхватывает, и COUNT(*) в
+        // графиках по ролям завышается на одного сотрудника за каждую такую
+        // пару (это и есть причина "Rep 151 на дашборде против 148-149 везде
+        // ещё", обнаруженной на реальных сотрудниках #84 и #110).
+        $latestTerrSub  = 'et.id = (SELECT et2.id FROM employee_territory et2 WHERE et2.employee_id = e.id ORDER BY et2.assigned_at DESC, et2.id DESC LIMIT 1)';
         $latestEventSub = 'ev.id = (SELECT ee.id FROM employee_events ee WHERE ee.employee_id = e.id ORDER BY ee.event_date DESC, ee.id DESC LIMIT 1)';
 
         // ── Метки и ключи для 12 месяцев ────────────────────────────────
@@ -170,7 +178,8 @@ class DashboardController extends Controller
         $allRoles      = $donutRows->pluck('role')->toArray();
 
         // ── Накопительный рост по ролям ─────────────────────────────────
-        $latestTerrSubEv = 'et.assigned_at = (SELECT MAX(et2.assigned_at) FROM employee_territory et2 WHERE et2.employee_id = ev.employee_id)';
+        // Тот же тай-брейк по et.id, что и в latestTerrSub выше.
+        $latestTerrSubEv = 'et.id = (SELECT et2.id FROM employee_territory et2 WHERE et2.employee_id = ev.employee_id ORDER BY et2.assigned_at DESC, et2.id DESC LIMIT 1)';
         $cumulativeByRole = array_fill_keys($allRoles, []);
         for ($i = 11; $i >= 0; $i--) {
             $endOfMonth = now()->subMonths($i)->endOfMonth()->format('Y-m-d 23:59:59');

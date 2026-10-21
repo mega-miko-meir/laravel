@@ -292,9 +292,21 @@ class Employee extends Model
 
         return $query->where(function ($q) use ($term, $normalized, $isRoleSearch) {
             if ($isRoleSearch) {
-                $q->whereHas('territories', function ($q2) use ($normalized) {
-                    $q2->whereRaw('LOWER(role) = ?', [$normalized]);
-                });
+                // territories() — это ПРЯМАЯ связь territories.employee_id, а не
+                // история назначений. Она не всегда совпадает с тем, что считают
+                // дашборд и остальная часть приложения "текущей ролью" (роль на
+                // ПОСЛЕДНЕЙ строке employee_territory) — из-за этого поиск "rep"
+                // здесь мог давать другое число, чем дашборд/выгрузка для одной
+                // и той же роли. Используем тот же тай-брейк (assigned_at DESC,
+                // id DESC), что и везде в приложении.
+                $q->whereRaw("LOWER((
+                    SELECT t.role
+                    FROM employee_territory et
+                    JOIN territories t ON t.id = et.territory_id
+                    WHERE et.employee_id = employees.id
+                    ORDER BY et.assigned_at DESC, et.id DESC
+                    LIMIT 1
+                )) = ?", [$normalized]);
                 return;
             }
 
