@@ -60,6 +60,7 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/admin/integrations', [IntegrationController::class, 'index'])->name('admin.integrations');
     Route::post('/admin/integrations/{slug}/run', [IntegrationController::class, 'trigger'])->name('admin.integrations.run');
     Route::get('/admin/integrations/{slug}/status', [IntegrationController::class, 'status'])->name('admin.integrations.status');
+    Route::post('/admin/integrations/{slug}/reset', [IntegrationController::class, 'reset'])->name('admin.integrations.reset');
 
     Route::get('/admin/territory-changes', [TerritoryChangeController::class, 'index'])->name('admin.territory-changes');
     Route::get('/admin/territory-changes/export', [TerritoryChangeController::class, 'export'])->name('admin.territory-changes.export');

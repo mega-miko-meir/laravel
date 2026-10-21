@@ -124,6 +124,30 @@ class IntegrationController extends Controller
         return response()->json($status);
     }
 
+    /**
+     * Снять "зависший" статус вручную — например, если фоновый процесс
+     * реально не стартовал на сервере (отключён exec, убит вместе с
+     * PHP-FPM воркером и т.п.) и ждать STALE_AFTER_MINUTES не хочется, а
+     * файл статуса на диске принадлежит веб-серверу (www-data) и недоступен
+     * для правки через SFTP-пользователя без sudo. Пишет этот же файл —
+     * выполняется от имени веб-сервера, так что прав всегда достаточно,
+     * в отличие от ручного rm через консоль хостинга.
+     *
+     * Важно: это НЕ останавливает реально работающий в фоне процесс, если
+     * он ещё жив — только сбрасывает отображаемый статус. Подтверждение
+     * (confirm()) на фронте явно предупреждает об этом.
+     */
+    public function reset(string $slug)
+    {
+        if (!config("integrations.{$slug}")) {
+            abort(404);
+        }
+
+        IntegrationStatusStore::write($slug, ['status' => 'idle']);
+
+        return response()->json(['status' => 'idle']);
+    }
+
     private function isStale(array $status): bool
     {
         if (empty($status['started_at'])) {

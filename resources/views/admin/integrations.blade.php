@@ -151,6 +151,27 @@
                 this.pollTimer = setInterval(() => this.checkStatus(false), 4000);
             },
 
+            resetStatus() {
+                if (!confirm('Сбросить статус? Если синхронизация ещё реально выполняется в фоне, это её НЕ остановит — только уберёт пометку "Выполняется..." с экрана. Сбрасывайте, только если уверены, что процесс завис.')) {
+                    return;
+                }
+                fetch(`{{ url('/admin/integrations') }}/${this.slug}/reset`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        clearInterval(this.pollTimer);
+                        this.pollTimer = null;
+                        this.applyStatus(data, true);
+                    })
+                    .catch(() => etlShowToast(false, 'Не удалось сбросить статус'));
+            },
+
             checkStatus(silent) {
                 fetch(`{{ url('/admin/integrations') }}/${this.slug}/status`, {
                     headers: { 'Accept': 'application/json' },

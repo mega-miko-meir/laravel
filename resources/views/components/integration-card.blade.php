@@ -51,5 +51,15 @@
             </svg>
             <span x-text="running ? 'Идёт обновление...' : 'Обновить'"></span>
         </button>
+
+        {{-- Видно, только пока статус "running" — снимает отображаемую
+             "зависшую" пометку без доступа к серверу (пишет тот же файл
+             статуса от имени веб-сервера, которому всегда хватает прав, в
+             отличие от SFTP-пользователя на сервере). Не останавливает
+             реальный процесс, если он ещё жив — только сбрасывает индикатор. --}}
+        <button type="button" x-show="running" x-cloak @click="resetStatus()"
+                style="background:none;border:none;color:#9ca3af;font-size:12px;text-decoration:underline;cursor:pointer;padding:0;">
+            Сбросить статус
+        </button>
     </div>
 </div>
