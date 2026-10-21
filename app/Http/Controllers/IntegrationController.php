@@ -67,6 +67,19 @@ class IntegrationController extends Controller
             $args = array_merge($args, array_map('strval', $reports));
         }
 
+        // Если exec()/popen() отключены в php.ini (disable_functions — частая
+        // практика безопасности на хостингах), фоновый процесс молча не
+        // стартует вообще, а карточка зависает на "Выполняется..." до
+        // срабатывания STALE_AFTER_MINUTES. Проверяем ДО записи статуса
+        // "running", чтобы сразу вернуть понятную ошибку, а не ложный прогресс.
+        $launcher = PHP_OS_FAMILY === 'Windows' ? 'popen' : 'exec';
+        if (!function_exists($launcher)) {
+            return response()->json([
+                'status'  => 'idle',
+                'message' => "Функция {$launcher}() отключена на сервере (disable_functions в php.ini) — фоновый запуск невозможен. Нужно включить её в настройках PHP либо запускать синхронизацию через консоль/cron напрямую.",
+            ], 500);
+        }
+
         IntegrationStatusStore::write($slug, [
             'status'      => 'running',
             'started_at'  => now()->toDateTimeString(),
@@ -83,7 +96,13 @@ class IntegrationController extends Controller
         if (PHP_OS_FAMILY === 'Windows') {
             pclose(popen("start /B \"\" {$php} {$artisan} {$command}{$argsStr} > {$logFile} 2>&1", 'r'));
         } else {
-            exec("{$php} {$artisan} {$command}{$argsStr} > {$logFile} 2>&1 &");
+            // setsid — обязателен: без него процесс остаётся в той же сессии/
+            // группе процессов, что и PHP-FPM воркер, и часто убивается вместе
+            // с ним, когда воркер перерабатывается/завершает запрос — именно
+            // так карточка зависала на "Выполняется..." на проде (процесс
+            // реально не доживал до конца, хотя команда вроде бы стартовала).
+            // </dev/null — чтобы фоновый процесс не ждал stdin родителя.
+            exec("setsid {$php} {$artisan} {$command}{$argsStr} > {$logFile} 2>&1 < /dev/null &");
         }
 
         return response()->json(['status' => 'running', 'started_at' => now()->toDateTimeString()]);
