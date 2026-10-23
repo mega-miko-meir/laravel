@@ -2,41 +2,83 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 /**
  * Хранилище статуса последнего запуска для каждой интеграции (см.
- * config/integrations.php) — отдельный JSON-файл на интеграцию, читает
- * страница /admin/integrations (polling) и пишет сама Artisan-команда
- * интеграции в начале и в конце выполнения (см. RunNobelEtl как образец).
+ * config/integrations.php) — читает страница /admin/integrations (polling),
+ * пишет сама Artisan-команда интеграции в начале и в конце выполнения (см.
+ * RunNobelEtl как образец).
  *
- * Простой файл, а не БД/кэш — статус должен переживать перезапуск
- * очереди/веб-сервера и не зависеть от того, запущен ли воркер очереди
- * (на сервере его может и не быть, см. EtlController/IntegrationController).
+ * Раньше это был локальный JSON-файл на интеграцию — но тогда ручной прогон
+ * ETL с другого компьютера (например, когда с продакшен-сервера заблокирован
+ * исходящий порт до внешнего API, а с ноутбука разработчика — нет) не
+ * отражался на карточке на сайте: разные машины, разные файлы на диске.
+ * Теперь статус пишется в общую таблицу в nobeldb (та же БД, что видят и
+ * сервер, и любой компьютер разработчика — она уже используется как общая
+ * точка для ETL) через коннекшен 'nobel_write' (см. config/database.php —
+ * обычный 'nobel'read-only, тут нужна запись).
  */
 class IntegrationStatusStore
 {
-    private static function path(string $slug): string
-    {
-        return storage_path("app/integration_status/{$slug}.json");
-    }
+    private const TABLE = 'etl_integration_status';
 
     public static function write(string $slug, array $data): void
     {
-        $dir = dirname(self::path($slug));
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
+        try {
+            self::ensureTable();
+            DB::connection('nobel_write')->statement(
+                'REPLACE INTO `' . self::TABLE . '` (slug, status, started_at, finished_at, message, updated_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                [
+                    $slug,
+                    $data['status'] ?? 'idle',
+                    $data['started_at'] ?? null,
+                    $data['finished_at'] ?? null,
+                    $data['message'] ?? null,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning("IntegrationStatusStore::write('{$slug}') failed: " . $e->getMessage());
         }
-
-        file_put_contents(self::path($slug), json_encode($data, JSON_UNESCAPED_UNICODE));
     }
 
     public static function read(string $slug): array
     {
-        $path = self::path($slug);
+        try {
+            self::ensureTable();
+            $row = DB::connection('nobel_write')
+                ->table(self::TABLE)
+                ->where('slug', $slug)
+                ->first();
 
-        if (!file_exists($path)) {
+            if (!$row) {
+                return ['status' => 'idle'];
+            }
+
+            return [
+                'status'      => $row->status,
+                'started_at'  => $row->started_at,
+                'finished_at' => $row->finished_at,
+                'message'     => $row->message,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning("IntegrationStatusStore::read('{$slug}') failed: " . $e->getMessage());
             return ['status' => 'idle'];
         }
+    }
 
-        return json_decode(file_get_contents($path), true) ?: ['status' => 'idle'];
+    private static function ensureTable(): void
+    {
+        DB::connection('nobel_write')->statement('
+            CREATE TABLE IF NOT EXISTS `' . self::TABLE . '` (
+                `slug` VARCHAR(64) NOT NULL PRIMARY KEY,
+                `status` VARCHAR(32) NOT NULL,
+                `started_at` DATETIME NULL,
+                `finished_at` DATETIME NULL,
+                `message` TEXT NULL,
+                `updated_at` DATETIME NOT NULL
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        ');
     }
 }

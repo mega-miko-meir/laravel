@@ -58,6 +58,28 @@ return [
             ],
         ],
 
+        // Та же nobeldb, но учёткой с правом записи (обычный коннекшен 'nobel'
+        // выше — read-only). Единственное место, одинаково доступное что с
+        // сервера, что с любого компьютера разработчика — поэтому именно
+        // сюда пишется статус интеграций (App\Services\IntegrationStatusStore):
+        // локальный ручной прогон ETL (когда порт API заблокирован на
+        // сервере) тогда тоже честно отражается на странице /admin/integrations.
+        'nobel_write' => [
+            'driver'    => 'mysql',
+            'host'      => env('NOBEL_DB_HOST', '192.168.33.39'),
+            'port'      => env('NOBEL_DB_PORT', '3306'),
+            'database'  => env('NOBEL_DB_DATABASE', 'nobeldb'),
+            'username'  => env('KMP_NOBELDB_USER'),
+            'password'  => env('KMP_NOBELDB_PASS'),
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix'    => '',
+            'strict'    => false,
+            'options'   => [
+                PDO::ATTR_TIMEOUT => env('NOBEL_DB_TIMEOUT', 3),
+            ],
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
