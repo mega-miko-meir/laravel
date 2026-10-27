@@ -9,7 +9,6 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\CrmMappingController;
 use App\Http\Controllers\KmpMappingController;
 use App\Http\Controllers\DataIntegrityController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TerritoryChangeController;
 use App\Http\Controllers\DoubleVisitPlanController;
 use App\Http\Controllers\TargetClientsController;
@@ -50,8 +49,6 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::post('/admin/kmp-mapping/link', [KmpMappingController::class, 'link'])->name('admin.kmp-mapping.link');
 
     Route::get('/admin/data-quality', fn() => redirect()->route('admin.data-integrity', ['tab' => 'quality']))->name('admin.data-quality');
-
-    Route::post('/admin/reports/weekly-dismissed', [ReportController::class, 'sendWeeklyDismissed'])->name('admin.reports.weekly-dismissed');
 
     // Интеграции — ручной запуск синхронизации данных из внешних систем
     // (Nobel CRM и далее по мере подключения новых источников), на случай
