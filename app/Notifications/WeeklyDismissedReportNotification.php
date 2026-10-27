@@ -6,11 +6,12 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Еженедельный дайджест уволенных и ушедших в декрет за прошедшую неделю (пн-вс),
- * с Excel-вложением. Отправляется синхронно из SendWeeklyDismissedReport сразу
- * после сборки файла — без ShouldQueue, чтобы не было гонки между удалением
- * временного файла командой и обработкой очереди воркером (который на этом
- * проекте не гарантированно поднят).
+ * Дайджест уволенных и ушедших в декрет за период с прошлой отправки (см.
+ * SendWeeklyDismissedReport — раз в 2 недели по расписанию, либо вручную по
+ * кнопке), с Excel-вложением. Отправляется синхронно сразу после сборки
+ * файла — без ShouldQueue, чтобы не было гонки между удалением временного
+ * файла командой и обработкой очереди воркером (который на этом проекте не
+ * гарантированно поднят).
  */
 class WeeklyDismissedReportNotification extends Notification
 {
@@ -34,14 +35,14 @@ class WeeklyDismissedReportNotification extends Notification
         $total   = $this->dismissedCount + $this->maternityCount;
 
         $message = (new MailMessage)
-            ->subject("Уволенные и в декрете — отмечено на неделе {$fromFmt} — {$toFmt}")
+            ->subject("Уволенные и в декрете — отмечено за период {$fromFmt} — {$toFmt}")
             ->greeting('Здравствуйте!');
 
         if ($total > 0) {
-            $message->line("За неделю {$fromFmt} — {$toFmt}: уволено — {$this->dismissedCount}, в декрете — {$this->maternityCount}.")
+            $message->line("За период {$fromFmt} — {$toFmt}: уволено — {$this->dismissedCount}, в декрете — {$this->maternityCount}.")
                      ->line('Список — во вложении. Дата в файле — фактическая дата события, она может отличаться от даты добавления в систему.');
         } else {
-            $message->line("За неделю {$fromFmt} — {$toFmt} увольнений и декретов не было.");
+            $message->line("За период {$fromFmt} — {$toFmt} увольнений и декретов не было.");
         }
 
         if (is_file($this->filePath)) {
