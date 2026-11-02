@@ -18,11 +18,12 @@ view `kmp` смотрит поверх неё).
   3. Заливка теперь — DELETE+INSERT только по фактическому диапазону дат
      выгрузки, а не по всему году — повторные/частичные прогоны безопасны.
 
-Использование:
-  python kmp_etl.py                              # авто-диапазон: 1-е число
-                                                  # прошлого месяца -> сегодня
-  python kmp_etl.py --from=2026-09-01 --to=2026-10-21   # произвольный диапазон
-                                                  # (ручной прогон/перезаливка)
+Использование (месяц, та же логика, что и у nobel_etl.py):
+  python kmp_etl.py                 # 1-е число месяца -> текущий месяц целиком
+                                     # (или ПРЕДЫДУЩИЙ месяц целиком, если
+                                     # сегодня 1-е число — последний шанс
+                                     # забрать поздние правки по нему)
+  python kmp_etl.py --month=2026-09 # конкретный месяц (ручной прогон/перезаливка)
 
 Все пароли/креды — ТОЛЬКО через переменные окружения (их задаёт
 app/Console/Commands/RunKmpEtl.php), в коде никогда не хранятся:
@@ -38,7 +39,7 @@ app/Console/Commands/RunKmpEtl.php), в коде никогда не храня�
 import io
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -133,32 +134,41 @@ def log(message: str):
 
 
 # ============================================================
-# ДИАПАЗОН ДАТ
+# ЦЕЛЕВОЙ МЕСЯЦ (та же логика, что в nobel_etl.py, --month=YYYY-MM)
 # ============================================================
-def _parse_date_override():
-    date_from = date_to = None
+def _parse_month_override():
     for arg in sys.argv[1:]:
-        if arg.startswith("--from="):
-            date_from = datetime.strptime(arg.split("=", 1)[1], "%Y-%m-%d").date()
-        elif arg.startswith("--to="):
-            date_to = datetime.strptime(arg.split("=", 1)[1], "%Y-%m-%d").date()
-    return date_from, date_to
+        if arg.startswith("--month="):
+            value = arg.split("=", 1)[1]
+            try:
+                return datetime.strptime(value, "%Y-%m").date().replace(day=1)
+            except ValueError:
+                raise ValueError(f"Неверный формат --month: {value} (ожидается YYYY-MM)")
+    return None
 
 
 def resolve_date_range():
-    override_from, override_to = _parse_date_override()
-    if override_from or override_to:
-        if not (override_from and override_to):
-            raise ValueError("--from и --to нужно задавать вместе")
-        return override_from, override_to
-
-    today = date.today()
-    first_of_this_month = today.replace(day=1)
-    if first_of_this_month.month == 1:
-        prev_month_start = first_of_this_month.replace(year=first_of_this_month.year - 1, month=12)
+    override_month = _parse_month_override()
+    if override_month:
+        target_month_start = override_month
     else:
-        prev_month_start = first_of_this_month.replace(month=first_of_this_month.month - 1)
-    return prev_month_start, today
+        today = date.today()
+        first_of_this_month = today.replace(day=1)
+        if today.day == 1:
+            # 1-е число — последний шанс забрать поздние правки по только
+            # что закрывшемуся месяцу целиком, пока он снова не станет
+            # "текущим" через месяц.
+            target_month_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
+        else:
+            target_month_start = first_of_this_month
+
+    if target_month_start.month == 12:
+        next_month_start = target_month_start.replace(year=target_month_start.year + 1, month=1)
+    else:
+        next_month_start = target_month_start.replace(month=target_month_start.month + 1)
+    month_end = min(next_month_start - timedelta(days=1), date.today())
+
+    return target_month_start, month_end
 
 
 # ============================================================

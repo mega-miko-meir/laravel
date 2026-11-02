@@ -8,8 +8,7 @@ use Symfony\Component\Process\Process;
 
 class RunKmpEtl extends Command
 {
-    protected $signature = 'etl:kmp {--from= : YYYY-MM-DD — начало диапазона (нужно вместе с --to)}
-        {--to= : YYYY-MM-DD — конец диапазона (нужно вместе с --from)}';
+    protected $signature = 'etl:kmp {--month= : YYYY-MM — переопределяет автоматический расчёт месяца}';
     protected $description = 'Забрать БыстрыйОтчёт с nobel.provisor.kz и залить в nobeldb.KMP_data';
 
     /** Slug в config('integrations') / IntegrationStatusStore — см. страницу /admin/integrations. */
@@ -18,19 +17,12 @@ class RunKmpEtl extends Command
     public function handle(): int
     {
         $scriptPath = base_path('scripts/kmp_etl.py');
-        $from       = $this->option('from');
-        $to         = $this->option('to');
-
-        if (($from && !$to) || ($to && !$from)) {
-            $this->error('--from и --to нужно задавать вместе');
-            return self::FAILURE;
-        }
+        $month      = $this->option('month');
 
         $python = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
         $cmd = [$python, $scriptPath];
-        if ($from && $to) {
-            $cmd[] = '--from=' . $from;
-            $cmd[] = '--to=' . $to;
+        if ($month) {
+            $cmd[] = '--month=' . $month;
         }
 
         $mainDb = config('database.connections.mysql');
